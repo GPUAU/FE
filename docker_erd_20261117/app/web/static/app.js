@@ -26,6 +26,10 @@ async function api(path, body) {
   let data = null; try { data = await r.json(); } catch (e) { /* 비 JSON */ }
   if (r.status === 401 || r.status === 403) throw new Error('이 워크스페이스에서 지원하지 않는 작업입니다.');
   if (r.status === 404 && data && data.detail === 'Not Found') throw new Error('서버가 화면보다 이전 버전입니다. 터미널에서 docker compose restart web 을 실행하고, 로그에 Uvicorn running 이 보이면 새로고침하세요.');
+  if (!r.ok && path.startsWith('/api/v1/') && data?.message) {
+    const reason = data.errors?.[0]?.reason;
+    throw new Error(reason ? data.errors[0].field + ' · ' + reason : data.message);
+  }
   if (!r.ok) throw new Error((data && data.detail) ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : `서버 오류 (${r.status})`);
   return data;
 }

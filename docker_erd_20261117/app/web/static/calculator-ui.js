@@ -1,4 +1,4 @@
-/* Local calculator UI. Inputs and results remain in memory; no scenario API calls. */
+/* Cost uses the Spring simulation endpoint. The existing IRR calculator uses in-memory inputs. */
 if(typeof PAGES!=='undefined'){PAGES.cost.tools=false;PAGES.bizcase.tools=false;PAGES.qa.tools=false;}
 function calculatorFrame(title,description){
  document.body.classList.add('market-v4');$('#pageTitle').textContent=title;$('#pageDesc').textContent=description;
@@ -10,33 +10,67 @@ function calculationInvalidator(form,result,onEdit){
 }
 function readCostForm(){
  const items=costRows.map(([id,name])=>{const row=document.querySelector(`[data-cost-row="${id}"]`),read=k=>row.querySelector(`[data-field="${k}"]`).value;
-  return {id,name,state:read('state'),amount:read('amount')===''?null:Number(read('amount')),currency:read('currency'),period:read('period'),date:read('date'),source:read('source')};});
+  return {id,name,state:read('state'),amount:read('amount')||null,currency:read('currency'),period:read('period'),date:read('date'),source:read('source')};});
  const percent=id=>fieldValue(id)==null?null:fieldValue(id)/100;
- return {gpu:fieldValue('v02Gpu'),util:percent('v02Util'),years:fieldValue('v02Years'),rate:percent('v02Rate'),salvage:fieldValue('v02Salvage'),fx:fieldValue('v02CostFx'),period:$('#costPeriod').value,month:$('#costMonth').value,margin:percent('v02Margin'),marginType:$('#v02MarginType').value,items,electricity:{mode:$('#electricMode').value,kw:fieldValue('electricKw'),pue:fieldValue('electricPue'),tariff:fieldValue('electricTariff'),includedIn:$('#electricOwner').value}};
+ return {modelId:$('#v02CostModel').value,marketFilters:$('#v02CostMarket').value?JSON.parse($('#v02CostMarket').value):null,gpu:fieldValue('v02Gpu'),util:percent('v02Util'),years:fieldValue('v02Years'),rate:percent('v02Rate'),salvage:fieldValue('v02Salvage'),fx:fieldValue('v02CostFx'),period:$('#costPeriod').value,month:$('#costMonth').value,margin:percent('v02Margin'),marginType:$('#v02MarginType').value,items,electricity:{mode:$('#electricMode').value,kw:fieldValue('electricKw'),pue:fieldValue('electricPue'),tariff:fieldValue('electricTariff'),includedIn:$('#electricOwner').value}};
 }
 RENDER.cost=async()=>{
  calculatorFrame('원가와 후보가격','잔존가치·전기료·판매 가능 시간을 반영한 사용자 가정 계산');
+ const { calculateCost, costModels, bindCostMarket, showCostMarket } = await import('/static/spring-cost.mjs');
+ let models = [], modelFailure = '';
+ try { models = await costModels(api); } catch (error) { modelFailure = error.message; }
+ if (location.hash.split('/')[0] !== '#cost') return;
  const saved=V02.costInput,elec=saved?.electricity||{mode:'missing'};
- $('#v-cost').innerHTML=`<div class="mv v02-calc">${calculatorNote()}<form id="v02CostForm" novalidate>
+ $('#v-cost').innerHTML=`<div class="mv v02-calc"><div class="mv-note"><b>입력 가정에 따른 계산</b><p>원가는 Spring에서 일회성 계산합니다. 입력값과 결과는 저장하지 않습니다. 원화 비용은 입력 환율로 환산합니다.</p></div><form id="v02CostForm" novalidate>
  <section class="mv-controls"><h3>투자와 분석 조건</h3><div class="mv-filterline">
- ${numberInput('v02Gpu','GPU 수',saved?.gpu,'1')}${numberInput('v02Util','유료 가동률 (%)',saved?.util==null?'':saved.util*100)}${numberInput('v02Years','사용연수 (년)',saved?.years)}${numberInput('v02Rate','연 자본비용률 (%) · 필수',saved?.rate==null?'':saved.rate*100)}${numberInput('v02Salvage','말기 잔존가치 (USD) · 0도 입력',saved?.salvage)}${numberInput('v02CostFx','비용 환산용 환율 (KRW / USD)',saved?.fx??GpuFx.appliedRate(V02.fx,V02.manualFx)??'')}
+ <label>GPU 모델<select id="v02CostModel"><option value="">선택</option>${models.map(model=>`<option value="${mh(model.id)}" ${model.id===saved?.modelId?'selected':''}>${mh(model.name)}</option>`).join('')}</select></label>
+ ${numberInput('v02Gpu','GPU 수',saved?.gpu,'1')}${numberInput('v02Util','유료 가동률 (%)',saved?.util==null?'':saved.util*100)}${numberInput('v02Years','사용연수 (년)',saved?.years)}${numberInput('v02Rate','연 자본비용률 (%) · 필수',saved?.rate==null?'':saved.rate*100)}${numberInput('v02Salvage','말기 잔존가치 (USD) · 0도 입력',saved?.salvage)}${numberInput('v02CostFx','비용 환산용 환율 (KRW / USD)',saved?.fx??GpuFx.appliedRate(V02.fx,V02.manualFx)?.rate??'')}
  <label>계산 기간<select id="costPeriod"><option value="year">연간 고정 · 8,760시간</option><option value="month" ${saved?.period==='month'?'selected':''}>선택 월 · 실제 달력 시간</option></select></label><label>적용 월<input id="costMonth" type="month" value="${mh(saved?.month||'')}"></label></div>
  <p>자본비용률은 전체 투자금의 연 할인율입니다. 실제 차입금리·공개 금리·목표 IRR과 구분합니다. 환율은 이 계산에 적용할 가정값이며 자동으로 바뀌지 않습니다. 잔존가치는 USD로 입력하세요.</p></section>
  <div class="mv-tablebox" tabindex="0" role="region" aria-label="원가 항목 입력"><table class="mv-table"><thead><tr><th>항목</th><th>상태</th><th>금액</th><th>통화 / 기간</th><th>기준일 / 출처</th></tr></thead><tbody>${costRows.map(([id,name],i)=>{const item=saved?.items.find(x=>x.id===id);return `<tr data-cost-row="${id}"><td><b>${name}</b><small>${id==='server'?'취득비 필수 · 일회성 투자':'다른 항목에 포함 시 중복 입력 금지'}</small></td><td><select data-field="state" aria-label="${name} 상태">${[['missing','미반영'],['user','사용자 입력'],['public','공개 자료'],['included','다른 항목에 포함']].map(([k,v])=>`<option value="${k}" ${item?.state===k?'selected':''}>${v}</option>`).join('')}</select></td><td><input type="number" step="any" data-field="amount" aria-label="${name} 금액" value="${mh(item?.amount??'')}"></td><td><select data-field="currency" aria-label="${name} 통화">${['USD','KRW'].map(k=>`<option ${item?.currency===k?'selected':''}>${k}</option>`).join('')}</select><select data-field="period" aria-label="${name} 기간">${[['once','일회성 투자'],['month','월 운영비'],['year','연 운영비']].map(([k,v])=>`<option value="${k}" ${(item?.period??(i<4?'once':'year'))===k?'selected':''}>${v}</option>`).join('')}</select></td><td><input type="date" data-field="date" aria-label="${name} 기준일" value="${mh(item?.date??'')}"><input type="url" data-field="source" aria-label="${name} 출처" placeholder="공개 자료는 URL 필수" value="${mh(item?.source??'')}"></td></tr>`;}).join('')}</tbody></table></div>
  <section class="mv-controls"><h3>전기료</h3><div class="mv-filterline"><label>반영 방식<select id="electricMode">${[['missing','미확인 · 조건부 결과'],['separate','별도 계산'],['included','입력한 운영비에 포함']].map(([k,v])=>`<option value="${k}" ${elec.mode===k?'selected':''}>${v}</option>`).join('')}</select></label><label>전기료 포함 항목<select id="electricOwner">${costRows.map(([id,name])=>`<option value="${id}" ${elec.includedIn===id?'selected':''}>${name}</option>`).join('')}</select></label>${numberInput('electricKw','전체 IT 전력 (kW)',elec.kw)}${numberInput('electricPue','PUE (1 이상)',elec.pue)}${numberInput('electricTariff','전기단가 (KRW / kWh)',elec.tariff)}</div><p>별도 전기료 = 전체 IT 전력 × 기간 시간 × PUE × 전기단가 ÷ 환율. 가동률을 다시 곱하지 않습니다. 운영비 포함 선택 시 해당 운영비에만 반영합니다.</p></section>
- <section class="mv-controls"><div class="mv-filterline"><label>마진 방식<select id="v02MarginType"><option value="profit">매출 기준 이익률</option><option value="markup" ${saved?.marginType==='markup'?'selected':''}>원가 가산율</option></select></label>${numberInput('v02Margin','목표 마진 (%)',saved?.margin==null?'':saved.margin*100)}<button class="mv-btn primary" type="submit">원가·후보가격 계산</button></div></section></form><div id="v02CostResult" aria-live="polite"></div></div>`;
+ <section class="mv-controls"><div class="mv-filterline"><label>마진 방식<select id="v02MarginType"><option value="profit">매출 기준 이익률</option><option value="markup" ${saved?.marginType==='markup'?'selected':''}>원가 가산율</option></select></label>${numberInput('v02Margin','목표 마진 (%)',saved?.margin==null?'':saved.margin*100)}<label>동일 조건 시장 비교<select id="v02CostMarket"></select></label><button class="mv-btn primary" type="submit">원가·후보가격 계산</button></div></section></form><div id="v02CostResult" aria-live="polite"></div></div>`;
  const form=$('#v02CostForm'),out=$('#v02CostResult');
+ bindCostMarket(form, api, saved?.marketFilters);
  const toggleElectricity=()=>{const separate=$('#electricMode').value==='separate';for(const id of ['electricKw','electricPue','electricTariff']){$('#'+id).disabled=!separate;if(!separate)$('#'+id).value='';}$('#electricOwner').disabled=$('#electricMode').value!=='included';};
  toggleElectricity();$('#electricMode').addEventListener('change',toggleElectricity);
  const toggleMonth=()=>$('#costMonth').disabled=$('#costPeriod').value!=='month';toggleMonth();$('#costPeriod').addEventListener('change',toggleMonth);
- calculationInvalidator(form,out,()=>{V02.costInput=readCostForm();V02.cost=null;});
- form.onsubmit=e=>{e.preventDefault();V02.cost=null;V02.costInput=readCostForm();try{
-  const input=V02.costInput,r=GpuV02.cost(input);V02.cost=r;out.dataset.state='valid';
+ let revision = 0;
+ calculationInvalidator(form,out,()=>{revision++; V02.costInput=readCostForm();V02.cost=null;});
+ const submit = form.querySelector('button[type="submit"]');
+ form.onsubmit=async e=>{
+  e.preventDefault();
+  if (submit.disabled) return;
+  V02.cost=null;
+  const input = readCostForm();
+  V02.costInput = input;
+  const ticket = ++revision;
+  submit.disabled = true;
+  out.dataset.state = 'loading';
+  out.textContent = 'Spring에서 원가를 계산하고 있습니다.';
+  try {
+  if (!input.modelId) throw Error('GPU 모델을 선택하세요.');
+  if (input.rate == null || input.rate < 0 || input.rate > 1 || input.salvage == null) {
+    throw Error('연 자본비용률(0~100%)과 말기 잔존가치를 입력하세요.');
+  }
+  const r = await calculateCost(api,input);
+  if (ticket !== revision || !form.isConnected) return;
+  V02.cost=r;out.dataset.state='valid';
   const price=v=>`${mp(v)}${input.fx>0?`<small>${Math.round(v*input.fx).toLocaleString('ko-KR')}원 · 비용 환산용 입력 환율 기준</small>`:''}`;
-  out.innerHTML=`<section class="mv-note"><h3>${r.incomplete?'불완전 원가 · 조건부 결과':'입력 항목 반영 결과'}</h3>${r.incomplete?`<p class="v02-warning">미반영: ${r.missing.map(mh).join(', ')}. 누락 비용 때문에 마진이 실제보다 높게 나올 수 있습니다.</p>`:''}${r.negativeMargin?'<p class="v02-warning">음수 가산율: 원가보다 낮은 손실 판매 가정입니다.</p>':''}<div class="v02-results"><div>시간당 원가<strong>${price(r.unit)}</strong><span>USD / GPU·시간</span></div><div>후보가격<strong>${price(r.candidate)}</strong><span>USD / GPU·시간</span></div><div>${r.period==='month'?mh(r.month)+' 월':'연간 고정'} 비용<strong>${mp(r.periodCost)}</strong><span>${r.periodHours.toLocaleString()}시간 · 판매 ${r.hours.toLocaleString()} GPU시간</span></div></div><p>초기 투자금 ${mp(r.capex)} · 말기 잔존가치 ${mp(r.salvage)} · 연 자본비용률 ${(r.rate*100).toFixed(2)}% · CRF ${r.crf.toFixed(6)}</p><p>연 자본회수분 = (투자금 − 잔존가치 / (1+r)<sup>n</sup>) × CRF = ${mp(r.capitalAnnual)}<br>기간 전기료 ${input.electricity.mode==='missing'?'미반영':input.electricity.mode==='included'?'운영비에 포함 (별도 가산 없음)':mp(r.periodElectricity)} · 기타 연 운영비 ${mp(r.otherOpex)}<br>시간당 원가 = 기간 총원가 ÷ (GPU 수 × 기간 시간 × 가동률). 후보가격 = ${input.marginType==='profit'?'원가 ÷ (1 − 매출 이익률)':'원가 × (1 + 가산율)'}.</p><p>산식 ${r.version}. 시장가격·예측·추천 범위와는 별도인 입력 가정 계산입니다.</p><details><summary>IRR에 전달되는 값 확인</summary><p>투자금 ${mp(r.capex)}, 사용연수 ${r.years}년, 잔존가치 ${mp(r.salvage)}, ${r.gpu} GPU, 가동률 ${r.util*100}%, 판매가격 ${mp(r.candidate)}, 연 현금 운영비 ${mp(r.opex)}를 덮어씁니다. 기존 목표 IRR은 유지합니다. 월 계산도 선택 월 가정을 연간 고정하며 전기료는 8,760시간으로 환산합니다. 자본회수분은 현금 운영비에 넣지 않습니다.</p></details><button type="button" id="applyCostToIrr" class="mv-btn primary">위 가정을 IRR에 적용</button></section>`;
+  out.innerHTML=`<section class="mv-note"><h3>${r.incomplete?'불완전 원가 · 조건부 결과':'입력 항목 반영 결과'}</h3>${r.incomplete?`<p class="v02-warning">미반영: ${r.missing.map(mh).join(', ')}. 누락 비용 때문에 마진이 실제보다 높게 나올 수 있습니다.</p>`:''}${r.negativeMargin?'<p class="v02-warning">목표율이 음수여서 원가보다 낮은 후보가격입니다.</p>':''}<div class="v02-results"><div>시간당 원가<strong>${price(r.unit)}</strong><span>USD / GPU·시간</span></div><div>후보가격<strong>${price(r.candidate)}</strong><span>USD / GPU·시간</span></div><div>${r.period==='month'?mh(r.month)+' 월':'연간 고정'} 비용<strong>${mp(r.periodCost)}</strong><span>${r.periodHours.toLocaleString()}시간 · 판매 ${r.hours.toLocaleString()} GPU시간</span></div></div><p>초기 투자금 ${mp(r.capex)} · 말기 잔존가치 ${mp(r.salvage)} · 연 자본비용률 ${(r.rate*100).toFixed(2)}% · CRF ${r.crf.toFixed(6)}</p><p>연 자본회수분 = (투자금 − 잔존가치 / (1+r)<sup>n</sup>) × CRF = ${mp(r.capitalAnnual)}<br>기간 전기료 ${input.electricity.mode==='missing'?'미반영':input.electricity.mode==='included'?'운영비에 포함 (별도 가산 없음)':mp(r.periodElectricity)} · 기타 연 운영비 ${mp(r.otherOpex)}<br>시간당 원가 = 기간 총원가 ÷ (GPU 수 × 기간 시간 × 가동률). 후보가격 = ${input.marginType==='profit'?'원가 ÷ (1 − 매출 이익률)':'원가 × (1 + 가산율)'}.</p><p>Spring 계산 · 산식 ${mh(r.version)}. ${mh(r.disclaimer||'')}</p>${r.nonPositiveCandidate?'<p class="v02-warning">후보가가 0 이하라 예상 이익률을 산출할 수 없습니다.</p>':''}<div data-cost-market></div><details><summary>IRR에 전달되는 값 확인</summary><p>투자금 ${mp(r.capex)}, 사용연수 ${r.years}년, 잔존가치 ${mp(r.salvage)}, ${r.gpu} GPU, 가동률 ${r.util*100}%, 판매가격 ${mp(r.candidate)}, 연 현금 운영비 ${mp(r.opex)}를 덮어씁니다. 기존 목표 IRR은 유지합니다. 월 계산도 선택 월 가정을 연간 고정하며 전기료는 8,760시간으로 환산합니다. 자본회수분은 현금 운영비에 넣지 않습니다.</p></details><button type="button" id="applyCostToIrr" class="mv-btn primary" ${r.nonPositiveCandidate?'disabled':''}>위 가정을 IRR에 적용</button></section>`;
+  showCostMarket(out.querySelector('[data-cost-market]'), r.marketComparison);
   $('#applyCostToIrr').onclick=()=>{if(V02.cost!==r)return;V02.irrInput={initial:r.capex,years:r.years,salvage:r.salvage,gpu:r.gpu,util:r.util,price:r.candidate,opex:r.opex,target:V02.irrInput?.target??null};V02.irrProvenance='원가 계산에서 전달 · '+(r.period==='month'?r.month+' 가정을 연간 고정':'연간 고정');V02.irrIncomplete=r.incomplete;location.hash='#bizcase';};
- }catch(error){out.dataset.state='invalid';out.textContent=error.message;}};
- if(V02.costInput)out.textContent='입력 가정을 복원했습니다. 결과를 확인하려면 다시 계산하세요.';
+  } catch(error) {
+    if (ticket === revision && form.isConnected) {
+      out.dataset.state='invalid';
+      out.textContent=error.message;
+    }
+  } finally {
+    submit.disabled = false;
+  }
+ };
+ if (modelFailure) out.textContent = 'GPU 모델 조회 실패 · ' + modelFailure;
+ else if(V02.costInput)out.textContent='입력 가정을 복원했습니다. 결과를 확인하려면 다시 계산하세요.';
 };
 const irrFields={initial:'Initial',years:'Years',opex:'Opex',gpu:'Gpu',util:'Util',salvage:'Salvage',target:'Target',price:'Price'};
 function readIrrForm(){const input={};for(const [key,id] of Object.entries(irrFields)){const value=fieldValue('irr'+id);input[key]=value==null?null:['util','target'].includes(key)?value/100:value;}return input;}
