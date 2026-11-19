@@ -9,7 +9,7 @@ html body .portal-search{border:0;background:none;padding:8px;width:auto}
 html body .portal-search .search-label,html body .portal-search kbd{display:none}
 html body .logo-svc{font-size:14px}
 html body.signature-page{background:#fff!important;color:var(--sg-ink)}
-html body.signature-page #hello,html body.signature-page #band,html body.signature-page .crumbs,html body.signature-page #snb,html body.signature-page #dataContext,html body.signature-page .research-fx,html body.signature-page #v02Fx,html body.signature-page #portalNext,html body.signature-page .main-footer{display:none!important}
+html body.signature-page #hello,html body.signature-page #band,html body.signature-page .crumbs,html body.signature-page #snb,html body.signature-page #dataContext,html body.signature-page #portalNext,html body.signature-page .main-footer{display:none!important}
 html body.signature-page #layout{display:block!important;max-width:none!important;padding:0!important;margin:0!important}
 html body.signature-page #content{display:block;padding:0!important;margin:0!important}
 html body.signature-page .view{padding:0!important}

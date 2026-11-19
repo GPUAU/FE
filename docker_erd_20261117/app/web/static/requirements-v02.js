@@ -1,22 +1,5 @@
 /* Requirements v0.2: display FX provenance and local-only cost / IRR scenarios. */
 const V02={fx:null,manualFx:null,fxPromise:null,cost:null,costInput:null,irrInput:null};
-async function openFinancialSettings(){
- let dialog=document.querySelector('#financialSettings');
- if(!dialog){dialog=document.createElement('dialog');dialog.id='financialSettings';dialog.className='v02-settings';document.body.append(dialog);}
- dialog.innerHTML='<h2>환율·금리 API 설정</h2><p>설정 상태를 확인하고 있습니다.</p>';dialog.showModal();
- try{
-  const info=await api('/api/settings/financial');
-  dialog.innerHTML=`<div class="mv"><h2>한국수출입은행 API 키</h2><p>이 설정은 기존 Python 서버 전용이며 Spring 서버의 .env 키와 연동되지 않습니다. Spring 환율 조회는 별도로 DB에 적재된 환율을 사용합니다.</p><form id="financialSettingsForm" autocomplete="off"><label>환율 API 키 <small>${info.fx_configured?'저장됨 · 변경할 때만 입력':'미등록'}</small><input id="financialFxKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="발급받은 환율 인증키"></label><label>금리 API 키 <small>${info.interest_configured?'저장됨 · 변경할 때만 입력':'미등록'}</small><input id="financialInterestKey" type="password" autocomplete="new-password" spellcheck="false" placeholder="발급받은 금리 인증키"></label><p id="financialSettingsStatus" role="status">환율 ${info.fx_validated_at?'조회·적재 확인 '+mh(info.fx_validated_at):'미검증'} · 금리 ${info.interest_validated_at?'조회·적재 확인 '+mh(info.interest_validated_at):'미검증'}. 키 변경 후에는 다시 수집·검증해야 합니다.</p><div class="mv-actions"><button type="submit" class="mv-btn primary">키 저장</button><button type="button" class="mv-btn" id="financialClose">닫기</button></div></form></div>`;
-  $('#financialClose').onclick=()=>{dialog.close();dialog.innerHTML='';};
-  dialog.oncancel=()=>{dialog.innerHTML='';};
-  $('#financialSettingsForm').onsubmit=async e=>{e.preventDefault();const button=e.submitter;button.disabled=true;try{
-   const response=await fetch('/api/settings/financial',{method:'POST',headers:{'Content-Type':'application/json','X-Settings-Token':info.csrf_token},body:JSON.stringify({fx_key:$('#financialFxKey').value,interest_key:$('#financialInterestKey').value})});
-   const data=await response.json();if(!response.ok)throw Error(data.detail||'저장 실패');
-   $('#financialFxKey').value='';$('#financialInterestKey').value='';
-   $('#financialSettingsStatus').textContent=`저장 완료 · 환율 키 ${data.fx_configured?'등록됨':'미등록'} / 금리 키 ${data.interest_configured?'등록됨':'미등록'}. 실제 API 인증·데이터 조회는 아직 미검증입니다.`;
-  }catch(error){$('#financialSettingsStatus').textContent=error.message;}finally{button.disabled=false;}};
- }catch{dialog.innerHTML='<h2>설정 조회 실패</h2><p>서버 연결을 확인한 뒤 다시 시도하세요. Esc를 누르면 닫힙니다.</p>';}
-}
 async function openInterestRates(){
  let dialog=document.querySelector('#financialRates');
  if(!dialog){dialog=document.createElement('dialog');dialog.id='financialRates';dialog.className='v02-settings v02-rates';document.body.append(dialog);}
@@ -27,25 +10,50 @@ async function openInterestRates(){
   $('#financialRatesClose').onclick=()=>dialog.close();
  }catch{dialog.innerHTML='<h2>금리 조회 실패</h2><p>Esc를 눌러 닫고 서버 연결을 확인하세요.</p>';}
 }
-function fxPrice(value){return `${mp(value)}${value==null?'':`<small class="v02-krw" data-usd="${Number(value)}"></small>`}`;}
-function refreshKrw(){
- const rate=V02.manualFx??(V02.fx?.rate?Number(V02.fx.rate.rate):null);
- document.querySelectorAll('[data-usd]').forEach(el=>{el.textContent=rate?`${Math.round(Number(el.dataset.usd)*rate).toLocaleString('ko-KR')}원 · ${V02.manualFx?'사용자 가정':'현재 기준 환산'}`:'원화: 환율 없음';});
+function fxPrice(value){
+ const valid=value!==null&&value!==undefined&&String(value).trim()!==''&&Number.isFinite(Number(value));
+ return valid?`${mp(value)}<small class="v02-krw" data-usd="${Number(value)}"></small>`:'—';
 }
-async function fxData(){
- if(!V02.fxPromise)V02.fxPromise=api('/api/v1/exchange-rates/latest').then(d=>{if(!d.isSuccess)throw Error(d.message);const r=d.result;return V02.fx={status:r.status==='AVAILABLE'?'available':'unavailable',rate:r.rate==null?null:{rate:r.rate,reference_date:r.referenceDate,source_url:r.source?.url},reason:r.reason,stale:r.referenceDate ? Date.now()-Date.parse(r.referenceDate+'T00:00:00+09:00')>4*86400000:false};}).catch(()=>{V02.fxPromise=null;return V02.fx={status:'failed',reason:'환율 조회 실패 · 원화 계산을 하지 않습니다.'};});
+function refreshKrw(){
+ document.querySelectorAll('[data-usd]').forEach(el=>{el.textContent=GpuFx.krwText(el.dataset.usd,V02.fx,V02.manualFx);});
+}
+async function fxData(force=false){
+ if(V02.fxPromise)return V02.fxPromise;
+ if(!force&&V02.fx)return V02.fx;
+ V02.fxPromise=GpuFx.fetchLatestFx().then(data=>{V02.fx=data;return data;}).finally(()=>{V02.fxPromise=null;});
  return V02.fxPromise;
 }
-async function mountFx(){
+function fxCollectedAt(value){
+ if(!value||!Number.isFinite(Date.parse(value)))return '수집 시각 미제공';
+ return new Intl.DateTimeFormat('ko-KR',{timeZone:'Asia/Seoul',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(value))+' KST';
+}
+function paintFx(panel,loading=false){
+ const d=V02.fx,applied=GpuFx.appliedRate(d,V02.manualFx),open=panel.querySelector('details')?.open;
+ const source=d?.rate?.source_name;
+ const sourceName=source&&/koreaexim/i.test(source)?'한국수출입은행':source||'출처 미제공';
+ const status=applied.manual?'사용자 가정':loading?'조회 중':d?.status==='failed'?'조회 실패':!d?.rate?'미확보':d.stale?'오래된 공시':'자동 환율';
+ const current=applied.rate!==null?`1 USD = ${applied.rate.toLocaleString('ko-KR',{maximumFractionDigits:6})} KRW`:loading?'환율 조회 중…':d?.status==='failed'?'환율 조회 실패':'환율 미확보';
+ const date=applied.manual?'사용자 입력 · 공시 기준일 없음':d?.rate?`공시 기준일 ${d.rate.reference_date}`:'조회 출처 · 한국수출입은행';
+ const warnings=[...(d?.stale?['환율 기준일이 4일을 초과했습니다. 오래된 환율로 환산 중입니다.']:[]),...(d?.warnings||[])];
+ panel.setAttribute('aria-busy',String(loading));
+ panel.innerHTML=`<div class="fx-display-head"><div class="fx-display-title"><span>USD → KRW</span><span class="fx-state ${applied.manual?'is-manual':d?.stale||d?.status==='failed'?'is-warning':''}">${mh(status)}</span><h2 id="fxSummaryCurrent">${mh(current)}</h2><p id="fxSummaryDate">${mh(date)}${!applied.manual&&d?.rate?' · '+mh(sourceName):''}</p></div><button type="button" class="mv-btn" id="v02FxRefresh" ${loading?'disabled':''}>${loading?'조회 중…':'환율 다시 조회'}</button></div>
+ <div id="fxDisplayStatus" class="fx-display-status" role="status" aria-live="polite">${loading?'저장된 최신 환율을 확인하고 있습니다.':d?.reason?mh(d.reason):''}${applied.manual?' 사용자 입력값으로 환산 중입니다. 자동 환율과 원본 가격은 변경하지 않습니다.':''}${warnings.map(w=>`<p class="fx-warning">${mh(w)}</p>`).join('')}</div>
+ <details class="fx-display-details" ${open?'open':''}><summary>환율 출처 · 사용자 환율 입력</summary><div class="fx-display-body"><div class="fx-provenance"><h3>자동 환율 정보</h3>${d?.rate?`<p><b>1 USD = ${Number(d.rate.rate).toLocaleString('ko-KR',{maximumFractionDigits:6})} KRW</b></p><p>공시 기준일 ${mh(d.rate.reference_date)} · ${mh(sourceName)}</p><p>수집 ${mh(fxCollectedAt(d.rate.collected_at))}</p>${d.rate.source_url?mlink(d.rate.source_url,'환율 출처 보기 ↗'): '<p>출처 링크 미제공</p>'}`:`<p>${d?.status==='failed'?'자동 환율 조회 실패':'자동 환율 미확보'}</p>`}<p>원화는 표시 환율로 재계산한 참고값이며, 과거 관측 당시의 원화 가격이 아닙니다. 차트와 CSV의 가격 기준은 USD입니다.</p><button type="button" class="mv-btn" id="v02Interest">금리 자료 보기</button></div><form id="v02FxForm"><label for="v02FxInput">사용자 환율 <span>KRW / USD</span></label><input id="v02FxInput" type="number" min="0.000001" step="any" inputmode="decimal" required placeholder="예: 1400 (가정값)" value="${V02.manualFx??''}" aria-describedby="v02FxNote"><div class="fx-form-actions"><button class="mv-btn" type="submit">적용</button><button class="mv-btn" type="button" id="v02FxReset">자동 환율로 복귀</button></div><small id="v02FxNote" role="status">${applied.manual?'사용자 가정 적용 중 · 새로고침하면 초기화':'입력값은 저장하거나 서버로 전송하지 않습니다.'}</small></form></div></details>`;
+ panel.querySelector('#v02FxRefresh').onclick=()=>mountFx(true);
+ panel.querySelector('#v02Interest').onclick=openInterestRates;
+ panel.querySelector('#v02FxForm').onsubmit=e=>{
+  e.preventDefault();const value=GpuFx.positiveNumber(panel.querySelector('#v02FxInput').value);
+  if(value===null){panel.querySelector('#v02FxNote').textContent='0보다 큰 유효한 환율을 입력하세요.';return;}
+  V02.manualFx=value;paintFx(panel,Boolean(V02.fxPromise));refreshKrw();panel.querySelector('#v02FxInput').focus();
+ };
+ panel.querySelector('#v02FxReset').onclick=()=>{V02.manualFx=null;paintFx(panel,Boolean(V02.fxPromise));refreshKrw();panel.querySelector('#v02FxReset').focus();};
+}
+async function mountFx(force=false){
  let panel=document.querySelector('#v02Fx');
- if(!panel){panel=document.createElement('section');panel.id='v02Fx';panel.className='v02-fx';document.querySelector('#dataContext').after(panel);}
- const d=await fxData();
- panel.innerHTML=`<details class="fx-disclosure"><summary><span class="fx-summary-label" id="fxSummaryLabel">${V02.manualFx?'사용자 가정 환율':'기준 환율'}</span><strong id="fxSummaryCurrent">${V02.manualFx?`1 USD = ${V02.manualFx.toLocaleString('ko-KR')}원`:d.rate?`1 USD = ${Number(d.rate.rate).toLocaleString('ko-KR')}원`:(d.status==='failed'?'조회 실패':'환율 없음')}</strong><span class="fx-summary-date">${d.rate?`공시 기준일 ${mh(d.rate.reference_date)}${d.stale?' · 기준일 4일 초과':''}`:'한국수출입은행 환율 미적재'}</span><span class="fx-summary-action">환율·금리 설정</span></summary><div class="fx-details"><div><b>USD → KRW 환율</b> <button type="button" class="mv-btn" id="v02ApiSettings">환율·금리 API 설정</button><p>${d.rate?`1 USD = <strong>${Number(d.rate.rate).toLocaleString('ko-KR')}원</strong> · 기준일 ${mh(d.rate.reference_date)} · ${mlink(d.rate.source_url,'한국수출입은행')}${d.stale?' <b class="v02-warning">기준일 4일 초과</b>':''}`:`<strong>${d.status==='failed'?'환율 조회 실패':'환율 없음'}</strong> · 한국수출입은행 환율 미적재`}</p><p><button type="button" class="mv-btn" id="v02Interest">금리 보기</button> <small id="v02InterestSummary">금리 확인 중…</small></p><small>공개가격 기준이며 실제 거래가와 다를 수 있음. VM 가격에는 CPU·RAM 등이 포함됩니다.</small></div><form id="v02FxForm"><label>사용자 환율 시나리오 <span>KRW / USD</span><input id="v02FxInput" type="number" min="0.01" step="0.01" placeholder="직접 입력" value="${V02.manualFx??''}" aria-label="사용자 환율"></label><button class="mv-btn" type="submit">적용</button><button class="mv-btn" type="button" id="v02FxReset">초기화</button><small id="v02FxNote" aria-live="polite">${V02.manualFx?'사용자 가정 적용 중 · 새로고침하면 초기화':'입력값은 저장하지 않습니다.'}</small></form></div></details>`;
- $('#v02FxForm').onsubmit=e=>{e.preventDefault();const value=Number($('#v02FxInput').value);if(!Number.isFinite(value)||value<=0){$('#v02FxNote').textContent='0보다 큰 환율을 입력하세요.';return;}V02.manualFx=value;$('#fxSummaryLabel').textContent='사용자 가정 환율';$('#fxSummaryCurrent').textContent=`1 USD = ${value.toLocaleString('ko-KR')}원`;$('#v02FxNote').textContent=`사용자 가정 ${value.toLocaleString('ko-KR')}원/USD 적용 · 저장하지 않음`;refreshKrw();};
- $('#v02FxReset').onclick=()=>{V02.manualFx=null;$('#fxSummaryLabel').textContent='기준 환율';$('#fxSummaryCurrent').textContent=d.rate?`1 USD = ${Number(d.rate.rate).toLocaleString('ko-KR')}원`:(d.status==='failed'?'조회 실패':'환율 없음');$('#v02FxInput').value='';$('#v02FxNote').textContent='사용자 환율 초기화 · 입력값은 저장하지 않습니다.';refreshKrw();};
- $('#v02ApiSettings').onclick=openFinancialSettings;
- $('#v02Interest').onclick=openInterestRates;
- api('/api/erd/interest').then(info=>{const el=$('#v02InterestSummary');if(el)el.textContent=info.status==='available'?`금리 ${info.rates.length}개 항목 · 기준일 ${info.capture.reference_date} · 수동 수집`:'금리 자료 미확보';}).catch(()=>{const el=$('#v02InterestSummary');if(el)el.textContent='금리 조회 실패';});
+ if(!panel){panel=document.createElement('section');panel.id='v02Fx';panel.className='v02-fx';panel.setAttribute('aria-label','USD 원화 환율 정보');document.querySelector('#dataContext').after(panel);}
+ const loading=force||!V02.fx||Boolean(V02.fxPromise);
+ paintFx(panel,loading);
+ if(loading){await fxData(force);if(panel.isConnected)paintFx(panel);}
  refreshKrw();
 }
 const beforeV02Frame=mframe;

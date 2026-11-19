@@ -1,15 +1,4 @@
 /* Chart-first research layout; all observations and evidence remain unchanged. */
-const researchOriginalFx = mountFx;
-mountFx = async function () {
-  await researchOriginalFx();
-  const panel = document.querySelector('#v02Fx');
-  if (panel && !panel.closest('.research-fx')) {
-    const details = document.createElement('details');
-    details.className = 'research-fx';
-    details.innerHTML = '<summary>환율·금리 및 사용자 시나리오 <span>설정 열기 ＋</span></summary>';
-    panel.before(details); details.append(panel);
-  }
-};
 function researchRoute() { document.body.classList.toggle('research-trend', location.hash.split('/')[0] === '#trend'); }
 window.addEventListener('hashchange', researchRoute);
 researchRoute();

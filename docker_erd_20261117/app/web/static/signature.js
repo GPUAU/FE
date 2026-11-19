@@ -17,6 +17,7 @@ const sgArrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stro
 const sgSearch = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>';
 const sgCount = n => Number(n).toLocaleString('en-US');
 const sgMoney = n => n == null || !Number.isFinite(Number(n)) ? '—' : mp(n);
+const sgPrice = n => n == null || !Number.isFinite(Number(n)) ? '—' : fxPrice(n);
 const sgDay = t => t ? kstDay(t) : '미확인';
 function sgRoute(){document.body.classList.toggle('signature-page',['home','trend',''].includes(location.hash.slice(1).split('/')[0]));}
 window.addEventListener('hashchange',sgRoute);sgRoute();
@@ -44,10 +45,11 @@ function sgHistoryRows(){
 function sgStats(rows){
   const prices=rows.filter(r=>r.price!=null&&Number.isFinite(Number(r.price))).map(r=>Number(r.price)).sort((a,b)=>a-b);
   const median=prices.length?(prices[Math.floor((prices.length-1)/2)]+prices[Math.floor(prices.length/2)])/2:null;
-  return `<div class="sg-metric"><span>선택 요금 최저가</span><strong class="sg-red">${sgMoney(prices[0])}</strong><small>USD / GPU·시간 · 참고 단가</small></div><div class="sg-metric"><span>선택 요금 중앙값</span><strong>${sgMoney(median)}</strong><small>오퍼별 최신 확보 단가 기준</small></div><div class="sg-metric"><span>가격 확보 오퍼</span><strong>${sgCount(rows.length)}<em>개</em></strong><small>${new Set(rows.map(r=>r.provider)).size}개 사업자 · ${new Set(rows.map(r=>r.region)).size}개 리전</small></div><div class="sg-metric"><span>수집 기준일</span><strong class="sg-date">${sgDay(SG.data.market.snapshot_at)}</strong><small><i class="sg-status-dot"></i>저장 자료 · 자동 갱신 없음</small></div>`;
+  return `<div class="sg-metric"><span>선택 요금 최저가</span><strong class="sg-red">${sgPrice(prices[0])}</strong><small>USD / GPU·시간 · 참고 단가</small></div><div class="sg-metric"><span>선택 요금 중앙값</span><strong>${sgPrice(median)}</strong><small>오퍼별 최신 확보 단가 기준</small></div><div class="sg-metric"><span>가격 확보 오퍼</span><strong>${sgCount(rows.length)}<em>개</em></strong><small>${new Set(rows.map(r=>r.provider)).size}개 사업자 · ${new Set(rows.map(r=>r.region)).size}개 리전</small></div><div class="sg-metric"><span>수집 기준일</span><strong class="sg-date">${sgDay(SG.data.market.snapshot_at)}</strong><small><i class="sg-status-dot"></i>저장 자료 · 자동 갱신 없음</small></div>`;
 }
 async function signatureRender(view='home'){
   const ticket=++SG.seq;SG.view=view;
+  mountFx();
   sgRoute();
   const root=document.getElementById('v-'+view);
   try{await sgData();}catch(e){root.innerHTML='<div class="sg-error"><h2>가격 자료를 불러오지 못했습니다.</h2><p>연결 상태를 확인한 뒤 다시 시도해 주세요.</p><button class="sg-button" id="sgRetry">다시 불러오기</button></div>';root.querySelector('#sgRetry').onclick=()=>signatureRender(view);return;}
@@ -84,14 +86,14 @@ async function signatureRender(view='home'){
   root.querySelector('#sgPeriod').onchange=e=>{SG.period=e.target.value;sgDrawHistory(root);};
   root.querySelector('#sgExport').onclick=()=>downloadCSV(`GPU_${SG.model}_${SG.term}.csv`,['사업자','모델','상품','리전','GPU수','요금제','지불방식','USD_GPU시간','가격기준','수집UTC','관측ID','출처'],sgCurrentRows().map(r=>[r.provider,r.model,r.product,r.region,r.gpus,r.contract,r.payment,r.price,r.basis,r.collected,r.observation,r.source]));
   root.querySelector('#sgHistoryExport').onclick=()=>downloadCSV(`GPU_${SG.model}_observations.csv`,['관측ID','사업자','모델','상품','리전','계약','표시기준UTC','수집UTC','USD_GPU시간','출처'],sgHistoryRows().map(r=>[r.observation_id,r.provider_name,r.model_name,r.original_product_name,r.region_code,r.contract_product_type,r.chart_at,r.collected_at,r.price,r.original_url]));
-  sgRenderOffers(root);sgDrawHistory(root);
+  sgRenderOffers(root);sgDrawHistory(root);refreshKrw();
 }
 function sgRenderOffers(root){
   const rows=sgCurrentRows(),size=6;
   SG.page=Math.min(SG.page,Math.max(0,Math.ceil(rows.length/size)-1));
   root.querySelector('#sgResultCount').textContent=rows.length;
   root.querySelector('#sgMetrics').innerHTML=sgStats(rows);
-  root.querySelector('#sgOfferList').innerHTML=rows.length?`<div class="sg-table-head"><span>사업자 / 상품</span><span>상품 구성</span><span>GPU당 시간 단가</span><span>근거</span></div>${rows.slice(SG.page*size,(SG.page+1)*size).map((r,i)=>`<article class="sg-offer"><div class="sg-offer-brand"><div class="sg-provider-logo ${r.provider.toLowerCase()}">${r.provider==='AWS'?'aws':r.provider==='Azure'?'A':mh(r.provider.slice(0,1))}</div><div><h4>${mh(r.provider)}${SG.sort==='price'&&SG.page===0&&i===0&&r.price!=null?'<small>최저 참고 단가</small>':''}</h4><p>${mh(r.product)}</p><span>수집 ${sgDay(r.collected)}</span></div></div><div class="sg-configuration"><b>${mh(r.region||'리전 미확인')}</b><span>${r.gpus??'미확인'} GPU / VM</span><small>${mh(r.contract)}${r.payment?' · '+mh(r.payment):''}</small></div><div class="sg-offer-price"><strong>${sgMoney(r.price)}</strong><span>/ GPU·시간</span><small>${mh(r.basis)}</small></div><button class="sg-evidence" data-observation="${r.observation}" aria-label="${mh(r.provider+' '+r.region+' '+r.contract)} 상세 근거">${sgArrow}</button></article>`).join('')}<div class="sg-pagination"><span>${SG.page*size+1}–${Math.min((SG.page+1)*size,rows.length)} / ${rows.length}개 오퍼</span><div><button id="sgPrev" ${SG.page===0?'disabled':''} aria-label="이전 상품 페이지">←</button><b>${SG.page+1} <span>/ ${Math.ceil(rows.length/size)}</span></b><button id="sgNext" ${(SG.page+1)*size>=rows.length?'disabled':''} aria-label="다음 상품 페이지">→</button></div></div>`:`<div class="sg-empty"><span>—</span><h4>선택 조건의 가격 자료가 없습니다.</h4><p>가격 미확보는 0원이나 미판매를 뜻하지 않습니다.<br>다른 모델·계약 조건을 선택하거나 필터를 초기화해 주세요.</p><button id="sgReset" class="sg-button">필터 초기화</button></div>`;
+  root.querySelector('#sgOfferList').innerHTML=rows.length?`<div class="sg-table-head"><span>사업자 / 상품</span><span>상품 구성</span><span>GPU당 시간 단가</span><span>근거</span></div>${rows.slice(SG.page*size,(SG.page+1)*size).map((r,i)=>`<article class="sg-offer"><div class="sg-offer-brand"><div class="sg-provider-logo ${r.provider.toLowerCase()}">${r.provider==='AWS'?'aws':r.provider==='Azure'?'A':mh(r.provider.slice(0,1))}</div><div><h4>${mh(r.provider)}${SG.sort==='price'&&SG.page===0&&i===0&&r.price!=null?'<small>최저 참고 단가</small>':''}</h4><p>${mh(r.product)}</p><span>수집 ${sgDay(r.collected)}</span></div></div><div class="sg-configuration"><b>${mh(r.region||'리전 미확인')}</b><span>${r.gpus??'미확인'} GPU / VM</span><small>${mh(r.contract)}${r.payment?' · '+mh(r.payment):''}</small></div><div class="sg-offer-price"><strong>${sgPrice(r.price)}</strong><span>/ GPU·시간</span><small>${mh(r.basis)}</small></div><button class="sg-evidence" data-observation="${r.observation}" aria-label="${mh(r.provider+' '+r.region+' '+r.contract)} 상세 근거">${sgArrow}</button></article>`).join('')}<div class="sg-pagination"><span>${SG.page*size+1}–${Math.min((SG.page+1)*size,rows.length)} / ${rows.length}개 오퍼</span><div><button id="sgPrev" ${SG.page===0?'disabled':''} aria-label="이전 상품 페이지">←</button><b>${SG.page+1} <span>/ ${Math.ceil(rows.length/size)}</span></b><button id="sgNext" ${(SG.page+1)*size>=rows.length?'disabled':''} aria-label="다음 상품 페이지">→</button></div></div>`:`<div class="sg-empty"><span>—</span><h4>선택 조건의 가격 자료가 없습니다.</h4><p>가격 미확보는 0원이나 미판매를 뜻하지 않습니다.<br>다른 모델·계약 조건을 선택하거나 필터를 초기화해 주세요.</p><button id="sgReset" class="sg-button">필터 초기화</button></div>`;
   const prev=root.querySelector('#sgPrev'),next=root.querySelector('#sgNext'),reset=root.querySelector('#sgReset');
   if(prev)prev.onclick=()=>{SG.page--;sgRenderOffers(root);};if(next)next.onclick=()=>{SG.page++;sgRenderOffers(root);};
   if(reset)reset.onclick=()=>{SG.provider='ALL';SG.region='ALL';SG.query='';SG.term='ON_DEMAND';signatureRender(SG.view);};
@@ -112,7 +114,7 @@ function sgDrawHistory(root){
     root.querySelector('#sgMiniArea').innerHTML='<span class="sg-mini-empty">가격 관측 미확보</span>';
   }
   root.querySelector('#sgChartFoot').innerHTML=`<span><b>${sgCount(rows.length)}</b>개 가격 기록 <i>·</i> ${new Set(rows.map(r=>r.offer_id)).size}개 오퍼</span><span>${rows.length?sgDay(rows[0].chart_at)+' — '+sgDay(rows.at(-1).chart_at):'확보한 기간 없음'} <small>KST</small></span>`;
-  root.querySelector('#sgHistoryLog').innerHTML=rows.length?`<p>최근 기준일 12건 표시 · 전체 ${sgCount(rows.length)}건은 CSV로 확인할 수 있습니다.</p><div class="sg-log-scroll"><table><thead><tr><th>표시 기준일</th><th>사업자 · 리전</th><th>단가</th><th>출처</th></tr></thead><tbody>${rows.slice(-12).reverse().map(r=>`<tr><td>${sgDay(r.chart_at)}</td><td>${mh(r.provider_name+' · '+r.region_code)}</td><td>${sgMoney(r.price)}</td><td><button data-observation="${r.observation_id}">상세 근거 ↗</button></td></tr>`).join('')}</tbody></table></div>`:'<p>선택 조건의 관측 기록이 없습니다.</p>';
+  root.querySelector('#sgHistoryLog').innerHTML=rows.length?`<p>최근 기준일 12건 표시 · 전체 ${sgCount(rows.length)}건은 CSV로 확인할 수 있습니다.</p><div class="sg-log-scroll"><table><thead><tr><th>표시 기준일</th><th>사업자 · 리전</th><th>단가</th><th>출처</th></tr></thead><tbody>${rows.slice(-12).reverse().map(r=>`<tr><td>${sgDay(r.chart_at)}</td><td>${mh(r.provider_name+' · '+r.region_code)}</td><td>${sgPrice(r.price)}</td><td><button data-observation="${r.observation_id}">상세 근거 ↗</button></td></tr>`).join('')}</tbody></table></div>`:'<p>선택 조건의 관측 기록이 없습니다.</p>';
 }
 RENDER.home=()=>signatureRender('home');
 RENDER.trend=()=>signatureRender('trend');
