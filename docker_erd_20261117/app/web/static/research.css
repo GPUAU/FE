@@ -1,0 +1,77 @@
+/* Research surface inspired by GPU price indices; original white header retained. */
+html body:not(.is-home) {background:#fff;--ink:#202731;--ink-2:#667181;--line:#e4e8ee;--bg:#fff;--surface-2:#f7f8fa}
+html body:not(.is-home) .snb {background:#fff;border-right:1px solid #edf0f4;padding-right:15px;scrollbar-width:thin}
+html body:not(.is-home) .workspace-identity {padding:16px 8px 22px;border-bottom:1px solid #e7eaf0}
+html body:not(.is-home) .nav-section > a[aria-current=page] {background:#fff1f3;border-radius:6px;color:#d92344;box-shadow:none}
+html body:not(.is-home) .nav-section > a {font-size:12px}
+html body:not(.is-home) .mv-controls,html body:not(.is-home) .mv-tablebox {border-color:#e4e8ee;box-shadow:none}
+html body.research-trend .band {background:radial-gradient(ellipse at 100% 0%,#ecebff80,transparent 60%)}
+html body.research-trend .band-in {padding-block:12px 8px}
+html body.research-trend .band-title {border-bottom:0;min-height:0;padding:4px 0 8px}
+html body.research-trend .band-title h1 {font-size:34px;letter-spacing:-1.4px;max-width:100%;font-weight:740;color:#1c2430}
+html body.research-trend .band-title #pageDesc {max-width:100%;font-size:13px;color:#78818e;margin:8px 0}
+html body.research-trend .content {padding-top:0}
+html body.research-trend #content {display:flex;flex-direction:column}
+html body.research-trend #v-trend {order:0}
+html body.research-trend #dataContext {order:1}
+html body.research-trend .research-fx {order:2}
+html body.research-trend #portalNext {order:3}
+html body.research-trend #dataContext {padding:0;border:0;background:none;margin:0 0 10px;font-size:11px;color:#818997}
+html body.research-trend #dataContext b {font-size:11px;font-weight:500}
+html .research-fx {border:0;border-bottom:1px solid #e6e9ef;margin-bottom:20px;font-size:11px;color:#7d8592}
+html .research-fx > summary {padding:9px 0;cursor:pointer;display:flex;justify-content:space-between;list-style:none}
+html .research-fx > summary::-webkit-details-marker {display:none}
+html .research-fx #v02Fx {margin-top:8px}
+html #v-trend .mv {gap:0}
+html .research-models {display:flex;gap:5px;border-bottom:1px solid #e5e9ef;padding-bottom:13px;overflow-x:auto;margin-bottom:16px;scrollbar-width:thin}
+html .research-models button {background:#fff;border:1px solid transparent;border-radius:6px;color:#7a8290;padding:8px 13px;font-size:12px;white-space:nowrap;cursor:pointer;font-weight:600}
+html .research-models button[aria-pressed=true] {background:#202b3c;color:white;border-color:#202b3c}
+html .research-models button:hover {border-color:#bac3cf}
+html #v-trend .mv-controls {border:0;background:none;padding:0;margin:0 0 19px;border-radius:0}
+html #v-trend .mv-filterline {border:0;padding:0;display:grid;grid-template-columns:repeat(4,minmax(100px,1fr)) repeat(2,minmax(120px,.9fr));gap:12px;align-items:end}
+html #v-trend .mv-filterline label {min-width:0;font-size:11px;color:#78828f;gap:5px}
+html #v-trend .mv-filterline input,html #v-trend .mv-filterline select {width:100%;min-width:0;height:35px;border:1px solid #e0e5ed;border-radius:6px;background:#fff;font-size:12px;padding:6px 8px;color:#303b4b}
+html .research-stats {display:grid;grid-template-columns:1fr 1fr 1fr 1.35fr;border:1px solid #e5e9f0;border-radius:10px;background:linear-gradient(105deg,#fafbff,#fff);padding:14px 0;margin:0 0 22px}
+html .research-stats > div {padding:0 22px;border-right:1px solid #e4e8f0;display:flex;flex-direction:column;gap:4px}
+html .research-stats > div:last-child {border:0}
+html .research-stats span {font-size:11px;color:#7a8392}
+html .research-stats strong {font-size:30px;font-weight:650;letter-spacing:-1px;line-height:1.35;color:#26364d;font-variant-numeric:tabular-nums}
+html .research-stats > div:first-child strong {color:#d62b4c}
+html .research-stats strong em {font-size:13px;font-style:normal;margin-left:5px;font-weight:500;letter-spacing:0}
+html .research-stats small {font-size:10px;color:#8a93a1}
+html .research-stats .research-dates {font-size:16px;letter-spacing:0;padding-top:4px}
+html .research-dates em {display:block;margin-left:0!important;font-size:14px!important}
+html #v-trend .sk-comparison-chart {border:1px solid #e4e8f0;border-radius:10px;padding:23px 24px 15px;background:white;box-shadow:0 4px 18px #24334c03;margin:0 0 32px}
+html .research-charthead {display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:15px}
+html #v-trend .research-charthead h3 {font-size:20px;letter-spacing:-.5px;font-weight:680;margin:0}
+html .research-kicker {display:block;font-size:9px!important;font-weight:650!important;letter-spacing:1.6px!important;color:#939aaa!important;margin-bottom:6px}
+html .research-charthead > span {font-size:11px;color:#7e8896;background:#f7f8fb;padding:6px 10px;border-radius:5px;white-space:nowrap}
+html .research-legend {display:flex;gap:7px 14px;flex-wrap:wrap;margin:0 0 20px;max-height:62px;overflow-y:auto;scrollbar-width:thin}
+html .research-legend button {border:0;background:none;color:#748092;font-size:10px;padding:0;cursor:pointer;display:flex;align-items:center;gap:5px}
+html .research-legend i {width:7px;height:7px;border-radius:50%}
+html .research-legend button[aria-pressed=false] {opacity:.35;text-decoration:line-through}
+html .research-chartnote {border-top:1px solid #edf0f5;padding-top:12px;margin:14px 0 0;font-size:10px;color:#8b94a2;line-height:1.6}
+html .research-recordhead {display:flex;justify-content:space-between;align-items:center;margin:0 0 17px;gap:16px}
+html .research-recordhead h2 {font-size:21px;letter-spacing:-.6px;color:#293443}
+html .research-recordhead h2 small {font-size:12px;color:#d62b4c;margin-left:6px}
+html .research-recordhead p {margin:6px 0 0;font-size:11px;color:#8b93a0}
+html #v-trend .mv-tablebox {border:1px solid #e4e8ef;border-radius:8px;margin:0;overflow-x:auto}
+html #v-trend .mv-table {font-size:12px;min-width:820px}
+html #v-trend .mv-table th {background:#f8f9fc;color:#7a8492;font-size:10px;font-weight:500;border-bottom:1px solid #e4e8ef;padding:13px 16px;white-space:nowrap}
+html #v-trend .mv-table td {padding:16px;border-top:1px solid #edf0f4;color:#39475b;font-size:12px}
+html #v-trend .mv-table td:nth-child(4) {font-size:16px;font-weight:650;white-space:nowrap}
+html #v-trend .mv-table td span {color:#9199a5;font-size:10px;font-weight:400;margin-top:4px;max-width:200px;overflow-wrap:anywhere}
+html #v-trend .mv-table a {color:#75829a;font-size:10px}
+html #v-trend .mv-btn {border:1px solid #e1e6ed;background:#fff;color:#4b596d;border-radius:6px;font-size:11px;padding:8px 12px}
+html .research-pager {display:flex;justify-content:space-between;align-items:center;padding:16px 0 28px;font-size:11px;color:#8a94a1}
+html .research-pager > div {display:flex;align-items:center;gap:16px}
+html .research-pager button {background:#fff;border:1px solid #e2e7ef;border-radius:5px;padding:6px 10px;font-size:11px;color:#65748a;cursor:pointer}
+html .research-pager button:disabled {opacity:.35;cursor:default}
+html .research-methods {border-top:1px solid #e2e7ee;border-bottom:1px solid #e2e7ee;margin:0 0 28px}
+html .research-methods > summary {display:flex;justify-content:space-between;cursor:pointer;list-style:none;padding:18px 0;color:#68758a;font-size:12px}
+html .research-methods > summary > span:last-child {font-size:10px;color:#8c96a5}
+html .research-methods .mv-note {padding:14px 0;margin:0;border:0;background:none;font-size:11px}
+html #v-trend .mv-sourcebar {border:0;background:none;padding:0;font-size:10px;color:#8a94a1}
+@media(min-width:1100px){html body.research-trend .layout,html body.research-trend .band-in {grid-template-columns:190px minmax(0,1fr);gap:34px}}
+@media(max-width:1050px){html #v-trend .mv-filterline{grid-template-columns:repeat(3,minmax(0,1fr))}html .research-stats > div{padding:0 14px}html .research-stats strong{font-size:25px}}
+@media(max-width:640px){html body.research-trend .band-title h1{font-size:27px}html .research-stats{grid-template-columns:1fr 1fr;gap:20px 0}html .research-stats > div:nth-child(2){border:0}html #v-trend .mv-filterline{grid-template-columns:1fr 1fr}html #v-trend .sk-comparison-chart{padding:17px 12px}html .research-charthead{align-items:flex-start;flex-direction:column}html .research-recordhead{align-items:flex-end}html .research-recordhead p{max-width:190px}html .research-models button{padding:7px 10px}}
