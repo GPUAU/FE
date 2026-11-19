@@ -115,7 +115,7 @@ for(const view of ['cost','bizcase','agent','favorites','inquiries']){
 const originalLoadMeta=loadMeta;
 loadMeta=async()=>{await originalLoadMeta();const d=await api('/api/market');$('#sCount').textContent=`온디맨드 ${d.summary.current_offers}개 · 스팟·약정 ${d.summary.contract_offers}개 · 가격 관측 ${d.summary.observations}건 · 공식 과거 자료 ${d.summary.historical}건 · 아카이브 가격 ${d.summary.archive_observations}건`;};
 // The old refresh button also fetched rates. This preview only rereads its DB.
-document.addEventListener('click',async e=>{if(e.target.closest('#refreshBtn')){e.preventDefault();e.stopImmediatePropagation();MV.promise=null;await loadMeta();await render();toast('저장된 ERD 데이터를 다시 불러왔습니다. 외부 수집은 실행하지 않았습니다.');}},true);
+document.addEventListener('click',async e=>{if(e.target.closest('#refreshBtn')){e.preventDefault();e.stopImmediatePropagation();MV.promise=null;if(typeof sgInvalidateData==='function')sgInvalidateData();await loadMeta();await render();toast('저장된 ERD 데이터를 다시 불러왔습니다. 외부 수집은 실행하지 않았습니다.');}},true);
 
 PAGES.catalog.tools=false;PAGES.trend.tools=false;
 
