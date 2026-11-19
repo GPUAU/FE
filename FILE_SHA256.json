@@ -47,7 +47,7 @@
   "docker_erd_20261117/app/web/static/icons/sliders.svg": "38986f0874b63e3a34e5f489a39b23579f31cbd0c43b79d17e95b50312ac21fc",
   "docker_erd_20261117/app/web/static/img/enterprise-datacenter.jpg": "9704ee7d3761c5efcc5c84146e0e3f001196bd4fd3db2d7fd1631158f9ed953b",
   "docker_erd_20261117/app/web/static/img/skt-logo.png": "90c8a57c8a7ffaa9393e02cd0050bfb182d12b4bb73d80c38d79e526ccf9a02c",
-  "docker_erd_20261117/app/web/static/index-erd.html": "76bf0bc6cf52c6ccf129394a4c926fbd7b4e2ec0bc75e5dbc01ec39bd1443d35",
+  "docker_erd_20261117/app/web/static/index-erd.html": "03fdc71e60bf1780a2d136e0a915ae63e5d7cff3a6d5fda6626fe4a57e4c0336",
   "docker_erd_20261117/app/web/static/index.html": "7f1240dbbf7aa20a9d4d6689acf812ea07db194ca471de9d3a78567315ab325d",
   "docker_erd_20261117/app/web/static/login-redesign.css": "f5c18d87e65b96816423bd1bca99d9c8d08e8de426176839ce1d48a8bbbea133",
   "docker_erd_20261117/app/web/static/login.html": "a8972868a96ec42aaeb1463aca3b1669a122e1a53bc49f0cd906fcce6e5b50f3",
@@ -76,7 +76,7 @@
   "docker_erd_20261117/app/web/static/research.css": "3756f205c76902c487e224984e130c2a5962bc66fffa600fe8b6034a72eb6f8b",
   "docker_erd_20261117/app/web/static/research.js": "1b76c9000162ec4b9cf1190f13b4537054967f34ebdff746442164309d3acf43",
   "docker_erd_20261117/app/web/static/signature.css": "e4a6ab224039c6ab04cc1ed270760ab0ac144bc71c8ce5cb0012801ae34af6e1",
-  "docker_erd_20261117/app/web/static/signature.js": "bfc77f591d75124c3bfec4de7d7650e722a939ac2e6092bc5ff9fba302bd0eea",
+  "docker_erd_20261117/app/web/static/signature.js": "3bab26a46045a5c6c81e70b0acdce3bb1471ab3fb052e9a69a7fe4607c7137fb",
   "docker_erd_20261117/app/web/static/sk-analysis-bridge.js": "4a0327bb1c691aeb0010e59bb3250c860296d08858099421949112880baee3e1",
   "docker_erd_20261117/app/web/static/sk-theme.css": "bc81c6d3bb1d8abbfd89597618ebd8d1339515ad81274605360d2647f48d71d0",
   "docker_erd_20261117/app/web/static/source-scope.js": "97d93b14e243961ed357071aa09bea5d3da6ff1f7e3721b66e31d41a6dc57cac",
@@ -138,5 +138,6 @@
   "ui-spec/UI_QA_CHECKLIST.md": "2c5e7292d179453b7bf22060ebdc4926578fd7d672bce313b47a7e2250788c77",
   "ui-spec/UX_ARCHITECTURE.md": "1c989ec054663d6dc48e8c5a49936d071a7e8e899cf529b575c44012f43d8471",
   "ui-spec/WIREFRAMES.md": "642d492d783ad8d14c877039e8c60d5611e0330573a3123cbdfe5dc2da221180",
-  "몬테카를로_실행.command": "21f1ff83c83cf63ee6edfd0b4a7823bfe63e9e34a6c2c01b0d8bfc1a9b5bef7b"
+  "몬테카를로_실행.command": "21f1ff83c83cf63ee6edfd0b4a7823bfe63e9e34a6c2c01b0d8bfc1a9b5bef7b",
+  "docker_erd_20261117/app/web/static/sk-color-system.css": "6ad07c1daf5e3fac94a15f1ce5d231718e63a7dc18b65aed078974b0d954c621"
 }
