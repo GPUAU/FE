@@ -14,5 +14,13 @@
   const visible=new Set(visibleIds.map(id)),byId=new Map((data?.candidates||[]).filter(r=>visible.has(id(r.observation_id))&&eligible(r,mode,now)).map(r=>[id(r.observation_id),r]));
   return (data?.groups?.[mode]||[]).map(g=>({...g,rows:[...new Set(g.observation_ids.map(id))].map(x=>byId.get(x)).filter(Boolean)})).filter(g=>g.rows.length>0);
  }
- const api={eligible,stats,groups};root.GpuComparison=api;if(typeof module!=='undefined')module.exports=api;
+ // Exploration only: all selected offer prices, including dated reference data.
+ function reference(rows,now=Date.now()){
+  const valid=rows.filter(r=>r.price!==null&&r.price!==undefined&&String(r.price).trim()!==''&&Number.isFinite(Number(r.price))&&Number(r.price)>0);
+  const values=valid.map(r=>Number(r.price)).sort((a,b)=>a-b),n=values.length;
+  const times=valid.map(r=>Date.parse(r.collected)).filter(t=>Number.isFinite(t)&&t<=now);
+  const stale=times.filter(t=>now-t>48*3600000).length;
+  return {values:n?[values[0],(values[Math.floor((n-1)/2)]+values[Math.floor(n/2)])/2,values[n-1]]:null,count:n,providers:new Set(valid.map(r=>r.provider)).size,stale,unknownTime:n-times.length,earliest:times.length?Math.min(...times):null,latest:times.length?Math.max(...times):null};
+ }
+ const api={eligible,stats,groups,reference};root.GpuComparison=api;if(typeof module!=='undefined')module.exports=api;
 })(globalThis);
