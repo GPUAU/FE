@@ -1,0 +1,43 @@
+{
+  "meta": {
+    "product": "B300 GPU 클라우드 (샘플, 가상값)",
+    "data_asof": "2026-11-01",
+    "is_sample": true
+  },
+  "simulation": {
+    "n_paths": 20000,
+    "seed": 20261118,
+    "mean_block_length": 3,
+    "jump_prob_per_month": 0.03,
+    "jump_size_tri": [-0.30, -0.15, -0.05]
+  },
+  "forecast": {
+    "horizons": [3, 6, 12]
+  },
+  "market": {
+    "history_csv": "sample_price_history.csv",
+    "competitor_prices": {
+      "경쟁사 A (가상)": 4.95,
+      "경쟁사 B (가상)": 5.60
+    }
+  },
+  "investment": {
+    "gpus": 64,
+    "months": 48,
+    "capex_per_gpu": 55000,
+    "ramp_months": 3,
+    "residual_value_pct": 0.10,
+    "pricing_mode": "follow_market"
+  },
+  "target_irr_annual": 0.15,
+  "decision": {
+    "low_probability_threshold": 0.5
+  },
+  "uncertain": {
+    "utilization": [0.55, 0.75, 0.90],
+    "capex_overrun": [0.00, 0.03, 0.12],
+    "opex_per_gpu_month": [700, 900, 1200],
+    "opex_annual_inflation": [0.01, 0.03, 0.06]
+  },
+  "candidate_prices": [5.00, 6.00, 7.00, 8.00]
+}

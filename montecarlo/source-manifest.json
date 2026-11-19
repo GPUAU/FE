@@ -1,0 +1,13 @@
+{
+  "source_library_file_id": "libfile_a59f34ee7f108191b8b1f7e54d2b9aad",
+  "source_zip_sha256": "81d41ced548fff78e70876ec2457d4a005329f1423a706dda0398a589512421c",
+  "files": {
+    "price_paths.py": "91cc5796076b4ed1ee7be8f6127ce373dc49eefdaa6208bccc6e06e509362514",
+    "run.py": "57c8c1302f0fba7b533053865500fc3f1ec0eb5398a133197b65113eedda82d1",
+    "sample_price_history.csv": "d044b9f51464420500765796fc9d741f3e141458c105c731a6f59cd4a5a12dd7",
+    "pricing_range.py": "9a25fe608d26da46343c0da3301fdd1a1f817e8e5c6658a0a97eaaa01984f035",
+    "config_sample.json": "86619fb05449e4ba9abcd197d5ad0fa4dad2a80e52e44c073a223f124efcbe52",
+    "tests.py": "ad2e4dc9470e6f1ab1a0160551caee5a3dc8254cf77d11cc7c368984323eb8ef",
+    "cashflow.py": "729728b2688137c9391d37cc9814e7b62eebf3dcd728f9d0218cf6a3cfc0190b"
+  }
+}

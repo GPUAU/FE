@@ -9,11 +9,10 @@ async function loadSpringHistory(name, from, to) {
   const end=to?new Date(to+'T15:00:00Z'):new Date();
   const start=from?new Date(from+'T15:00:00Z'):new Date(end.getTime()-730*86400000);
   if(from) start.setUTCDate(start.getUTCDate()-1);
-  const query=new URLSearchParams({modelId:selected.id,from:start.toISOString(),to:end.toISOString()});
-  const response=await api('/api/v1/market/price-histories?'+query);
-  if(!response.isSuccess) throw new Error(response.message||'가격 이력 조회 실패');
+  const {fetchHistory}=await import('/static/spring-history-client.mjs');
   const {mapSeries}=await import('/static/spring-history-adapter.mjs');
-  return mapSeries(response.result.series);
+  const capabilities=await api('/static/backend-capabilities.json');
+  return mapSeries(await fetchHistory(api,selected.id,start.toISOString(),end.toISOString(),capabilities.historyPagination===true));
 }
 async function showSpringObservation(id) {
   const [,observationId,normalizationId]=id.split('-');

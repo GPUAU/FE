@@ -10,3 +10,7 @@ node_modules/
 *.db
 *.sqlite*
 *.sql
+
+runtime/
+runtime-private/
+logs/
