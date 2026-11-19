@@ -49,17 +49,18 @@ async function askSpringPrice(text) {
       const conditions = [item.providerName, item.regionCode,
         item.gpuCount == null ? null : item.gpuCount + ' GPU'].filter(Boolean).join(' · ');
       const price = item.priceUsdGpuHour == null ? '가격 미확보' : '$' + item.priceUsdGpuHour + ' / GPU·시간';
-      return `<li><b>${esc(conditions)}</b> · ${esc(price)}<br><small>${esc(collected)}</small></li>`;
+      const links = GpuSpringAnalysis.sourcesForResult(item, result.sources || []).flatMap(source => {
+        const url = GpuSpringAnalysis.sourceLink(source.sourceUrl);
+        if (!url) return [];
+        return [`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(source.sourceName || '출처 원문')}</a>`];
+      });
+      return `<li><b>${esc(conditions)}</b> · ${esc(price)}<br>
+        <small>${esc(collected)} · 출처 ${links.join(' · ') || '미제공'}</small></li>`;
     });
-    const sources = (result.sources || []).flatMap(source => {
-      const url = GpuSpringAnalysis.sourceLink(source.sourceUrl);
-      if (!url) return [];
-      return [`<li><a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(source.sourceName || '출처 원문')}</a></li>`];
-    });
+    const answer = items.length ? String(result.answer ?? '').split(/\r?\n/, 1)[0] : result.answer;
     reply.innerHTML = `<div class="hd"><span class="route">${esc(label)}</span></div>
-      <div class="md"><p>${esc(result.answer)}</p>
-      ${items.length ? '<h4>조회 가격과 수집 시각</h4><ul>' + items.join('') + '</ul>' : ''}
-      ${sources.length ? '<h4>출처</h4><ul>' + sources.join('') + '</ul>' : ''}</div>`;
+      <div class="md"><p>${esc(answer)}</p>
+      ${items.length ? '<h4>조회 가격·수집 시각·출처</h4><ul>' + items.join('') + '</ul>' : ''}</div>`;
   } catch (error) {
     reply.textContent = error.message;
   }

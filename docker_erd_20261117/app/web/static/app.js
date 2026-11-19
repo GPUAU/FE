@@ -829,8 +829,10 @@ async function boot() {
     applyShellLang();
     await loadMeta();
     wire(); wireShell(); wireBiz(); wireHome(); wireDiscPage();
-    const ex = await api('/api/ask/examples');
-    $('#exQs').innerHTML = ex.map(x => `<button type="button" class="qbtn" data-q="${esc(x)}">${esc(x)}</button>`).join('');
+    if (!window.GpuSpringAnalysis) {
+      const examples = await api('/api/ask/examples').catch(() => []);
+      $('#exQs').innerHTML = examples.map(x => `<button type="button" class="qbtn" data-q="${esc(x)}">${esc(x)}</button>`).join('');
+    }
     loadNoti().catch(() => {});
     await loadFavs();
     await route();

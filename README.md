@@ -46,7 +46,7 @@ python3 -m unittest discover -s montecarlo/engine -p tests.py
 python3 -m unittest discover -s montecarlo -p 'test*.py'
 ```
 
-FE 테스트 67개. PM 엔진과 기존 연동 테스트는 각각의 명령으로 실행합니다.
+FE 테스트 70개. PM 엔진과 기존 연동 테스트는 각각의 명령으로 실행합니다.
 
 ## 남은 작업
 

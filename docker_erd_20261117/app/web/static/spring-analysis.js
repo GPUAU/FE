@@ -1,11 +1,52 @@
 (function (root) {
   'use strict';
 
-  async function request(path, body, fetcher) {
+  const labels = {
+    modelId: 'GPU 모델', 'assumptions.gpuCount': 'GPU 수',
+    'assumptions.depreciationYears': '사용연수', 'assumptions.utilization': '유료 가동률',
+    'assumptions.annualInterestRate': '연 자본비용률',
+    'assumptions.residualValueUsd': '말기 잔존가치', 'assumptions.calendarMonth': '적용 월',
+    'pricing.targetRate': '목표 마진', inputFxKrwPerUsd: '비용 환산용 환율',
+    electricity: '전기료', 'electricity.itPowerKw': '전체 IT 전력',
+    'electricity.pue': 'PUE', 'electricity.krwPerKwh': '전기단가',
+    investment: '초기 투자금', analysisYears: '분석 기간', residualValue: '말기 잔존가치',
+    targetIrr: '목표 IRR', 'candidatePrices[0]': '판매가격', marketFilters: '동일 조건 시장',
+    items: '원가 항목', message: '질문'
+  };
+  const costLabels = {
+    ACQUISITION: '서버·GPU', MEMORY: '별도 메모리', NETWORK_STORAGE: '네트워크·스토리지',
+    RACK_FACILITY: '랙·전원·냉각 설비', RENT: '임차료', OPERATIONS: '운영·유지보수',
+    FINANCING: '연 자본비용률', ELECTRICITY: '전기료'
+  };
+  const itemFields = {
+    amount: '금액', currency: '통화', period: '기간', sourceUrl: '출처',
+    referenceDate: '기준일', includedInItemType: '상위 항목'
+  };
+
+  function validationMessage(body, errors) {
+    const fields = (errors || []).map(error => {
+      const path = String(error.field || '').replace(/^costInput\./, '');
+      const item = /^items\[(\d+)\](?:\.(\w+))?$/.exec(path);
+      const category = item && (body?.costInput || body)?.items?.[Number(item[1])]?.itemType;
+      const label = item
+        ? [costLabels[category] || '원가 항목', itemFields[item[2]]].filter(Boolean).join(' ')
+        : labels[path];
+      return label ? label + ': ' + error.reason : null;
+    }).filter(Boolean);
+    return fields.length ? [...new Set(fields)].join(' · ')
+      : '입력값과 자릿수, 필수 조건을 확인하세요.';
+  }
+
+  async function requestEnvelope(path, body, fetcher = fetch) {
     const options = body === undefined
       ? { cache: 'no-store' }
       : { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) };
-    const response = await fetcher(path, options);
+    let response;
+    try {
+      response = await fetcher(path, options);
+    } catch {
+      throw new Error('Spring 서버에 연결하지 못했습니다. 연결을 확인한 뒤 다시 시도하세요.');
+    }
     if (response.status === 403 || response.status === 404) {
       const name = path.endsWith('/irr-simulations') ? 'IRR' : '공개가격 조회';
       throw new Error(`현재 Spring 서버에서 ${name} API를 사용할 수 없습니다.`);
@@ -16,11 +57,15 @@
     }
     if (!response.ok || !envelope?.isSuccess || !envelope.result) {
       if (response.status === 422 || response.status === 400) {
-        throw new Error('입력값과 자릿수, 필수 조건을 확인하세요.');
+        throw new Error(validationMessage(body, envelope?.errors));
       }
       throw new Error('Spring 서버의 조회에 실패했습니다. 연결을 확인한 뒤 다시 시도하세요.');
     }
-    return envelope.result;
+    return envelope;
+  }
+
+  async function request(path, body, fetcher) {
+    return (await requestEnvelope(path, body, fetcher)).result;
   }
 
   function loadModels(fetcher = fetch) {
@@ -82,7 +127,13 @@
     }
   }
 
-  const client = { loadModels, simulateIrr, askPrice, sourceLink };
+  function sourcesForResult(item, sources) {
+    const available = new Map(sources.map(source => [String(source.evidenceId), source]));
+    return [...new Set((item.evidenceIds || []).map(String))]
+      .map(id => available.get(id)).filter(Boolean);
+  }
+
+  const client = { requestEnvelope, loadModels, simulateIrr, askPrice, sourceLink, sourcesForResult };
   root.GpuSpringAnalysis = client;
   if (typeof module !== 'undefined') module.exports = client;
 })(globalThis);

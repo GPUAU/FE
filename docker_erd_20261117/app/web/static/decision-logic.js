@@ -4,9 +4,15 @@
  const C=typeof module!=='undefined'?require('./v02-calculations.js'):root.GpuV02;
  const copy=x=>JSON.parse(JSON.stringify(x));
  const finite=x=>typeof x==='number'&&Number.isFinite(x);
+ function reviewRangeError(input){
+  if(!finite(input.target)||input.target<0||input.target>2)return '가격 검토의 목표 IRR은 0~200%로 입력하세요.';
+  if(input.salvage>input.initial)return '가격 검토에서는 잔존가치를 초기 투자금 이하로 입력하세요.';
+  return null;
+ }
  function validate(input){
   if(!input||Object.values(input).some(x=>x==null))throw Error('투자·가동률·IRR의 모든 입력을 채워 주세요. 0도 직접 입력하세요.');
-  if(!finite(input.target)||input.target>2)throw Error('목표 IRR은 0~200%로 입력하세요.');
+  const rangeError=reviewRangeError(input);
+  if(rangeError)throw Error(rangeError);
   const r=C.investment(input);
   if(![r.minimum,r.hours,...r.flows].every(finite))throw Error('입력이 계산 가능한 범위를 초과했습니다.');
   return r;
@@ -78,6 +84,6 @@
    clearSimulation:()=>{simulation=null;emit();},
    saveSimulation:(value,version)=>{if(stale||version!==revision||!snapshot)return false;simulation=copy(value);emit();return true;}};
  }
- const api={validate,scenarios,comparison,contractRecords,review,toMonteCarlo,fromCost,createStore};
+ const api={validate,reviewRangeError,scenarios,comparison,contractRecords,review,toMonteCarlo,fromCost,createStore};
  root.GpuDecision=api;root.GpuFlow=createStore();if(typeof module!=='undefined')module.exports=api;
 })(globalThis);

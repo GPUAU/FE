@@ -70,3 +70,10 @@ test('store snapshots are isolated from later form mutations',()=>{
  const store=D.createStore(),s={input:input(),dependsOn:[]};store.set(s);s.input.price=999;assert.notEqual(store.get().snapshot.input.price,999);
  const received=store.get();received.snapshot.input.price=999;assert.notEqual(store.get().snapshot.input.price,999);
 });
+
+test('Spring IRR results outside price review bounds retain their result but cannot be forwarded', () => {
+ assert.match(D.reviewRangeError({...input(),target:-.05}), /0~200%/);
+ assert.match(D.reviewRangeError({...input(),target:2.01}), /0~200%/);
+ assert.match(D.reviewRangeError({...input(),salvage:150}), /잔존가치/);
+ assert.equal(D.reviewRangeError(input()), null);
+});

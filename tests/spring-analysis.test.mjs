@@ -68,3 +68,26 @@ test('IRR applies the selected market cap with the full public comparison scope'
     constraint: 'MEDIAN'
   }), /비교 조건/);
 });
+
+test('cost validation identifies the affected Korean fields without including input values', async () => {
+  const { requestEnvelope } = require('../docker_erd_20261117/app/web/static/spring-analysis.js');
+  const validation = new Response(JSON.stringify({ isSuccess: false, code: 'VALIDATION_ERROR',
+    errors: [{ field: 'assumptions.utilization', reason: '입력값이 유효하지 않습니다.' },
+      { field: 'items[0].amount', reason: '금액·통화·기간을 입력하세요.' }] }), { status: 422 });
+  const body = { items: [{ itemType: 'ACQUISITION', amount: '135790' }] };
+  await assert.rejects(requestEnvelope('/api/v1/cost-simulations', body, async () => validation), err => {
+    assert.match(err.message, /가동률.*서버·GPU.*금액/);
+    assert.doesNotMatch(err.message, /135790|assumptions/);
+    return true;
+  });
+});
+
+test('public evidence is matched to the observation and deduplicated by evidence ID', () => {
+  const { sourcesForResult } = require('../docker_erd_20261117/app/web/static/spring-analysis.js');
+  const sources = [
+    { evidenceId: '10', sourceName: 'AWS', sourceUrl: 'https://example.org/seoul' },
+    { evidenceId: '20', sourceName: 'AWS', sourceUrl: 'https://example.org/ohio' },
+  ];
+  assert.deepEqual(sourcesForResult({ evidenceIds: ['20', '20', '30'] }, sources), [sources[1]]);
+  assert.deepEqual(sourcesForResult({ evidenceIds: [] }, sources), []);
+});
