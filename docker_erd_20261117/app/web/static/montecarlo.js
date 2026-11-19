@@ -1,7 +1,7 @@
 /* PM Python prototype adapter UI. All scenario computation stays on localhost. */
 (() => {
  'use strict';
- const MC={defaults:null,forecast:null,pricing:null,busy:false,chart:null,ready:null};
+ const MC={defaults:null,forecast:null,pricing:null,busy:false,chart:null,ready:null,flowRevision:null,generation:0,inputOrigin:null};
  const endpoint=`http://${location.hostname==='localhost'?'localhost':'127.0.0.1'}:18096`;
  const $m=id=>document.getElementById(id), money=v=>v==null?'계산 불가':`$${Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
  const pct=v=>v==null?'산출 불가':`${(v*100).toFixed(1)}%`, safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -23,6 +23,10 @@
  function status(text,type=''){const el=$m('mcStatus');el.textContent=text;el.className='mc-status '+type;}
  function destroyChart(){MC.chart?.destroy();MC.chart=null;}
  function invalidate(all){
+  MC.generation++;
+  if(all){MC.flowRevision=null;MC.inputOrigin=null;}
+  GpuFlow.clearSimulation();
+  bridge();
   MC.pricing=null;$m('mcPricingResult').hidden=true;$m('mcPricingExport').disabled=true;
   if(all){$m('mcInputTag').textContent=' · 사용자 수정 가정 포함';MC.forecast=null;destroyChart();$m('mcForecastResult').hidden=true;$m('mcEmpty').hidden=false;$m('mcEmpty').innerHTML='<div><b>입력이 변경되었습니다.</b>시장가격 범위를 다시 계산하면 판매가 분석을 진행할 수 있습니다.</div>';$m('mcForecastExport').disabled=true;}
   $m('mcPriceButton').disabled=!MC.forecast;status(all?'입력이 변경되었습니다. 시장가격 범위를 다시 계산하세요.':'시장가 선택이 변경되었습니다. 판매가를 다시 계산하세요.');
@@ -42,8 +46,8 @@
   const s=c.simulation,i=c.investment,u=c.uncertain;
   root.innerHTML=`<div class="mc">
    <div class="mc-intro"><div><div class="mc-kicker">GPU PRICING / SIMULATION LAB</div><h2>가격의 가능성을 계산하다.</h2><p class="mc-subtle">시장가격의 범위를 살펴보고, 선택한 가정에서 필요한 판매가를 비교하세요.</p></div><span class="mc-chip">PM 프로토타입 · 가상 샘플</span></div>
-   <div class="mc-note warn"><b>동작 확인용 데이터입니다.</b>ZIP에 포함된 B300 가상 가격 18개월과 가상 투자·운영비로 계산합니다. 실제 수집 DB와 연결하지 않았으며, 백테스트로 정확도를 검증하지 않았습니다.</div>
-   <div class="mc-steps"><strong>시장가격 범위 계산</strong><span>시장가 가정 선택</span><span>목표 IRR 기준 판매가 검토</span></div>
+   <div class="mc-note warn"><b>동작 확인용 데이터입니다.</b>가격 이력은 ZIP의 B300 가상 자료 18개월입니다. 투자·운영비는 PM 기본값 또는 가격 검토에서 연결한 사용자 가정을 사용합니다. 실제 수집 DB와 연결하지 않았으며, 백테스트로 정확도를 검증하지 않았습니다.</div>
+   <div id="mcReviewBridge"></div><div class="mc-steps"><strong>시장가격 범위 계산</strong><span>시장가 가정 선택</span><span>목표 IRR 기준 판매가 검토</span></div>
    <form id="mcConfigForm" novalidate><fieldset id="mcConfigFields"><div class="mc-grid">
     <div class="mc-panel"><h3>시뮬레이션 조건</h3><p class="mc-subtle">B300 GPU 클라우드 · 샘플<br>최근 샘플 가격 <b>$4.31</b> / GPU·시간</p><div class="mc-fields">
     ${field('mcPaths','반복 횟수',s.n_paths,1000,50000,1)}${field('mcSeed','난수 시드',s.seed,0,2147483647,1)}
@@ -52,7 +56,7 @@
     <button type="submit" class="primary mc-run" id="mcForecastButton">시장가격 범위 계산</button><div class="mc-actions"><button type="button" id="mcReset">PM 기본값 복원</button></div><p class="mc-subtle">같은 입력과 시드로 다시 실행하면 같은 결과를 얻습니다.</p></div>
     <div><div id="mcEmpty" class="mc-empty"><div><b>12개월의 가격 범위</b>‘시장가격 범위 계산’을 누르면<br>중앙값과 P10~P90 범위가 표시됩니다.</div></div><div id="mcForecastResult" hidden></div></div>
    </div>
-   <details class="mc-panel" id="mcInvestment"><summary>투자·운영비 가정 수정 <small id="mcInputTag"> · PM 샘플 기본값 적용 중</small></summary><p class="mc-subtle">모든 값은 가상 가정입니다. 변경하면 기존 계산 결과는 만료됩니다.</p>
+   <details class="mc-panel" id="mcInvestment"><summary>투자·운영비 가정 수정 <small id="mcInputTag"> · PM 샘플 기본값 적용 중</small></summary><p class="mc-subtle">PM 기본값 또는 연결한 사용자 가정입니다. 변경하면 기존 결과가 만료되고 가격 검토와의 연결이 해제됩니다.</p>
     <div class="mc-fields">${field('mcGpus','GPU 수',i.gpus,1,100000,1)}${field('mcCapex','GPU당 투자비 (USD)',i.capex_per_gpu,1,10000000)}${field('mcRamp','정상 가동까지 기간 (개월)',i.ramp_months,0,60,1)}${field('mcResidual','말기 잔존가치 (%)',i.residual_value_pct*100,0,100)}${field('mcTarget','목표 IRR (연 %)',c.target_irr_annual*100,0,200)}
     <label class="mc-field">판매가격 방식<select id="mcMode"><option value="follow_market">시장가 연동</option><option value="fixed">분석기간 고정가</option></select></label><label class="mc-field full">후보 기준 판매가 (USD/GPU·시간 · 쉼표 구분, 최대 8개)<input id="mcCandidates" value="${c.candidate_prices.join(', ')}" required></label></div>
     <p class="mc-subtle">각 변수는 서로 독립인 삼각분포로 추출합니다. 최빈값은 가장 자주 나올 것으로 가정한 값입니다.</p><div class="mc-tablebox"><div class="mc-triples"><span class="mc-th">불확실 변수</span><span class="mc-th">최소</span><span class="mc-th">최빈</span><span class="mc-th">최대</span>
@@ -69,11 +73,11 @@
    <div id="mcPricingResult" hidden></div>
    <div class="mc-footer">PM 모델 0.3.0-prototype · 정상 블록 부트스트랩 + 이벤트 점프 · 최종 시장가 가정과 판매가는 담당자가 결정합니다.</div>
   </div>`;
-  $m('mcMode').value=i.pricing_mode;
+  $m('mcMode').value=i.pricing_mode;bridge();
   $m('mcConfigForm').addEventListener('input',()=>invalidate(true));$m('mcConfigForm').addEventListener('change',()=>invalidate(true));
   $m('mcSelectionForm').addEventListener('input',()=>invalidate(false));$m('mcSelectionForm').addEventListener('change',()=>invalidate(false));
   $m('mcScenario').addEventListener('change',()=>{const direct=$m('mcScenario').value==='direct';$m('mcDirectLabel').hidden=!direct;$m('mcDirect').disabled=!direct;selectionHint();});
-  $m('mcReset').onclick=()=>{destroyChart();MC.forecast=null;MC.pricing=null;build(MC.defaults);status('PM 기본값으로 복원했습니다. 계산을 다시 실행하세요.');};
+  $m('mcReset').onclick=()=>{MC.generation++;MC.flowRevision=null;MC.inputOrigin=null;GpuFlow.clearSimulation();destroyChart();MC.forecast=null;MC.pricing=null;build(MC.defaults);status('PM 기본값으로 복원했습니다. 계산을 다시 실행하세요.');};
   $m('mcConfigForm').onsubmit=e=>{e.preventDefault();run('forecast');};
   $m('mcSelectionForm').onsubmit=e=>{e.preventDefault();run('pricing');};
   $m('mcForecastExport').onclick=()=>download('forecast',MC.forecast);$m('mcPricingExport').onclick=()=>download('pricing',MC.pricing);
@@ -115,25 +119,45 @@
    ${c.investment.pricing_mode==='fixed'?'<p class="mc-subtle">고정가 방식에서는 시장가격 경로가 매출에 반영되지 않습니다. 가정별 차이는 선택된 경로에 배정된 비용·가동률 표본의 차이입니다.</p>':''}</section>
    <section class="mc-panel"><h3>12개월 이후 · 선택한 추세 가정</h3><p class="mc-subtle">‘${trendNames[r.post12_trend]}’를 ${c.investment.months}개월 분석에 적용했습니다. 아래 가격은 전체 경로 기준이며, 검증된 장기 예측이 아닙니다.</p>${table(['시점','P10','중앙값','P90'],r.monthly.filter(x=>[12,24,36,48,60,c.investment.months].includes(x.month)).map(x=>row([`${x.month}개월 후${x.month>12?' · 가정':''}`,money(x.p10),money(x.p50),money(x.p90)])))}</section>
    <section class="mc-panel"><h3>필요 판매가에 영향을 주는 변수</h3>${table(['변수','최소 가정의 필요가','최대 가정의 필요가','가격 변동폭'],r.tornado.map(x=>row([labels[x.input]||safe(x.input),money(x.required_at_low),money(x.required_at_high),money(x.swing)])))}<p class="mc-subtle">다른 입력은 최빈값으로 고정하고 한 변수만 바꾼 민감도입니다. 변수별 영향의 합이나 인과관계를 뜻하지 않습니다.</p>${metadata(r.meta)}</section>
-   <div class="mc-note"><b>가정과 한계</b>월 730시간 · 세전·무차입 프로젝트 IRR · 가격에 따른 수요 변화 미반영 · 비용·가동률 변수 간 상관관계 미반영 · 백테스트와 기준 모델 비교 미수행. 결과는 기존 원가·IRR 화면이나 DB에 자동 반영되지 않습니다.</div>`;
+   <div class="mc-note"><b>가정과 한계</b>월 730시간 · 세전·무차입 프로젝트 IRR · 가격에 따른 수요 변화 미반영 · 비용·가동률 변수 간 상관관계 미반영 · 백테스트와 기준 모델 비교 미수행. 연결한 입력이 유지된 결과는 가격 검토 화면에서 함께 확인할 수 있습니다. 원가 입력·추천 구간·DB 값은 덮어쓰지 않습니다.</div>`;
  }
  async function run(kind){
   if(MC.busy)return;
    const invalid=$m('mcConfigForm').querySelector('input:invalid, select:invalid');
    if(invalid){let parent=invalid.parentElement;while(parent&&parent!==root){if(parent.tagName==='DETAILS')parent.open=true;parent=parent.parentElement;}$m('mcConfigForm').reportValidity();return;}
   if(kind==='pricing'&&!MC.forecast){status('먼저 시장가격 범위를 계산하세요.','error');return;}
-  const c=config();MC.busy=true;$m('mcConfigFields').disabled=true;$m('mcSelectionFields').disabled=true;
+  const c=config(),generation=MC.generation,flowRevision=MC.flowRevision;MC.busy=true;$m('mcConfigFields').disabled=true;$m('mcSelectionFields').disabled=true;
   if(kind==='forecast'){MC.forecast=null;MC.pricing=null;destroyChart();$m('mcForecastResult').hidden=true;$m('mcPricingResult').hidden=true;$m('mcForecastExport').disabled=true;$m('mcPricingExport').disabled=true;}
   else {MC.pricing=null;$m('mcPricingResult').hidden=true;$m('mcPricingExport').disabled=true;}
   status(kind==='forecast'?`${c.simulation.n_paths.toLocaleString()}개 가격 경로를 계산하고 있습니다…`:'시장가 경로를 선택하고 현금흐름·IRR을 계산하고 있습니다…','busy');
   try{
    const selection={post12_trend:$m('mcTrend').value};if($m('mcScenario').value==='direct')selection.market_price_12m=Number($m('mcDirect').value);else selection.scenario=$m('mcScenario').value;
    const r=await request('/'+kind,{config:c,selection});
+   if(generation!==MC.generation){status('연결 입력이 바뀌어 이 계산 결과를 폐기했습니다. 가격 검토에서 다시 연결하세요.','error');return;}
+   r.input_provenance={origin:MC.inputOrigin||'PM 기본값 또는 시뮬레이션에서 직접 수정',review_revision:flowRevision,price_history:'B300 가상 샘플'};
    if(kind==='forecast'){MC.forecast=r;paintForecast(r);$m('mcForecastExport').disabled=false;status('시장가격 범위 계산 완료. 아래에서 시장가 가정을 선택하고 판매가를 계산하세요.');}
-   else{MC.pricing={...r,config:c,requested_selection:selection};paintPricing(r,c);$m('mcPricingExport').disabled=false;status('판매가 계산 완료. 아래에서 후보가격별 목표 IRR 달성 확률을 확인하세요.');$m('mcPricingResult').scrollIntoView({behavior:'smooth',block:'start'});}
+   else{MC.pricing={...r,config:c,requested_selection:selection};paintPricing(r,c);if(flowRevision!==null)GpuFlow.saveSimulation({...r,config:c},flowRevision);bridge();$m('mcPricingExport').disabled=false;status('판매가 계산 완료. 아래에서 후보가격별 목표 IRR 달성 확률을 확인하세요.');$m('mcPricingResult').scrollIntoView({behavior:'smooth',block:'start'});}
   }catch(e){status(e.message,'error');}finally{MC.busy=false;$m('mcConfigFields').disabled=false;$m('mcSelectionFields').disabled=false;$m('mcPriceButton').disabled=!MC.forecast;}
  }
  function download(kind,data){if(!data)return;const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=`GPU_PM_sample_${kind}_${new Date().toISOString().slice(0,10)}.json`;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
+ function bridge(){
+  const el=$m('mcReviewBridge');if(!el)return;
+  el.innerHTML=MC.flowRevision!==null?`<div class="mc-note"><b>가격 검토의 사용자 가정을 연결했습니다 · 입력 버전 ${MC.flowRevision}</b>${safe(MC.inputOrigin)} · 투자·운영비·가동률·목표 IRR·후보가격 적용. 가격 이력은 B300 가상 샘플입니다.<br>첫 연결은 고정가, 가동 지연 0개월, 추가 비용 변동 0으로 맞춥니다. 입력을 바꾸면 가격 검토 결과와의 연결은 해제됩니다.<br>연간 IRR과 월별 현금흐름의 수취 시점 차이로 수치가 달라질 수 있습니다.<div class="mc-actions"><a href="#decision">가격 검토와 결과 함께 보기</a></div></div>`:'<div class="mc-note"><b>독립 시뮬레이션 입력</b>원가·가동률·IRR 가정을 이어 쓰려면 <a href="#decision">가격 검토 화면</a>에서 계산 후 연결하세요. 이 화면에서 수정한 입력은 기존 원가나 IRR을 덮어쓰지 않습니다.</div>';
+ }
+ GpuFlow.subscribe(f=>{if(MC.flowRevision!==null&&(f.stale||f.revision!==MC.flowRevision)){
+  invalidate(true);status('연결했던 원가·IRR·가격 검토 입력이 변경되었습니다. 가격 검토에서 다시 연결하세요.','error');
+ }});
+ window.GpuMonteCarlo={applyReview:async(snapshot,revision)=>{
+  if(MC.busy)throw Error('시뮬레이션 계산이 끝난 뒤 다시 연결하세요.');
+  if(snapshot.model!=='B300')throw Error('PM은 B300 가상 가격 이력만 지원합니다.');
+  await RENDER.forecast();
+  if(!MC.defaults)throw Error('시뮬레이션 기본 설정을 불러오지 못했습니다. 다시 시도하세요.');
+  const c=GpuDecision.toMonteCarlo(snapshot,MC.defaults),f=GpuFlow.get();
+  if(f.stale||f.revision!==revision)throw Error('가격 검토 입력이 변경되었습니다. 다시 계산 후 연결하세요.');
+  MC.generation++;MC.flowRevision=revision;MC.inputOrigin=snapshot.origin;MC.forecast=null;MC.pricing=null;destroyChart();GpuFlow.clearSimulation();build(c);
+  $m('mcInputTag').textContent=' · 가격 검토의 사용자 가정 적용';
+  status('가격 검토 입력을 적용했습니다. 시장가격 범위와 판매가를 순서대로 계산하세요.');
+ }};
  RENDER.forecast=async()=>{
   calculatorFrame('몬테카를로 시뮬레이션','PM 프로토타입 · 12개월 가격 범위와 목표 IRR 기준 판매가');
   if(MC.defaults)return;
