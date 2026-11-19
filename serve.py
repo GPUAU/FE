@@ -1,12 +1,13 @@
 """Local preview: original site and legacy API, with /api/v1 sent to Spring."""
 from functools import partial
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from os import environ
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 STATIC = Path(__file__).parent / 'docker_erd_20261117/app/web/static'
-SPRING = 'http://127.0.0.1:18092'
+SPRING = environ.get('GPU_SPRING_BASE_URL', 'http://127.0.0.1:18092').rstrip('/')
 LEGACY = 'http://127.0.0.1:18093'
 
 class Handler(SimpleHTTPRequestHandler):
@@ -55,5 +56,6 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
 if __name__ == '__main__':
-    print('화면: http://127.0.0.1:18091', flush=True)
-    ThreadingHTTPServer(('127.0.0.1', 18091), partial(Handler, directory=str(STATIC))).serve_forever()
+    port = int(environ.get('GPU_FE_PORT', '18091'))
+    print(f'화면: http://127.0.0.1:{port}', flush=True)
+    ThreadingHTTPServer(('127.0.0.1', port), partial(Handler, directory=str(STATIC))).serve_forever()
