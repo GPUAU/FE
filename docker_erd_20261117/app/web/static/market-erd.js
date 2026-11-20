@@ -1,5 +1,5 @@
 /* Four-provider research workspace. Read-only snapshot, transparent provenance. */
-const MV={data:null,promise:null,model:'B300',group:'general',term:'ON_DEMAND',region:['ALL','ALL'],pick:['',''],provider:'ALL',q:'',page:0,supp:true,contractProvider:'aws',contractKey:'',seq:0};
+const MV={data:null,promise:null,model:'B300',group:'general',term:'ON_DEMAND',region:['ALL','ALL'],pick:['',''],provider:'ALL',q:'',page:0,includeStale:true,contractProvider:'aws',contractKey:'',seq:0};
 const MG={
  general:{label:'GPU 인스턴스 클라우드',ids:['aws','azure'],caption:'CPU·메모리 포함',description:'GPU와 CPU·메모리를 함께 제공하는 인스턴스 상품을 비교합니다.'},
  specialist:{label:'GPU 전문 클라우드',ids:['nebius','verda'],caption:'GPU 중심 서비스 · Neo Cloud',description:'GPU 연산 중심의 클라우드 상품과 계약 조건을 비교합니다.'}
@@ -17,29 +17,324 @@ const mlink=(url,label)=>/^https?:\/\//.test(url||'')?`<a href="${mh(url)}" targ
 async function marketData(){if(!MV.promise)MV.promise=api('/api/market').then(d=>(MV.data=d,d)).catch(e=>{MV.promise=null;throw e});return MV.promise}
 function mframe(title,desc){document.body.classList.add('market-v4');$('#pageTitle').textContent=title;$('#pageDesc').textContent=desc;const c=$('#dataContext');c.innerHTML=`<span class="mv-dot"></span><div><b>가격 관측 기준</b><span>${mtime(MV.data.snapshot_at)} · 현재 예약가와 다를 수 있습니다. 자동 갱신되지 않는 수집 자료입니다.</span></div>`;c.hidden=false}
 function mfooter(){return `<footer class="mv-sourcebar"><b>자료 출처</b><span>${mlink('https://gpuledger.dev/data/','GPU Ledger')} · ${mlink('https://gpueconomy.com/data','GPU Economy')} · 집계 데이터 CC BY 4.0 / 선별·환산 적용</span><small>공식 관측은 검증·보완 자료입니다. 집계 라이선스가 사업자 원문에 적용된다는 뜻은 아닙니다. </small><a href="/public-data">수집 자료·과거 이력 보기 ↗</a></footer>`}
-function mmodels(){return `<div class="mv-models"><div><small>메인 모델</small>${MV.data.models.slice(0,3).map(m=>`<button data-model="${mh(m)}" aria-pressed="${m===MV.model}">${mh(m)}</button>`).join('')}</div><div class="refs"><small>참조 모델</small>${MV.data.models.slice(3).map(m=>`<button data-model="${mh(m)}" aria-pressed="${m===MV.model}">${mh(m)}</button>`).join('')}</div></div>`}
+function mmodels(models = MV.data.models){return `<div class="mv-models"><div><small>메인 모델</small>${models.slice(0,3).map(m=>`<button data-model="${mh(m)}" aria-pressed="${m===MV.model}">${mh(m)}</button>`).join('')}</div><div class="refs"><small>참조 모델</small>${models.slice(3).map(m=>`<button data-model="${mh(m)}" aria-pressed="${m===MV.model}">${mh(m)}</button>`).join('')}</div></div>`}
 function mbind(el,rerender){el.onclick=e=>{const b=e.target.closest('[data-model]'),detail=e.target.closest('[data-offer]');if(b){MV.model=b.dataset.model;MV.page=0;MV.pick=['',''];MV.contractKey='';rerender()}if(detail)marketEvidence(detail.dataset.offer)};}
-function mrows(){return MV.data.records.filter(r=>r.model===MV.model&&(MV.supp||r.origin==='aggregate'))}
 async function marketHome(){await marketData();mframe('GPU 가격 리서치','동일한 조건, 명확한 근거로 가격을 비교하세요.');++homeRequest;setHomeHero();$('#heroHeadline').innerHTML='GPU 가격과 계약 조건을<br>한곳에서 비교하세요.';$('#helloSub').textContent='클라우드 유형을 선택하고 상품 구성과 공개 가격을 함께 비교하세요.';$('#helloWhy').textContent='메인 B300 · GB300 NVL72 · VR200 NVL72 / 참조 GB200 NVL72 · H100 · H200';$('#heroStatus').innerHTML=`<span>집계 출처 <b>${MV.data.summary.aggregate}개 조합</b></span><span>공식 가격 일치 <b>${MV.data.summary.by_verification['공식 관측가 일치']||0}건</b></span><span>관측 기준 <b>${mtime(MV.data.snapshot_at)}</b></span>`;
  $('#homeBody').innerHTML=`<div class="mv"><div class="mv-section-head"><div><p class="mv-eyebrow">사업자 비교</p><h2>비교 시장 선택</h2></div><a class="mv-btn" href="#discounts">계약기간별 할인 보기 ↗</a></div><div class="mv-groups">${Object.entries(MG).map(([k,g])=>`<a class="mv-group" href="#dashboard/${k}"><i class="sk-market-accent" data-sk-market-accent aria-hidden="true"></i><span>${g.caption}</span><h3>${g.label}</h3><p>${g.description}</p><b>시장 선택 <span aria-hidden="true">↗</span></b></a>`).join('')}</div><div class="mv-section-head"><div><p class="mv-eyebrow">모델별 자료</p><h2>주요 GPU 모델</h2></div><span>모델별 수집 현황과 공개 가격 상태</span></div><div class="mv-modelcards">${MV.data.models.slice(0,3).map(m=>{const rows=MV.data.records.filter(r=>r.model===m&&r.listed_price!=null);return `<a href="#catalog/gpu/${encodeURIComponent(m)}"><span class="mv-chip">주요 모델</span><h3>${mh(m)}</h3><strong>${rows.length?rows.length.toLocaleString():'—'}<small>${rows.length?'개 가격 조합':'공개 가격 미관측'}</small></strong><p>${m.includes('NVL72')?'전체 랙과 부분 구성을 구분해 확인하세요.':'지역·GPU 수·과금 방식에 따라 달라집니다.'}</p><span>모든 상품과 근거 보기 ↗</span></a>`}).join('')}</div><div class="mv-note"><b>GPU당 가격 ≠ 단일 GPU 상품</b><p>수집한 원본 가격과 구성 수를 보존합니다. 선납금·지역·사양이 없으면 추정하지 않고 미확인으로 표시합니다.</p></div>${mfooter()}</div>`;
 }
-async function marketDashboard(){const ticket=++MV.seq;await marketData();if(ticket!==MV.seq)return;const group=location.hash.split('/')[1];if(MG[group]&&MV.group!==group){MV.group=group;MV.region=['ALL','ALL'];MV.pick=['','']}state.f.model=MV.model;state.f.term=MV.term;document.body.classList.add('pair-mode');let el=$('#pairWorkspace');if(!el){el=document.createElement('div');el.id='pairWorkspace';$('#v-dashboard').prepend(el)}mframe('시장별 GPU 가격 비교','클라우드 유형별로 상품 구성과 가격 근거를 확인하세요.');
- el.innerHTML=`<div class="mv"><nav class="mv-tabs" aria-label="비교 시장 선택">${Object.entries(MG).map(([k,g])=>`<a class="${MV.group===k?'active':''}" href="#dashboard/${k}" ${MV.group===k?'aria-current="page"':''}><small>${g.caption}</small>${g.label}${MV.group===k?'<i class="sk-market-accent" data-sk-market-accent aria-hidden="true"></i>':''}</a>`).join('')}</nav><section class="mv-controls">${mmodels()}<div class="mv-filterline"><label>과금 방식<select id="mvTerm">${Object.entries(MT).map(([v,l])=>`<option value="${v}" ${MV.term===v?'selected':''}>${l}</option>`).join('')}</select></label><label class="mv-check"><input id="mvSupplement" type="checkbox" ${MV.supp?'checked':''}> 공식 수집 데이터 표시</label><a class="mv-btn" href="#discounts">1년·3년 할인 비교 ↗</a></div></section><div class="mv-section-head"><div><p class="mv-eyebrow">${MG[MV.group].label} · 수집 사업자 ${MG[MV.group].ids.length}곳</p><h2>${mh(MV.model)} <span>· ${MT[MV.term]}</span></h2></div><button class="mv-btn" id="mvExport">선택 비교 저장 ↓</button></div><div id="mvPair"></div>${mfooter()}</div>`;mbind(el,marketDashboard);$('#mvTerm').onchange=e=>{MV.term=e.target.value;MV.pick=['',''];marketDashboard()};$('#mvSupplement').onchange=e=>{MV.supp=e.target.checked;MV.pick=['',''];marketDashboard()};drawMarketPair();
+let springCatalogPending;
+async function springMarketCatalog() {
+  if (!springCatalogPending) {
+    const pending = import('/static/spring-market-client.mjs')
+      .then(client => client.fetchMarketCatalog(api))
+      .catch(error => {
+        if (springCatalogPending === pending) springCatalogPending = null;
+        throw error;
+      });
+    springCatalogPending = pending;
+  }
+  return springCatalogPending;
 }
-function drawMarketPair(){
- const group=MG[MV.group],pool=mrows().filter(r=>r.term===MV.term),picked=[];
- const cards=group.ids.map((pid,i)=>{const rows=pool.filter(r=>r.provider_id===pid);const regions=[...new Set(rows.map(r=>r.region||''))].sort();if(MV.region[i]!=='ALL'&&!regions.includes(MV.region[i]))MV.region[i]='ALL';const options=rows.filter(r=>MV.region[i]==='ALL'||(r.region||'')===MV.region[i]).sort((a,b)=>(a.origin==='official')-(b.origin==='official')||(a.normalized_price??Infinity)-(b.normalized_price??Infinity)||(a.gpu_count??Infinity)-(b.gpu_count??Infinity));const r=options.find(r=>r.id===MV.pick[i])||options.find(r=>r.normalized_price!=null)||options[0];picked.push(r);MV.pick[i]=r?.id||'';return `<article class="mv-provider"><div class="mv-provider-head"><span class="mv-monogram ${pid}">${pid==='aws'?'aws':pid==='azure'?'A':pid==='nebius'?'N':'V'}</span><div><small>${group.label}</small><h3>${MV.data.providers[pid]}</h3></div><span class="mv-muted">${rows.length}개 관측</span></div><div class="mv-selects"><label>리전<select data-region="${i}"><option value="ALL">전체 관측 지역</option>${regions.map(x=>`<option value="${mh(x)}" ${x===MV.region[i]?'selected':''}>${mh(mr(x))}</option>`).join('')}</select></label><label>비교 상품<select data-pick="${i}" ${options.length?'':'disabled'}>${options.map(x=>`<option value="${x.id}" ${r?.id===x.id?'selected':''}>${mh(x.sku)} · ${x.gpu_count??'?'} GPU · ${mh(mr(x.region))} · ${mp(x.normalized_price)}${x.origin==='official'?' [공식 수집]':''}</option>`).join('')||'<option>관측 자료 없음</option>'}</select></label></div>${r?`<div class="mv-quote"><div>${mstamp(r)} <span class="mv-chip">${msource(r)}</span></div><small>${r.normalized_price==null?'원본 가격 · GPU당 환산 보류':'원본 요금의 GPU당 시간 환산'}</small><strong>${r.normalized_price!=null?fxPrice(r.normalized_price):r.listed_price!=null?mp(r.listed_price):'견적 문의'}<em>${r.normalized_price!=null?'/ GPU·시간':r.listed_price!=null?'/ VM·시간':''}</em></strong><p>${mh(r.product_original)}</p><span class="mv-chip">${mh(r.hardware_scope)}</span></div><dl class="mv-quick"><div><dt>원본 시간 요금</dt><dd>${mp(r.listed_price)} <small>${r.listed_unit==='USD/GPU-hour'?'GPU당':'구성 전체'}</small></dd></div><div><dt>vCPU / 시스템 RAM</dt><dd>${mv(r.vcpu)} / ${r.ram_gb==null?'미확인':mh(r.ram_gb)+' GB'}</dd></div><div><dt>지역</dt><dd>${mh(mr(r.region))}</dd></div></dl><div class="mv-cardfoot"><small>${mtime(r.observed_at)}</small><button class="mv-btn primary" data-offer="${r.id}">상품 상세·가격 근거 ↗</button></div>`:`<div class="mv-empty"><span>—</span><h3>${MV.group==='specialist'?'수집 보류 · 약관 검토 미완료':'선택 조건의 가격 미확보'}</h3><p>이번 적재 범위에 가격이 없습니다.<br>0원이나 미판매를 뜻하지 않습니다.</p></div>`}</article>`});
- const chartRows=group.ids.map((pid,i)=>({label:MV.data.providers[pid],price:picked[i]?.normalized_price??null,missingLabel:picked[i]?.listed_price!=null?'GPU당 환산 보류':'공개 가격 미관측',source:picked[i]?msource(picked[i]):'',observedAt:picked[i]?.observed_at||''}));
- const chart=`<section class="sk-comparison-chart" aria-label="선택 상품의 GPU당 시간 요금 차트"><div class="sk-chart-heading"><div><h3>선택 상품의 시간당 가격</h3><p>${mh(MV.model)} · ${MT[MV.term]} · ${group.label}</p></div><span>USD / GPU·시간</span></div><div data-sk-price-chart data-rows="${mh(JSON.stringify(chartRows))}"></div><p class="sk-comparison-note">아래에서 선택한 상품의 GPU당 환산 요금입니다. CPU·메모리·GPU 수·리전·연결망 조건이 다를 수 있으며, GPU 전문 클라우드도 단일 GPU만 판매한다는 뜻은 아닙니다.</p></section>`;
- const g=MarketLogic.gap(...picked);$('#mvPair').innerHTML=`${chart}<div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(p=>MV.data.providers[p]).join(' → ')} · GPU당 차이</small><strong>${g?`${g.amount>=0?'+':'−'}${mp(Math.abs(g.amount))}`:'비교 가능한 양쪽 가격이 필요합니다.'}</strong>${g?`<span>왼쪽 기준 ${g.percent>0?'+':''}${g.percent.toFixed(1)}%</span>`:''}</div><p>공식 API·가격 카탈로그에서 확보한 참고 단가입니다. 같은 모델이어도 GPU 수·리전·CPU/RAM·네트워크가 다를 수 있어, 동일 조건 견적이나 성능 대비 할인율을 뜻하지 않습니다.</p></div>`;
- $('#mvPair').onchange=e=>{if(e.target.dataset.region!==undefined){MV.region[+e.target.dataset.region]=e.target.value;MV.pick[+e.target.dataset.region]='';drawMarketPair()}if(e.target.dataset.pick!==undefined){MV.pick[+e.target.dataset.pick]=e.target.value;drawMarketPair()}};$('#mvExport').onclick=()=>marketCSV(picked.filter(Boolean),'선택비교');
+
+const marketProviderTypes = {general: 'GENERAL_CLOUD', specialist: 'GPU_SPECIALIST'};
+const marketProviderNames = {aws:'AWS', azure:'Azure', nebius:'Nebius', verda:'Verda'};
+const marketFreshness = {CURRENT:'48시간 이내 확인', STALE:'48시간 초과 · 과거 참고', UNKNOWN:'확인 시각 미확인'};
+const marketCertainty = {EXACT:'확정가', FROM:'시작가', RANGE:'범위가', SCENARIO:'시나리오', UNKNOWN:'가격 구분 미확인'};
+const marketDisclosure = {PUBLIC:'공개가', NOT_DISCLOSED:'가격 미공개', LOGIN_REQUIRED:'로그인 필요', CONTACT_SALES:'영업 문의', QUOTE_REQUIRED:'견적 문의', UNKNOWN:'공개 여부 미확인'};
+const marketPayment = {ALL_UPFRONT:'전액 선납', PARTIAL_UPFRONT:'일부 선납', NO_UPFRONT:'선납 없음', NOT_APPLICABLE:'해당 없음', UNKNOWN:'미확인'};
+const marketExclusions = {staleOffers:'48시간 초과', notFoundOffers:'최근 확인에서 공개가 미확보', nonExactOffers:'확정 단가 아님', incomparableOffers:'동일 조건 판단에 필요한 정보 누락', missingPriceOffers:'관측 가격 미확보', unavailableNormalizationOffers:'실효 단가 환산 불가'};
+
+function marketGroupConditions(key) {
+  const labels = {
+    providerType:'사업자 유형', countryCode:'국가', regionCode:'리전', systemType:'시스템',
+    serviceOption:'서비스', gpuCount:'GPU 수', contractType:'계약', contractProductType:'계약 상품',
+    commitmentMonths:'약정 개월', paymentOption:'지불 방식', minimumQuantity:'최소 물량',
+    minimumQuantityUnit:'최소 물량 단위', intraNodeInterconnect:'노드 내 연결', vcpuCount:'vCPU',
+    ramGb:'RAM(GB)', vramGbPerGpu:'GPU당 VRAM(GB)', specScope:'구성 범위',
+    storageDescription:'스토리지', interNodeNetwork:'노드 간 네트워크',
+  };
+  const values = {
+    providerType: {GENERAL_CLOUD:'GPU 인스턴스 클라우드', GPU_SPECIALIST:'GPU 전문 클라우드'},
+    paymentOption: marketPayment,
+    contractType: {ON_DEMAND:'온디맨드', SPOT:'스팟', COMMITMENT:'장기약정'},
+  };
+  return Object.entries(labels).filter(([field]) => key[field] != null)
+    .map(([field, label]) => label + ' ' + (values[field]?.[key[field]] || key[field])).join(' · ');
 }
-async function marketCatalog(){await marketData();const [,kind,...parts]=location.hash.slice(1).split('/'),id=decodeURIComponent(parts.join('/'));let rows=MV.data.records;if(kind==='gpu'&&MV.data.models.includes(id)){MV.model=id;rows=rows.filter(r=>r.model===id)}else if(kind==='provider'){MV.provider=id;rows=rows.filter(r=>r.provider_id===id)}
- mframe(kind==='gpu'?MV.model+' 상품 카탈로그':'GPU·사업자 카탈로그','가격과 구성, 계약 조건, 원천 확인 결과를 함께 살펴보세요.');const el=$('#catBody');const baseRows=rows;const catalogModel=kind==='gpu';
- function draw(){const q=MV.q.toLowerCase();let filtered=baseRows.filter(r=>(MV.provider==='ALL'||r.provider_id===MV.provider)&&(!q||[r.sku,r.region,r.product_original,r.source].join(' ').toLowerCase().includes(q))&&(MV.supp||r.origin==='aggregate'));const pages=Math.max(1,Math.ceil(filtered.length/24));MV.page=Math.min(MV.page,pages-1);const display=filtered.slice(MV.page*24,(MV.page+1)*24);const valid=filtered.filter(r=>r.normalized_price!=null);
- el.innerHTML=`<div class="mv"><div class="mv-cataloghero"><div><p class="mv-eyebrow">GPU / ${catalogModel?MV.data.models.indexOf(MV.model)<3?'주요 모델':'참조 모델':'상품 목록'}</p><h1>${catalogModel?mh(MV.model):'GPU 상품·가격 목록'}</h1><p>${catalogModel&&MV.model.includes('NVL72')?'NVL72 계열의 전체 랙과 부분 GPU 구성을 구분합니다. 모델명만으로 72 GPU 견적으로 보지 않습니다.':'원본 가격과 상품 조건을 보존합니다. 미제공 정보는 추정하지 않습니다.'}</p><div class="mv-actions"><a class="mv-btn primary" href="#dashboard/${MV.group}">사업자 비교 ↗</a><a class="mv-btn" href="#discounts">계약기간별 할인 ↗</a></div></div><div class="mv-catalognumbers"><div><strong>${filtered.length}</strong><span>상품·지역·계약 조합</span></div><div><strong>${new Set(valid.map(r=>r.provider_id)).size}</strong><span>숫자 단가 확보 사업자</span></div></div></div>${!catalogModel?`<div class="mv-modelnav">${MV.data.models.map((m,i)=>`<a href="#catalog/gpu/${encodeURIComponent(m)}">${i<3?'<small>메인</small>':'<small>참조</small>'}${mh(m)}</a>`).join('')}</div>`:''}<div class="mv-toolbar"><label>사업자<select id="mvProvider"><option value="ALL">수집 사업자 전체</option>${Object.entries(MV.data.providers).map(([k,n])=>`<option value="${k}" ${MV.provider===k?'selected':''}>${n}</option>`).join('')}</select></label><label class="grow">상품·리전 검색<input id="mvSearch" type="search" placeholder="예: p6-b300, koreasouth" value="${mh(MV.q)}"></label><button class="mv-btn" id="mvCatalogCSV">검색 결과 저장 ↓</button></div><div class="mv-tablebox" tabindex="0" role="region" aria-label="표: 가로로 스크롤하여 전체 열 확인"><table class="mv-table"><thead><tr><th>사업자 / 상품 원문</th><th>계약 / 구성</th><th>지역</th><th>수집 원본 요금</th><th>USD / GPU·시간</th><th>수집 상태 / 출처</th><th>전체 정보</th></tr></thead><tbody>${display.map(r=>`<tr><td><b>${r.provider}</b><span>${mh(r.product_original)}</span><small>${mh(r.model)} · 원문 ${mv(r.model_original)}</small></td><td>${MT[r.term]}<span>${mh(r.hardware_scope)}</span><small>${r.term_months?r.term_months+'개월':''}</small></td><td>${mh(mr(r.region))}<span>${mv(r.country)}</span></td><td>${mp(r.listed_price)}<span>${r.listed_unit==='USD/GPU-hour'?'GPU·시간당':'VM / 구성·시간당'}</span></td><td><strong>${fxPrice(r.normalized_price)}</strong><span>${r.status}</span></td><td>${mstamp(r)}<span>${msource(r)}</span><small>${mtime(r.observed_at)}</small></td><td><button class="mv-btn" data-offer="${r.id}">상세·근거 ↗</button></td></tr>`).join('')||'<tr><td colspan="7"><div class="mv-empty"><h3>이번 수집 범위에서 가격을 확인하지 못했습니다.</h3><p>공개 가격 미관측 상태를 유지하며 다른 모델 가격으로 채우지 않습니다.</p></div></td></tr>'}</tbody></table></div><div class="mv-pagination"><span>${filtered.length}개 중 ${filtered.length?MV.page*24+1:0}–${Math.min((MV.page+1)*24,filtered.length)}</span><button class="mv-btn" id="mvPrev" ${MV.page?'':'disabled'}>이전</button><b>${MV.page+1} / ${pages}</b><button class="mv-btn" id="mvNext" ${MV.page+1<pages?'':'disabled'}>다음</button></div><div class="mv-note"><b>상품 상세에서 8가지 정보 묶음을 확인하세요.</b><p>수집 메타 · 상품 식별 · 원본 가격 · 계약 · 구성 · 지역 · 상태 · 환산 근거. 출처가 제공하지 않은 값은 미확인으로 표시합니다.</p></div>${mfooter()}</div>`;
- $('#mvProvider').onchange=e=>{MV.provider=e.target.value;MV.page=0;draw()};$('#mvSearch').oninput=e=>{MV.q=e.target.value;MV.page=0;const pos=e.target.selectionStart;draw();$('#mvSearch').focus();$('#mvSearch').setSelectionRange(pos,pos)};$('#mvPrev').onclick=()=>{MV.page--;draw()};$('#mvNext').onclick=()=>{MV.page++;draw()};$('#mvCatalogCSV').onclick=()=>marketCSV(filtered,'상품목록');el.onclick=e=>{const b=e.target.closest('[data-offer]');if(b)marketEvidence(b.dataset.offer)};
- }draw();
+
+function marketSummaryContent(summary, chosen) {
+  if (!summary) return '<p>시장 요약을 불러오지 못했습니다.</p>';
+  const counts = chosen?.sampleCounts;
+  const excluded = Object.entries(summary.excludedSummary).filter(([, count]) => count > 0);
+  const asOf = summary.asOf ? '<p><small>판정 ' + mtime(summary.asOf) + '</small></p>' : '';
+  return (chosen
+    ? `<p>최저 ${fxPrice(chosen.minimum)} · 중앙값 ${fxPrice(chosen.median)} · 최고 ${fxPrice(chosen.maximum)} (USD / GPU·시간)</p>
+      <p>사업자별 최저 1개 · 사업자 ${counts.providerCount}곳 / 상품 ${counts.productCount}개 / 오퍼 ${counts.offerCount}개 / 관측 ${counts.observationCount}건${chosen.warnings?.includes('SINGLE_PROVIDER')?' · 단일 사업자 표본':''}</p>`
+    : '<p>비교 조건을 충족한 최신 표본이 없습니다.</p>') + asOf
+    + (excluded.length ? `<details><summary>집계 제외 사유</summary><ul>${excluded.map(([reason, count]) => `<li>${mh(marketExclusions[reason] || reason)} · ${count}개</li>`).join('')}</ul></details>` : '');
+}
+
+function springMarketFooter() {
+  return '<footer class="mv-sourcebar"><b>공개 GPU 가격</b><span>AWS 가격 카탈로그·스팟 API 기록 · Azure Retail Prices API</span><small>기존 수집 파일과 과거 이력은 별도 보관 서버에서 제공합니다.</small><a href="/public-data">수집 아카이브 열기 (선택) ↗</a></footer>';
+}
+
+function exportMarketOffers(filename, rows) {
+  const headers = ['오퍼ID','상품ID','관측ID','사업자','모델','상품','SKU','국가','리전','GPU수','시스템 유형','vCPU','RAM_GB','스토리지','노드 내 연결','계약','약정개월','선납','최소 물량','최소 물량 단위','가격 원문','반복 요금 원본','실효USD_GPU시간','최근공개상태','최신성','수집UTC','출처'];
+  const values = rows.map(row => {
+    const product = row.configuration, contract = row.contractInfo;
+    const fields = [row.id, row.productId, row.observationId, row.provider, row.model, row.product, product.sku, row.country,
+      row.region, row.gpus, product.systemType, product.vcpuCount, product.ramGb, product.storageDescription,
+      product.intraNodeInterconnect, row.contract, contract.months, contract.paymentOption, contract.minimumQuantity,
+      contract.minimumQuantityUnit, row.rawPriceText, row.hourlyComponent ? marketHourly(row.hourlyComponent) : '',
+      row.price, row.disclosure, row.freshness, row.collected, row.source];
+    return fields.map(value => typeof value === 'string' && /^\s*[=+@-]/.test(value) ? "'" + value : value);
+  });
+  downloadCSV(filename, headers, values);
+}
+
+function marketPriceFrame(title, description) {
+  document.body.classList.add('market-v4');
+  $('#pageTitle').textContent = title;
+  $('#pageDesc').textContent = description;
+  const context = $('#dataContext');
+  context.innerHTML = '<span class="mv-dot"></span><div><b>저장 가격 관측</b><span>마지막 성공 관측 가격과 최근 공개 상태를 확인할 수 있습니다.</span></div>';
+  context.hidden = false;
+}
+
+
+async function marketDashboard() {
+  const ticket = ++MV.seq;
+  const group = location.hash.split('/')[1];
+  if (MG[group] && MV.group !== group) {
+    MV.group = group;
+    MV.region = ['ALL','ALL'];
+    MV.pick = ['',''];
+    MV.summaryGroup = '';
+  }
+  state.f.model = MV.model;
+  state.f.term = MV.term;
+  document.body.classList.add('pair-mode', 'market-v4');
+  const el = $('#pairWorkspace') || Object.assign(document.createElement('div'), {id:'pairWorkspace'});
+  if (!el.isConnected) $('#v-dashboard').prepend(el);
+  marketPriceFrame('시장별 GPU 가격 비교', '클라우드 유형별로 상품 구성과 가격 근거를 확인하세요.');
+  el.innerHTML = '<div class="mv-note" role="status">가격 자료를 불러오는 중입니다.</div>';
+
+  try {
+    const [client, catalog] = await Promise.all([import('/static/spring-market-client.mjs'), springMarketCatalog()]);
+    if (ticket !== MV.seq || state.view !== 'dashboard') return;
+    const filters = {
+      modelId: catalog.models.find(model => model.name === MV.model)?.id,
+      providerType: marketProviderTypes[MV.group], ...client.marketTerm(MV.term),
+    };
+    const [offers, summary] = filters.modelId ? await Promise.all([
+      client.fetchMarketOffers(api, {...filters, includeStale: String(MV.includeStale)}),
+      client.fetchMarketSummary(api, filters).catch(() => null),
+    ]) : [[], null];
+    if (ticket !== MV.seq || state.view !== 'dashboard') return;
+    const modelNames = catalog.models.map(model => model.name);
+    el.innerHTML = `<div class="mv"><nav class="mv-tabs" aria-label="비교 시장 선택">${Object.entries(MG).map(([key, item]) => `<a class="${MV.group===key?'active':''}" href="#dashboard/${key}" ${MV.group===key?'aria-current="page"':''}><small>${item.caption}</small>${item.label}${MV.group===key?'<i class="sk-market-accent" data-sk-market-accent aria-hidden="true"></i>':''}</a>`).join('')}</nav>
+      <section class="mv-controls">${mmodels(modelNames)}<div class="mv-filterline"><label>과금 방식<select id="mvTerm">${Object.entries(MT).map(([key,label]) => `<option value="${key}" ${MV.term===key?'selected':''}>${label}</option>`).join('')}</select></label><label class="mv-check"><input id="mvSupplement" type="checkbox" ${MV.includeStale?'checked':''}> 48시간 지난 가격 포함</label><a class="mv-btn" href="#discounts">1년·3년 할인 비교 ↗</a></div></section>
+      <div class="mv-section-head"><div><p class="mv-eyebrow">${MG[MV.group].label} · 비교 사업자 ${MG[MV.group].ids.length}곳</p><h2>${mh(MV.model)} <span>· ${MT[MV.term]}</span></h2></div><button class="mv-btn" id="mvExport">선택 비교 저장 ↓</button></div>
+      <div id="mvPair"></div><section class="mv-note cp-summary" id="mvMarketSummary"></section>${springMarketFooter()}</div>`;
+    mbind(el, marketDashboard);
+    $('#mvTerm').onchange = event => { MV.term = event.target.value; MV.pick = ['','']; marketDashboard(); };
+    $('#mvSupplement').onchange = event => { MV.includeStale = event.target.checked; MV.pick = ['','']; marketDashboard(); };
+    drawMarketPair(offers.map(client.mapMarketOffer));
+    const groups = summary?.groups || [];
+    const drawSummary = () => {
+      const chosen = groups.find(item => client.marketGroupId(item.groupKey) === MV.summaryGroup) || groups[0];
+      MV.summaryGroup = client.marketGroupId(chosen?.groupKey);
+      $('#mvMarketSummary').innerHTML = `<h3>동일 조건 대표가격</h3><p>선택한 시장 유형·GPU 모델·계약 기준으로 집계합니다.</p>
+        ${chosen ? `<label>집계 조건 <select id="mvSummaryGroup">${groups.map((item, index) => `<option value="${index}" ${item===chosen?'selected':''}>${mh(marketGroupConditions(item.groupKey))}</option>`).join('')}</select></label>` : ''}
+        ${marketSummaryContent(summary, chosen)}${!summary && filters.modelId ? '<button class="mv-btn" id="mvSummaryRetry">요약 다시 조회</button> ' : ''}<a class="mv-btn" id="mvCompareLink" href="#compare">동일 조건·표본 수 확인 ↗</a>`;
+      $('#mvSummaryGroup')?.addEventListener('change', event => {
+        MV.summaryGroup = client.marketGroupId(groups[Number(event.target.value)].groupKey);
+        drawSummary();
+        $('#mvSummaryGroup').focus();
+      });
+      $('#mvSummaryRetry')?.addEventListener('click', marketDashboard);
+      $('#mvCompareLink').onclick = () => {
+        Object.assign(CP, {model: MV.model, term: filters.contractType.toLowerCase(), months: filters.commitmentMonths || 'ALL',
+          type: MV.group === 'general' ? 'hyperscaler' : 'neocloud', provider:'ALL', country:'ALL', region:'ALL',
+          query:'', generation:'ALL', confidential:true, mode:'strict', group:MV.summaryGroup, page:0});
+      };
+      refreshKrw();
+    };
+    drawSummary();
+  } catch (error) {
+    if (ticket !== MV.seq || state.view !== 'dashboard') return;
+    el.innerHTML = `<div class="mv-note"><b>가격 자료를 불러오지 못했습니다.</b><p>${mh(error.message)}</p><button class="mv-btn" id="mvMarketRetry">다시 불러오기</button></div>`;
+    $('#mvMarketRetry').onclick = marketDashboard;
+  }
+}
+
+function marketHourly(component) {
+  if (component?.amount == null) return '—';
+  const amount = String(component.amount).replace(/(\.\d*?[1-9])0+$|\.0+$/, '$1');
+  return [component.currency, amount, component.timeUnit, component.appliesTo].filter(Boolean).join(' ');
+}
+
+function drawMarketPair(pool) {
+  const group = MG[MV.group], picked = [];
+  const cards = group.ids.map((pid, i) => {
+    const name = marketProviderNames[pid];
+    const rows = pool.filter(row => row.provider === name);
+    const regions = [...new Set(rows.map(row => row.region || ''))].sort();
+    if (MV.region[i] !== 'ALL' && !regions.includes(MV.region[i])) MV.region[i] = 'ALL';
+    const options = rows.filter(row => MV.region[i] === 'ALL' || (row.region || '') === MV.region[i])
+      .sort((a, b) => (a.freshness === 'STALE') - (b.freshness === 'STALE') || (a.price ?? Infinity) - (b.price ?? Infinity));
+    const row = options.find(item => item.id === MV.pick[i]) || options.find(item => item.price != null) || options[0];
+    picked.push(row);
+    MV.pick[i] = row?.id || '';
+    return `<article class="mv-provider"><div class="mv-provider-head"><span class="mv-monogram ${pid}">${{aws:'aws',azure:'A',nebius:'N',verda:'V'}[pid]}</span><div><small>${group.label}</small><h3>${name}</h3></div><span class="mv-muted">${rows.length}개 오퍼</span></div>
+      <div class="mv-selects"><label>리전<select data-region="${i}"><option value="ALL">전체 관측 지역</option>${regions.map(region => `<option value="${mh(region)}" ${region===MV.region[i]?'selected':''}>${mh(mr(region))}</option>`).join('')}</select></label>
+      <label>비교 상품<select data-pick="${i}" ${options.length?'':'disabled'}>${options.map(item => `<option value="${mh(item.id)}" ${row?.id===item.id?'selected':''}>${mh(item.configuration.sku || item.product)} · ${item.gpus??'?'} GPU · ${mh(mr(item.region))} · ${mp(item.price)}</option>`).join('') || '<option>관측 자료 없음</option>'}</select></label></div>
+      ${row ? `<div class="mv-quote"><div><span class="mv-badge ${row.eligible?'good':''}">${mh(marketFreshness[row.freshness] || '미확인')}</span> <span class="mv-chip">${mv(row.sourceName)}</span></div><small>마지막 관측 실효 단가 · ${mh(marketCertainty[row.certainty] || '가격 미관측')}</small><strong>${fxPrice(row.price)}<em>/ GPU·시간</em></strong><p>${mh(row.product)}</p><span class="mv-chip">${mv(row.configuration.systemType)} · ${row.gpus ?? '미확인'} GPU</span></div>
+      <dl class="mv-quick"><div><dt>원본 반복 요금</dt><dd>${mh(marketHourly(row.hourlyComponent))}</dd></div><div><dt>vCPU / 시스템 RAM</dt><dd>${mv(row.configuration.vcpuCount)} / ${mv(row.configuration.ramGb)} GB</dd></div><div><dt>최근 가격 공개 상태</dt><dd>${mh(marketDisclosure[row.disclosure] || '미확인')}</dd></div></dl>
+      <div class="mv-cardfoot"><small>${mtime(row.collected)}</small><button class="mv-btn primary" data-market-offer="${mh(row.id)}">상품 상세·가격 근거 ↗</button></div>` : '<div class="mv-empty"><span>—</span><h3>선택 조건의 가격 미확보</h3><p>저장된 가격 관측이 없습니다.</p></div>'}</article>`;
+  });
+  const chartRows = group.ids.map((pid, i) => ({label:marketProviderNames[pid], price:picked[i]?.price == null ? null : Number(picked[i].price),
+    missingLabel:'실효 단가 미확보', source:picked[i]?.sourceName || '', observedAt:picked[i]?.collected || ''}));
+  const gap = MarketLogic.gap(...picked.map(row => row && {normalized_price:row.price == null ? null : Number(row.price)}));
+  $('#mvPair').innerHTML = `<section class="sk-comparison-chart" aria-label="선택 상품의 GPU당 시간 요금 차트"><div class="sk-chart-heading"><div><h3>선택 상품의 시간당 가격</h3><p>${mh(MV.model)} · ${MT[MV.term]} · ${group.label}</p></div><span>USD / GPU·시간</span></div><div data-sk-price-chart data-rows="${mh(JSON.stringify(chartRows))}"></div><p class="sk-comparison-note">참고 단가에는 서로 다른 리전·CPU·메모리·GPU 수·연결망 조건이 포함될 수 있습니다.</p></section>
+    <div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(pid => marketProviderNames[pid]).join(' → ')} · GPU당 차이</small><strong>${gap ? `${gap.amount>=0?'+':'−'}${mp(Math.abs(gap.amount))}` : '비교 가능한 양쪽 가격이 필요합니다.'}</strong>${gap?`<span>왼쪽 기준 ${gap.percent>0?'+':''}${gap.percent.toFixed(1)}%</span>`:''}</div><p>선택 상품의 실효 단가를 사용한 참고 비교입니다.</p></div>`;
+  $('#mvPair').onchange = event => {
+    const {region, pick} = event.target.dataset;
+    if (region !== undefined) { MV.region[Number(region)] = event.target.value; MV.pick[Number(region)] = ''; }
+    if (pick !== undefined) MV.pick[Number(pick)] = event.target.value;
+    drawMarketPair(pool);
+    if (region !== undefined) $('#mvPair').querySelector(`[data-region="${region}"]`).focus();
+    if (pick !== undefined) $('#mvPair').querySelector(`[data-pick="${pick}"]`).focus();
+  };
+  $('#mvExport').disabled = !picked.some(Boolean);
+  $('#mvExport').onclick = () => exportMarketOffers('GPU_선택비교.csv', picked.filter(Boolean));
+  refreshKrw();
+}
+
+let marketDetailTicket = 0;
+
+function marketEvidenceList(evidence) {
+  return evidence.map(source => `<div class="mv-evidence-match"><b>${mv(source.sourceName)}</b><p>${mlink(source.sourceUrl, '원문 URL')} · ${mv(source.role)}</p><small>근거 확보 ${mtime(source.capturedAt)} · 공식 검증 ${source.primaryVerified === true ? '확인됨' : source.primaryVerified === false ? '미확인' : '기록 없음'}</small></div>`).join('') || '<p>연결된 출처가 없습니다.</p>';
+}
+
+async function showMarketOffer(offerId, trigger) {
+  const ticket = ++marketDetailTicket;
+  const dialog = $('#evidenceDialog'), body = $('#evidenceBody');
+  evidenceTrigger = trigger;
+  dialog.classList.add('mv-dialog');
+  body.innerHTML = '<div class="mv"><h2 id="evidenceTitle">상품 상세·가격 근거</h2><p role="status">상품을 불러오는 중입니다.</p></div>';
+  if (!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0;
+  try {
+    const client = await import('/static/spring-market-client.mjs');
+    const detail = await client.fetchMarketOffer(api, offerId);
+    if (!dialog.open || ticket !== marketDetailTicket) return;
+    const offer = detail.offer, product = offer.product, contract = offer.contract;
+    const observation = offer.lastSuccessfulObservation, row = client.mapMarketOffer(offer);
+    const status = offer.latestCheck, explanation = detail.normalizationExplanation;
+    const section = (title, fields) => `<section class="mv-detail-section"><h3>${title}</h3><dl>${fields.map(([label, value]) => `<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl></section>`;
+    body.innerHTML = `<div class="mv"><p class="mv-eyebrow">상품·계약·관측 근거</p><h2 id="evidenceTitle">${mh(offer.providerName)} · ${mh(offer.modelName)}</h2><div class="mv-detailhero"><h3>${mv(row.product)}</h3><p>오퍼 ${mh(offerId)} · ${mv(offer.providerType)} · ${mv(product.countryCode)} / ${mv(product.regionCode)}</p><strong>${fxPrice(row.price)} <small>/ GPU·시간 · 마지막 관측 실효 단가</small></strong></div>
+      ${section('상품 구성', [['상품명·SKU', mv(product.originalProductName) + ' / ' + mv(product.sku)], ['원본 모델명', mv(product.originalModelName)], ['시스템·서비스', mv(product.systemType) + ' / ' + mv(product.serviceOption)], ['GPU 수 / GPU당 VRAM(GB)', mv(product.gpuCount) + ' / ' + mv(product.vramGbPerGpu)], ['vCPU / RAM(GB)', mv(product.vcpuCount) + ' / ' + mv(product.ramGb)], ['스토리지', mv(product.storageDescription)], ['연결 정보', mv(product.intraNodeInterconnect) + ' / ' + mv(product.interNodeNetwork)], ['구성 범위·버전', mv(product.specScope) + ' / ' + mv(product.configurationVersion)]])}
+      ${section('계약과 공개 상태', [['계약 상품', mv(contract.productType)], ['약정기간', contract.months == null ? (contract.type==='ON_DEMAND'||contract.type==='SPOT'?'기간 약정 없음':'미확인') : mh(contract.months) + '개월'], ['지불 방식', mv(marketPayment[contract.paymentOption])], ['최소 물량', mv(contract.minimumQuantity) + ' / ' + mv(contract.minimumQuantityUnit)], ['최근 가격 공개 상태', mv(marketDisclosure[row.disclosure])], ['최근 확인', mtime(status?.checkedAt) + ' · ' + mv(status?.processingStatus)], ['최신성', mv(marketFreshness[row.freshness])], ['동일 조건 집계', row.eligible ? '집계 대상' : mh(row.excludedReasons.map(reason => marketExclusions[reason] || reason).join(' · ') || '미확인')]])}
+      ${section('마지막 성공 관측', [['가격 원문', mv(observation?.rawPriceText)], ['실제 수집 시각', mtime(row.collected)], ['가격 적용 시작', mtime(observation?.effectiveFrom)], ['가격 구분', mv(marketCertainty[row.certainty])], ['명목 USD / GPU·시간', fxPrice(observation?.nominal?.amount)], ['정규화 산식', mv(explanation?.formulaDescription)], ['정규화 규칙·정밀도', mv(explanation?.ruleVersion) + ' / ' + mv(explanation?.precisionPolicy)]])}
+      ${observation?.components?.length ? `<section class="mv-detail-section"><h3>원본 가격 구성요소</h3><ul>${observation.components.map(component => `<li>${mv(component.type)} · ${mv(component.amount ?? component.discountRate)} ${mv(component.currency)} / ${mv(component.timeUnit)} · ${mv(component.appliesTo)}</li>`).join('')}</ul></section>` : ''}
+      <section class="mv-detail-section"><h3>가격 관측 출처</h3>${marketEvidenceList(observation?.evidence || [])}</section>
+      ${offer.latestDisclosure?.evidence?.length ? `<details class="mv-note"><summary>최근 공개 상태 출처</summary>${marketEvidenceList(offer.latestDisclosure.evidence)}</details>` : ''}
+      ${detail.specEvidence?.length ? `<details class="mv-note"><summary>상품 사양 근거</summary>${detail.specEvidence.map(item => `<h4>${mv(item.attributeName)}</h4>${marketEvidenceList([item.evidence])}`).join('')}</details>` : ''}
+      ${row.observation ? `<button class="mv-btn primary" id="mvOfferObservation">정규화 관측·환율 재계산 ↗</button>` : ''}
+      </div>`;
+    $('#mvOfferObservation')?.addEventListener('click', () => {
+      const pending = showErdObservation(row.observation);
+      evidenceTrigger = trigger;
+      return pending;
+    });
+    refreshKrw();
+  } catch (error) {
+    if (!dialog.open || ticket !== marketDetailTicket) return;
+    body.innerHTML = `<div class="mv"><h2 id="evidenceTitle">상품 상세·가격 근거</h2><p role="alert">${mh(error.message)}</p><button class="mv-btn" id="mvOfferRetry">다시 불러오기</button></div>`;
+    $('#mvOfferRetry').onclick = () => showMarketOffer(offerId, trigger);
+  }
+}
+
+document.addEventListener('click', event => {
+  const button = event.target.closest('[data-market-offer]');
+  if (button) showMarketOffer(button.dataset.marketOffer, button);
+});
+
+
+let marketCatalogTicket = 0;
+
+async function marketCatalog() {
+  const ticket = ++marketCatalogTicket, el = $('#catBody');
+  const [, kind, ...parts] = location.hash.slice(1).split('/');
+  const modelRoute = kind === 'gpu', providerRoute = kind === 'provider';
+  marketPriceFrame('GPU·사업자 카탈로그', '가격과 구성, 계약 조건, 원천 확인 결과를 함께 살펴보세요.');
+  el.innerHTML = '<div class="mv-note" role="status">등록 상품을 불러오는 중입니다.</div>';
+
+  try {
+    const id = decodeURIComponent(parts.join('/'));
+    const [catalog, client] = await Promise.all([springMarketCatalog(), import('/static/spring-market-client.mjs')]);
+    if (ticket !== marketCatalogTicket || state.view !== 'catalog') return;
+    const model = modelRoute ? catalog.models.find(item => item.name === id) : null;
+    const provider = providerRoute ? catalog.providers.find(item => item.id === id || item.name.toLowerCase() === id.toLowerCase()) : null;
+    const filters = {
+      ...(model ? {modelId: model.id} : {}),
+      ...(provider ? {providerIds: provider.id} : {}),
+      includeStale:'true',
+    };
+    const offers = (modelRoute && !model) || (providerRoute && !provider) ? [] : await client.fetchMarketOffers(api, filters);
+    if (ticket !== marketCatalogTicket || state.view !== 'catalog') return;
+    const rows = offers.map(client.mapMarketOffer);
+    const providers = providerRoute ? (provider ? [provider] : []) : catalog.providers;
+    let selectedProvider = provider?.id || 'ALL';
+    if (model) {
+      MV.model = model.name;
+      $('#pageTitle').textContent = model.name + ' 상품 카탈로그';
+    }
+
+    function draw() {
+      const query = MV.q.trim().toLowerCase();
+      const filtered = rows.filter(row => (selectedProvider === 'ALL' || row.providerId === selectedProvider)
+        && (!query || [row.configuration.sku, row.region, row.product, row.sourceName, row.provider].join(' ').toLowerCase().includes(query)));
+      const pages = Math.max(1, Math.ceil(filtered.length / 24));
+      MV.page = Math.min(MV.page, pages - 1);
+      const display = filtered.slice(MV.page * 24, (MV.page + 1) * 24);
+      const pricedProviders = new Set(filtered.filter(row => row.price != null).map(row => row.providerId));
+      el.innerHTML = `<div class="mv"><div class="mv-cataloghero"><div><p class="mv-eyebrow">GPU / ${modelRoute ? model && catalog.models.indexOf(model) < 3 ? '주요 모델' : '참조 모델' : '상품 목록'}</p>
+        <h1>${modelRoute ? mh(model?.name || id) : 'GPU 상품·가격 목록'}</h1><p>원본 가격과 상품 조건을 함께 확인하세요.</p>
+        <div class="mv-actions"><a class="mv-btn primary" href="#dashboard/${MV.group}">사업자 비교 ↗</a><a class="mv-btn" href="#discounts">계약기간별 할인 ↗</a></div></div>
+        <div class="mv-catalognumbers"><div><strong>${filtered.length}</strong><span>상품·지역·계약 조합</span></div><div><strong>${pricedProviders.size}</strong><span>숫자 단가 확보 사업자</span></div></div></div>
+        ${!modelRoute ? `<div class="mv-modelnav">${catalog.models.map(({name}, i) => `<a href="#catalog/gpu/${encodeURIComponent(name)}"><small>${i<3?'메인':'참조'}</small>${mh(name)}</a>`).join('')}</div>` : ''}
+        <div class="mv-toolbar"><label>사업자<select id="mvProvider">${providerRoute ? '' : '<option value="ALL">수집 사업자 전체</option>'}${providers.map(item => `<option value="${mh(item.id)}" ${selectedProvider===item.id?'selected':''}>${mh(item.name)}</option>`).join('') || (providerRoute ? '<option>등록 사업자 없음</option>' : '')}</select></label>
+        <label class="grow">상품·리전 검색<input id="mvSearch" type="search" placeholder="예: p6-b300, koreasouth" value="${mh(MV.q)}"></label>
+        <button class="mv-btn" id="mvCatalogCSV" ${filtered.length?'':'disabled'}>검색 결과 저장 ↓</button></div>
+        <div class="mv-tablebox" tabindex="0" role="region" aria-label="표: 가로로 스크롤하여 전체 열 확인"><table class="mv-table"><thead><tr><th>사업자 / 상품 원문</th><th>계약 / 구성</th><th>지역</th><th>원본 반복 요금</th><th>실효 USD / GPU·시간</th><th>수집 상태 / 출처</th><th>전체 정보</th></tr></thead>
+        <tbody>${display.map(row => `<tr><td><b>${mh(row.provider)}</b><span>${mv(row.product)}</span><small>${mh(row.model)} · 원문 ${mv(row.configuration.originalModelName)}</small></td>
+          <td>${mh(MT[row.term] || row.contract || '미확인')}<span>${mv(row.configuration.systemType)} · ${mv(row.gpus)} GPU</span><small>${mv(marketPayment[row.contractInfo.paymentOption])}</small></td>
+          <td>${mh(mr(row.region))}<span>${mv(row.country)}</span></td><td>${mh(marketHourly(row.hourlyComponent))}</td>
+          <td><strong>${fxPrice(row.price)}</strong><span>${mh(marketCertainty[row.certainty] || '가격 미관측')}</span></td>
+          <td><span class="mv-badge ${row.eligible?'good':''}">${mh(marketFreshness[row.freshness] || '미확인')}</span><span>${mh(marketDisclosure[row.disclosure] || '공개 여부 미확인')}</span><small>${mtime(row.collected)} · ${mv(row.sourceName)}</small></td>
+          <td><button class="mv-btn" data-market-offer="${mh(row.id)}">상세·근거 ↗</button></td></tr>`).join('') || '<tr><td colspan="7"><div class="mv-empty"><h3>이번 수집 범위에서 가격을 확인하지 못했습니다.</h3><p>검색어를 지우거나 다른 모델·사업자를 선택해 주세요.</p></div></td></tr>'}</tbody></table></div>
+        <div class="mv-pagination"><span>${filtered.length}개 중 ${filtered.length?MV.page*24+1:0}–${Math.min((MV.page+1)*24,filtered.length)}</span><button class="mv-btn" id="mvPrev" ${MV.page?'':'disabled'}>이전</button><b>${MV.page+1} / ${pages}</b><button class="mv-btn" id="mvNext" ${MV.page+1<pages?'':'disabled'}>다음</button></div>
+        <div class="mv-note"><b>원본 요금과 실효 단가</b><p>반복 요금에 더해 선납금·원본 약정 기간·환산 규칙 등은 상품 상세에서 확인할 수 있습니다.</p></div>${springMarketFooter()}</div>`;
+      $('#mvProvider').onchange = event => { selectedProvider = event.target.value; MV.page = 0; draw(); $('#mvProvider').focus(); };
+      $('#mvSearch').oninput = event => {
+        const pos = event.target.selectionStart;
+        MV.q = event.target.value;
+        MV.page = 0;
+        draw();
+        $('#mvSearch').focus();
+        $('#mvSearch').setSelectionRange(pos, pos);
+      };
+      $('#mvPrev').onclick = () => { MV.page--; draw(); ($('#mvPrev').disabled ? $('#mvNext') : $('#mvPrev')).focus(); };
+      $('#mvNext').onclick = () => { MV.page++; draw(); ($('#mvNext').disabled ? $('#mvPrev') : $('#mvNext')).focus(); };
+      $('#mvCatalogCSV').onclick = () => exportMarketOffers('GPU_상품목록.csv', filtered);
+      refreshKrw();
+    }
+    draw();
+  } catch (error) {
+    if (ticket === marketCatalogTicket && state.view === 'catalog') errBox(el, error);
+  }
 }
 async function marketEvidence(id){const r=await api('/api/market/offer/'+encodeURIComponent(id));evidenceTrigger=document.activeElement;const item=(label,value)=>`<div><dt>${label}</dt><dd>${value}</dd></div>`;const sec=(n,title,items)=>`<section class="mv-detail-section"><h3><span>${n}</span>${title}</h3><dl>${items.map(([a,b])=>item(a,b)).join('')}</dl></section>`;
  const upfront=/all upfront/i.test(r.term_original||r.product_original||'')?'전액 선납 조건 · 선납 총액 미확인':r.upfront_amount==null?'금액 미확인 · 0원으로 간주하지 않음':mp(r.upfront_amount);

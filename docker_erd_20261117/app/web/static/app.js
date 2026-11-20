@@ -26,7 +26,11 @@ async function api(path, body) {
   let data = null; try { data = await r.json(); } catch (e) { /* 비 JSON */ }
   if (r.status === 401 || r.status === 403) throw new Error('이 워크스페이스에서 지원하지 않는 작업입니다.');
   if (r.status === 404 && data && data.detail === 'Not Found') throw new Error('서버가 화면보다 이전 버전입니다. 터미널에서 docker compose restart web 을 실행하고, 로그에 Uvicorn running 이 보이면 새로고침하세요.');
-  if (!r.ok) throw new Error((data && data.detail) ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : `서버 오류 (${r.status})`);
+  if (!r.ok) {
+    const error = new Error((data && data.detail) ? (typeof data.detail === 'string' ? data.detail : JSON.stringify(data.detail)) : `서버 오류 (${r.status})`);
+    error.httpStatus = r.status;
+    throw error;
+  }
   return data;
 }
 const qs = o => '?' + new URLSearchParams(o).toString();
@@ -72,9 +76,33 @@ const regionOpts = () => [['ALL', '전체 지역'], ...state.meta.regions.map(r 
 const typeOpts = () => [['ALL', '전체'], ...state.meta.provider_types.map(t => [t, typeL(t), TYPE_VAR[t]])];
 
 /* ---------- 상단 상태 ---------- */
+const compatibilityUnavailable = error => [502, 503, 504].includes(error.httpStatus);
+
 async function loadMeta() {
-  const m = await api('/api/meta');
-  if (!m.run) throw new Error('수집 데이터가 없습니다. 터미널에서 docker compose exec web python cli.py seed → docker compose exec web python cli.py collect 순서로 실행한 뒤 새로고침하세요.');
+  let m;
+  try {
+    m = await api('/api/meta');
+  } catch (error) {
+    if (!compatibilityUnavailable(error)) throw error;
+  }
+  if (!m?.run) {
+    const { isSuccess, result: catalog } = await api('/api/v1/catalog');
+    if (!isSuccess || !Array.isArray(catalog?.models) || !Array.isArray(catalog?.providers)) {
+      throw new Error('Spring GPU 카탈로그를 읽을 수 없습니다.');
+    }
+    const names = catalog.models.map(model => model.name);
+    const defaultModel = names.includes('B300') ? 'B300' : names[0];
+    state.meta = {
+      springOnly: true, catalog_models: names, models: names, fresh_hours: 48,
+      terms: Object.keys(TERMS), provider_types: catalog.providerTypes || [],
+      regions: [...new Set((catalog.regions || []).map(region => region.regionCode).filter(Boolean))],
+    };
+    state.f.model ||= defaultModel;
+    state.t.model ||= defaultModel;
+    $('#sLast').textContent = '공통 적재 시각 미제공';
+    $('#sCount').textContent = `Spring 카탈로그 · GPU 모델 ${names.length}개 · 사업자 ${catalog.providers.length}곳`;
+    return;
+  }
   state.meta = m;
   if (m.fx) { state.dbFx = m.fx.rate_to_usd; if (state.fx == null) state.fx = state.dbFx; }
   if (!state.f.model) state.f.model = (m.catalog_models || ['B200'])[0];
@@ -823,7 +851,10 @@ function wireShell() {
 
 async function boot() {
   try {
-    const me = await api('/api/workspace');
+    const me = await api('/api/workspace').catch(error => {
+      if (!compatibilityUnavailable(error)) throw error;
+      return { user: null };
+    });
     state.user = me.user;
     document.querySelectorAll('[data-admin]').forEach(el => { el.hidden = !isAdmin(); });
     applyShellLang();

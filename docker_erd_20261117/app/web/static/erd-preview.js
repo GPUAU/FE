@@ -15,25 +15,35 @@ async function loadSpringHistory(name, from, to) {
   return mapSeries(await fetchHistory(api,selected.id,start.toISOString(),end.toISOString(),capabilities.historyPagination===true));
 }
 async function showSpringObservation(id) {
+  const ticket = ++marketDetailTicket;
+  const dialog = $('#evidenceDialog'), body = $('#evidenceBody');
   const [,observationId,normalizationId]=id.split('-');
   const query=normalizationId!=='none'?'?normalizationId='+encodeURIComponent(normalizationId):'';
   evidenceTrigger=document.activeElement;
-  $('#evidenceBody').innerHTML='<div class="mv"><p>근거 조회 중입니다.</p></div>';
-  if(!$('#evidenceDialog').open) $('#evidenceDialog').showModal();
+  dialog.classList.add('mv-dialog');
+  body.innerHTML='<div class="mv"><h2 id="evidenceTitle">가격 관측 근거</h2><p role="status">근거 조회 중입니다.</p></div>';
+  if(!dialog.open) dialog.showModal();
+  dialog.scrollTop = 0;
   try {
     const envelope=await api('/api/v1/market/observations/'+encodeURIComponent(observationId)+query);
+    if (!dialog.open || ticket !== marketDetailTicket) return;
     if(!envelope.isSuccess)throw new Error(envelope.message||'조회 실패');
     const d=envelope.result;
     const evidence=d.evidence.map(e=>`<div class="mv-evidence-match"><b>${mh(e.sourceName)}</b><p>${mlink(e.sourceUrl,'원본 URL')} · ${mh(e.role)}</p><p>근거 확보 ${mutc(e.capturedAt)} · 공식 원천 검증 ${e.primaryVerified===true?'확인됨':e.primaryVerified===false?'미확인':'기록 없음'}</p></div>`).join('');
     $('#evidenceBody').innerHTML=`<div class="mv"><h2 id="evidenceTitle">Spring 가격 관측 ${mh(d.observationId)}</h2><section class="mv-detail-section"><h3>가격 원문과 수집 시각</h3><p>${mh(d.rawPriceText||'미확인')}</p><p>수집 ${mutc(d.collectedAt)} · 적용 시작 ${mutc(d.effectiveFrom)}</p><p>가격 구분 ${mh(d.priceCertainty)} · 실효 단가 ${d.effective?.amount==null?'환산 불가':mp(d.effective.amount)+' / GPU·시간'} · 규칙 ${mh(d.effective?.ruleVersion||'미확인')}</p></section><section class="mv-detail-section"><h3>출처와 검증 근거</h3>${evidence||'<p>출처 미확보</p>'}</section><section class="mv-detail-section"><h3>직접 입력 환율 재계산</h3><p>이 관측의 실효 USD 단가를 입력한 환율로 환산합니다. 결과는 저장되지 않습니다.</p><form id="springFxForm"><label>사용자 환율 (KRW / USD)<input id="springFxInput" type="number" min="0.000001" step="0.000001" required></label><button class="mv-btn" type="submit" ${normalizationId==='none'?'disabled':''}>재계산</button></form><p id="springFxResult" role="status">${normalizationId==='none'?'환산 결과 ID가 없어 재계산할 수 없습니다.':'양수 환율을 입력하세요.'}</p></section></div>`;
     $('#springFxForm').onsubmit=async event=>{
       event.preventDefault(); const out=$('#springFxResult'); const button=event.currentTarget.querySelector('button');
-      try {const {fxRequest}=await import('/static/spring-operations.mjs'); const request=fxRequest(observationId,normalizationId,$('#springFxInput').value);button.disabled=true;out.textContent='재계산 중입니다.';
+      if (button.disabled) return;
+      const rate = event.currentTarget.querySelector('#springFxInput').value;
+      button.disabled=true;out.textContent='재계산 중입니다.';
+      try {const {fxRequest}=await import('/static/spring-operations.mjs'); const request=fxRequest(observationId,normalizationId,rate);
         const result=await api('/api/v1/exchange-rate-simulations',request);if(!result.isSuccess)throw Error(result.message||'재계산 실패');const item=result.result.items[0];
         out.textContent=item?.status==='OK'?`환산 단가 ${Number(item.krwPerGpuHour).toLocaleString('ko-KR',{maximumFractionDigits:6})}원/GPU·시간 · 적용 환율 ${request.krwPerUsd}원/USD · 저장하지 않음`:`환산 불가: ${item?.reason||'결과가 없습니다.'}`;
       } catch(error){out.textContent='재계산 실패: '+error.message;} finally {button.disabled=normalizationId==='none';}
     };
-  } catch(e) {$('#evidenceBody').textContent='관측 출처 조회 실패: '+e.message;}
+  } catch(e) {
+    if (dialog.open && ticket === marketDetailTicket) body.textContent='관측 출처 조회 실패: '+e.message;
+  }
 }
 /* ERD adapter: retain the existing SK shell, market cards and evidence dialog. */
 
@@ -112,42 +122,273 @@ for(const view of ['cost','bizcase','agent','favorites','inquiries']){
 }
 
 const originalLoadMeta=loadMeta;
-loadMeta=async()=>{await originalLoadMeta();const d=await api('/api/market');$('#sCount').textContent=`온디맨드 ${d.summary.current_offers}개 · 스팟·약정 ${d.summary.contract_offers}개 · 가격 관측 ${d.summary.observations}건 · 공식 과거 자료 ${d.summary.historical}건 · 아카이브 가격 ${d.summary.archive_observations}건`;};
+loadMeta=async()=>{
+  await originalLoadMeta();
+  if(state.meta.springOnly)return;
+  const d=await api('/api/market').catch(error=>{if(!compatibilityUnavailable(error))throw error;return null;});
+  if(d)$('#sCount').textContent=`온디맨드 ${d.summary.current_offers}개 · 스팟·약정 ${d.summary.contract_offers}개 · 가격 관측 ${d.summary.observations}건 · 공식 과거 자료 ${d.summary.historical}건 · 아카이브 가격 ${d.summary.archive_observations}건`;
+};
 // The old refresh button also fetched rates. This preview only rereads its DB.
 document.addEventListener('click',async e=>{if(e.target.closest('#refreshBtn')){e.preventDefault();e.stopImmediatePropagation();MV.promise=null;if(typeof sgInvalidateData==='function')sgInvalidateData();await loadMeta();await render();toast('저장된 ERD 데이터를 다시 불러왔습니다. 외부 수집은 실행하지 않았습니다.');}},true);
 
 PAGES.catalog.tools=false;PAGES.trend.tools=false;
 
-// Contract types and payment options remain separate; no arbitrary minimum
-// is presented as guaranteed savings. History filters keep contract types separate.
-let contractModel='ALL',contractProvider='ALL',contractType='ALL',contractTerm='ALL';
-let contractBaseline='',contractChoices={};
-const discountText=r=>r.discount_percent==null?'비교 불가':r.discount_percent<0?`${Math.abs(r.discount_percent).toFixed(1)}% 높음`:`${r.discount_percent.toFixed(1)}% ${r.contract_type==='spot'?'낮음 · 가격 차이':'할인'}`;
-const discountClass=r=>r.discount_percent==null?'is-missing':r.discount_percent<0?'is-increase':'';
-RENDER.discounts=async()=>{
-  await marketData();const all=await api('/api/erd/contracts');
-  mframe('온디맨드 대비 가격 차이·할인율','스팟 가격 차이와 1년·3년 약정 할인율을 같은 상품 기준으로 비교합니다.');
-  document.body.classList.add('contract-v4');
-  const rows=all.filter(r=>(contractModel==='ALL'||r.model_name===contractModel)&&(contractProvider==='ALL'||r.provider_name===contractProvider)&&(contractType==='ALL'||r.contract_product_type===contractType)&&(contractTerm==='ALL'||String(r.commitment_months||0)===contractTerm));
-  const select=(id,label,values,value)=>`<label>${label}<select id="${id}">${values.map(v=>`<option value="${mh(v)}" ${v===value?'selected':''}>${v==='ALL'?'전체':v==='0'?'기간 약정 없음':v==='12'?'1년':v==='36'?'3년':mh(v)}</option>`).join('')}</select></label>`;
-  const payment={all_upfront:'전액 선납',partial_upfront:'일부 선납',no_upfront:'선납 없음'};
-  const componentName={hourly_rate:'시간요금',upfront_fee:'선납금',commitment_total:'약정 총액'};
-  const groups=new Map();
-  for(const r of rows)if(r.on_demand_observation_id!=null){const k=String(r.on_demand_observation_id);if(!groups.has(k))groups.set(k,[]);groups.get(k).push(r)}
-  if(!groups.has(contractBaseline)){contractBaseline=[...groups.keys()].sort((a,b)=>new Set(groups.get(b).map(r=>r.contract_type==='spot'?'spot':r.commitment_months)).size-new Set(groups.get(a).map(r=>r.contract_type==='spot'?'spot':r.commitment_months)).size)[0]||'';contractChoices={}}
-  const chosen=groups.get(contractBaseline)||[],base=chosen[0];
-  const optionName=r=>`${r.contract_product_type} · ${payment[r.payment_option]||'지불 방식 미확인'} · ${mp(r.display_price)} / GPU·시간`;
-  const detailButton=id=>`<button class="mv-btn" data-observation="${id}">상세·근거</button>`;
-  const cards=base?`<section class="discount-comparison"><div class="mv-section-head"><div><h2>같은 상품, 계약별 할인율</h2><p>아래 상품과 요금제를 선택하면 해당 조건의 할인율을 표시합니다.</p></div></div><label>비교할 상품 · 리전<select id="contractBaseline">${[...groups].map(([k,g])=>`<option value="${k}" ${k===contractBaseline?'selected':''}>${mh(g[0].provider_name+' · '+g[0].model_name+' · '+g[0].original_product_name+' · '+g[0].region_code+' · '+g[0].sku.split('/')[0])}</option>`).join('')}</select></label><div class="mv-contractgrid discount-grid"><article class="mv-contractcard"><span class="mv-chip">기준 가격</span><h3>온디맨드</h3><strong>${fxPrice(base.on_demand_price)}<small>USD / GPU·시간</small></strong><b class="mv-saving">기준 0.0%</b><p>수집: ${mh(base.on_demand_collected_at)}</p>${detailButton(base.on_demand_observation_id)}</article>${[['spot','스팟'],['12','1년 약정'],['36','3년 약정']].map(([key,title])=>{
-    const options=chosen.filter(r=>key==='spot'?r.contract_type==='spot':r.contract_type==='commitment'&&String(r.commitment_months)===key);
-    const r=options.find(r=>String(r.observation_id)===contractChoices[key])||options[0];
-    return `<article class="mv-contractcard featured"><span class="mv-chip">${key==='spot'?'중단 가능':'장기약정'}</span><h3>${title}</h3>${r?`<label>비교 요금제<select data-contract-choice="${key}">${options.map(o=>`<option value="${o.observation_id}" ${o===r?'selected':''}>${mh(optionName(o)+(o.availability_zone?' · '+o.availability_zone:''))}</option>`).join('')}</select></label><strong>${fxPrice(r.display_price)}<small>USD / GPU·시간</small></strong><b class="mv-saving ${discountClass(r)}">${discountText(r)}</b><p>온디맨드 대비 ${r.saving_usd_gpu_hour<0?'추가':'절감'} ${mp(Math.abs(r.saving_usd_gpu_hour))} / GPU·시간</p><p>${mh(r.display_basis)}</p><small>수집: ${mh(r.collected_at)}</small>${detailButton(r.observation_id)}`:'<strong>미확보</strong><p>현재 선택 조건에서 확보한 가격이 없습니다.</p>'}</article>`;
-  }).join('')}</div></section>`:'';
-  $('#v-discounts').innerHTML=`<div id="mvContracts" class="mv"><section class="mv-controls"><div class="mv-filterline">${select('contractModel','GPU 모델',['ALL',...MV.data.models],contractModel)}${select('contractProvider','사업자',['ALL','AWS','Azure'],contractProvider)}${select('contractType','요금제',['ALL',...new Set(all.map(r=>r.contract_product_type))],contractType)}${select('contractTerm','약정기간',['ALL','0','12','36'],contractTerm)}<button class="mv-btn" id="contractCSV">선택 자료 CSV ↓</button></div></section>${cards}<div class="mv-note"><b>${rows.length}개 공개 요금 · 할인율 산출 ${rows.filter(r=>r.discount_percent!=null).length}건 · 비교 불가 ${rows.filter(r=>r.discount_percent==null).length}건</b><p><b>할인율 = (1 − 선택 요금 ÷ 온디맨드 요금) × 100</b> · 단위는 USD / GPU·시간입니다. 동일 사업자·상품군·VM 규격·리전·GPU 수를 맞추고, 확인된 vCPU·RAM 등 구성의 불일치는 제외합니다. 일부 서비스·상호연결 조건은 미확인 상태이므로 참고 비교입니다.</p><p>예약 요금은 선납금과 반복 요금 또는 약정 총액을 합산·환산하며, 연 8,760시간·100% 사용을 가정합니다. Savings Plan은 적용 사용량의 공개 할인 단가를 비교하며 미사용 약정을 포함한 실제 청구 절감률이 아닙니다. 스팟 수치는 보장 할인율이 아닌 관측 시점 가격 차이입니다. 스팟은 중단될 수 있고 가격·가용성이 변합니다.</p><p>최신 확보 가격끼리 비교하므로 기준가와 할인 요금의 수집 시점이 다를 수 있습니다. 수집일과 원문은 각 근거에서 확인하세요. AWS 스팟은 업로드한 SQL 백업의 관측값을 포함합니다. AZ별 스팟과 같은 리전의 온디맨드를 비교하며, 출처 기록의 API 재조회 검증은 수행하지 않았습니다.</p></div><div class="mv-tablebox" tabindex="0" role="region" aria-label="표: 가로로 스크롤하여 전체 열 확인"><table class="mv-table"><thead><tr><th>사업자 / 모델 / 상품</th><th>리전 / GPU 수</th><th>요금제 / 약정 / 지불</th><th>원본 금액 (USD)</th><th>USD / GPU·시간</th><th>온디맨드 기준가</th><th>온디맨드 대비 차이 / 할인율</th><th>수집일 (UTC) / 출처</th></tr></thead><tbody>${rows.length?rows.map(r=>`<tr><td>${mh(r.provider_name)} · ${mh(r.model_name)}<span>${mh(r.original_product_name)}</span></td><td>${mh(r.region_code)}${r.availability_zone?'<span>'+mh(r.availability_zone)+'</span>':''}<span>${r.gpu_count} GPU / VM</span></td><td>${mh(r.contract_product_type)}<span>${r.commitment_months?r.commitment_months+'개월':'기간 약정 없음'} · ${payment[r.payment_option]||'지불 방식 미확인'}</span></td><td>${r.components.map(c=>`${componentName[c.component_type]||mh(c.component_type)}: ${mp(c.amount)}`).join('<br>')}</td><td>${fxPrice(r.display_price)}<span>${mh(r.display_basis)}</span></td><td>${r.on_demand_price==null?'기준가 미확정':`${fxPrice(r.on_demand_price)}<span>${mh(r.on_demand_collected_at)}</span>${detailButton(r.on_demand_observation_id)}`}</td><td><b class="mv-saving ${discountClass(r)}">${discountText(r)}</b><span>${r.discount_percent==null?mh(r.discount_reason):`${r.saving_usd_gpu_hour<0?'추가':'절감'} ${mp(Math.abs(r.saving_usd_gpu_hour))} / GPU·시간 · 참고 비교`}</span></td><td>${mh(r.collected_at)}<span>${mlink(r.source_url,'공식 원문')}</span>${detailButton(r.observation_id)}</td></tr>`).join(''):'<tr><td colspan="8">선택 조건에 해당하는 수집 가격이 없습니다.</td></tr>'}</tbody></table></div>${mfooter()}</div>`;
-  for(const [id,set] of [['contractModel',v=>contractModel=v],['contractProvider',v=>contractProvider=v],['contractType',v=>contractType=v],['contractTerm',v=>contractTerm=v]])$('#'+id).onchange=e=>{set(e.target.value);RENDER.discounts()};
-  if($('#contractBaseline'))$('#contractBaseline').onchange=e=>{contractBaseline=e.target.value;contractChoices={};RENDER.discounts()};
-  document.querySelectorAll('[data-contract-choice]').forEach(el=>el.onchange=e=>{contractChoices[el.dataset.contractChoice]=e.target.value;RENDER.discounts()});
-  $('#contractCSV').onclick=()=>downloadCSV('GPU_spot_commitments_discounts.csv',['관측ID','사업자','모델','상품','리전','GPU수','계약종류','약정개월','지불방식','원본가격요소','비교USD_GPU시간','온디맨드USD_GPU시간','할인율퍼센트','절감USD_GPU시간','비교상태','비교사유','비교주의','온디맨드관측ID','온디맨드수집UTC','온디맨드적용일','온디맨드출처','계산상태','수집UTC','출처'],rows.map(r=>[r.observation_id,r.provider_name,r.model_name,r.original_product_name,r.region_code,r.gpu_count,r.contract_product_type,r.commitment_months,r.payment_option,JSON.stringify(r.components),r.display_price,r.on_demand_price,r.discount_percent,r.saving_usd_gpu_hour,r.discount_status,r.discount_reason,r.discount_notes.join(' '),r.on_demand_observation_id,r.on_demand_collected_at,r.on_demand_effective_from,r.on_demand_source_url,r.display_basis,r.collected_at,r.source_url]));
+const contractFilters = {modelId:'ALL', providerId:'ALL', type:'ALL', term:'ALL'};
+let contractProductId = '', contractChoices = {}, contractRequest = 0;
+const contractPayment = {
+  ALL_UPFRONT:'전액 선납', PARTIAL_UPFRONT:'일부 선납', NO_UPFRONT:'선납 없음', NOT_APPLICABLE:'해당 없음',
+};
+const contractTypeName = {ON_DEMAND:'온디맨드', SPOT:'스팟', COMMITMENT:'약정'};
+const contractPriceKind = {EXACT:'확정가', SCENARIO:'시나리오', FROM:'시작가', RANGE:'가격 범위', UNKNOWN:'가격 구분 미확인'};
+const contractFreshness = {CURRENT:'48시간 이내 확인', STALE:'48시간 초과 관측', UNKNOWN:'확인 시각 미확인'};
+const contractReasons = {
+  BASE_PRICE_MISSING:'최근 48시간 내 확인한 양수 온디맨드 확정가가 없습니다.',
+  AMBIGUOUS_BASE_PRICE:'조건을 충족하는 온디맨드 기준가가 하나로 정해지지 않았습니다.',
+  COMMITMENT_PRICE_STALE:'마지막 약정 가격 확인 후 48시간이 지났습니다.',
+  COMMITMENT_PRICE_NOT_AVAILABLE:'최근 점검에서 약정 가격을 확보하지 못했습니다.',
+  COMMITMENT_PRICE_NOT_EXACT:'약정 요금의 확정가 근거가 없습니다.',
+  COMMITMENT_PRICE_MISSING:'비교할 약정 환산 단가가 없습니다.',
+  CONDITIONS_NOT_COMPARABLE:'환산 규칙, 최소 물량, 약정기간 또는 결제 조건이 일치하지 않거나 미확인입니다.',
+  PRICE_NOT_OBSERVED:'가격 관측이 없습니다.',
+  LATEST_PRICE_NOT_AVAILABLE:'최근 점검에서 가격을 확보하지 못했습니다.',
+};
+const contractComponents = {
+  HOURLY_RATE:'시간요금', UPFRONT_FEE:'선납금', COMMITMENT_TOTAL:'약정 총액', LIST_PRICE:'표시가',
+  DISCOUNT_RATE:'공개 할인율', RANGE_MIN:'범위 하한', RANGE_MAX:'범위 상한',
+};
+const contractPriceUnit = {HOUR:'/ 시간', DAY:'/ 일', MONTH:'/ 월', YEAR:'/ 년', CONTRACT:'/ 계약'};
+const contractOriginalAmount = new Intl.NumberFormat('en-US',{maximumFractionDigits:10});
+const contractTermName = term => ({NONE:'기간 약정 없음', UNKNOWN:'약정기간 미확인', 12:'1년', 36:'3년'}[term] || term+'개월');
+const contractOfferName = offer => offer.contractProductType || contractTypeName[offer.contractType] || offer.contractType;
+const contractPayName = offer => contractPayment[offer.paymentOption] || '지불 방식 미확인';
+const contractAmount = offer => offer?.effective?.status === 'OK' ? offer.effective.amount : null;
+const contractRate = offer => offer.discount?.status === 'OK' ? offer.discount.discountRate : null;
+const contractReason = reason => contractReasons[reason] || reason || '비교 가능한 기준가를 확인하지 못했습니다.';
+const contractSelect = (id, label, options, selected) => `<label>${label}<select id="${id}" ${options.length?'':'disabled'}>${options.map(([value,text])=>
+  `<option value="${mh(value)}" ${value===selected?'selected':''}>${mh(text)}</option>`).join('')||'<option>해당 상품 없음</option>'}</select></label>`;
+
+function contractProductName(product) {
+  return [product.providerName, product.modelName, product.originalProductName, product.regionCode,
+    product.gpuCount == null ? 'GPU 수 미확인' : product.gpuCount+' GPU',
+    product.sku, product.configurationVersion == null ? null : '구성 v'+product.configurationVersion, '상품 #'+product.id,
+  ].filter(Boolean).join(' · ');
+}
+
+function contractEvidence(offer) {
+  const links = [...new Map((offer.observation?.evidence ?? [])
+    .filter(source => /^https?:\/\//.test(source.sourceUrl || ''))
+    .map(source => [source.sourceUrl, source])).values()];
+  const sourceLinks = links.map(source => `<span>${mlink(source.sourceUrl, source.sourceName || '출처 원문')}</span>`).join('');
+  const detail = offer.observationId ? `<button type="button" class="mv-btn" data-observation="spring-${mh(offer.observationId)}-${mh(offer.effective?.normalizationId ?? 'none')}">상세·근거</button>` : '';
+  return sourceLinks+detail || '출처 미확보';
+}
+
+function contractOriginalPrice(offer) {
+  const observation = offer.observation;
+  if (!observation?.components.length) return mv(observation?.rawPriceText);
+  return observation.components.map(component => {
+    let amount = component.rawValue;
+    if (component.type === 'DISCOUNT_RATE' && component.discountRate != null) {
+      amount = (Number(component.discountRate)*100).toLocaleString('ko-KR',{maximumFractionDigits:6})+'%';
+    } else if (component.amount != null) {
+      amount = [contractOriginalAmount.format(Number(component.amount)),
+        component.currency, contractPriceUnit[component.timeUnit] || component.timeUnit].filter(Boolean).join(' ');
+    }
+    return `${mh(contractComponents[component.type] || component.type)} · ${mv(amount)}`;
+  }).join('<br>');
+}
+
+function contractPriceNote(offer) {
+  const effective = offer.effective ?? {};
+  const labels = [contractPriceKind[effective.kind], contractFreshness[offer.freshness]];
+  if (contractAmount(offer) == null) labels.push(contractReason(effective.reason));
+  labels.push(...(effective.assumptions ?? []));
+  return labels.filter(Boolean).map(mh).join(' · ');
+}
+
+function contractDiscount(offer, baseline) {
+  if (offer.contractType === 'ON_DEMAND') return offer === baseline ? '<b class="mv-saving">비교 기준가</b>' : '온디맨드 관측가';
+  if (offer.contractType === 'SPOT') return '<b class="mv-saving is-missing">스팟 관측가</b><span>중단 가능</span>';
+  const rate = contractRate(offer);
+  if (rate == null) return `<b class="mv-saving is-missing">할인율 산출 불가</b><span>${mh(contractReason(offer.discount?.reason))}</span>`;
+  const percent = Number(rate)*100;
+  const label = percent < 0 ? '높음' : percent > 0 ? '할인' : '차이';
+  const baseAmount = contractAmount(baseline);
+  const amount = contractAmount(offer);
+  const difference = baseAmount == null || amount == null ? null : Number(baseAmount)-Number(amount);
+  return `<b class="mv-saving ${percent<0?'is-increase':''}">${Math.abs(percent).toFixed(1)}% ${label}</b>${difference == null?'':
+    ` <span>${difference<0?'추가':difference>0?'절감':'차액'} ${mp(Math.abs(difference))} / GPU·시간</span>`}`;
+}
+
+function contractCards(rows, baseline) {
+  const onDemand = rows.filter(offer => offer.contractType === 'ON_DEMAND');
+  const base = baseline ?? (onDemand.length === 1 ? onDemand[0] : null);
+  const baseCard = `<article class="mv-contractcard"><span class="mv-chip">${baseline?'비교 기준가':'온디맨드 관측가'}</span><h3>온디맨드</h3>
+    ${base?`<strong>${fxPrice(contractAmount(base))}<small>USD / GPU·시간</small></strong><p>${contractPriceNote(base)}</p><small>수집 · ${mutc(base.collectedAt)}</small>${contractEvidence(base)}`:
+    `<strong>기준가 미확정</strong><p>${onDemand.length?'온디맨드 오퍼는 아래 표에서 확인하세요.':'온디맨드 관측가가 없습니다.'}</p>`}</article>`;
+  const terms = [['spot','스팟'], ['12','1년 약정'], ['36','3년 약정']];
+  return `<div class="mv-contractgrid discount-grid">${baseCard}${terms.map(([key,title]) => {
+    const options = rows.filter(offer => key === 'spot' ? offer.contractType === 'SPOT' :
+      offer.contractType === 'COMMITMENT' && String(offer.months) === key);
+    const selected = options.find(offer => offer.offerId === contractChoices[key]) ?? options[0];
+    const choices = options.map(offer => [offer.offerId,
+      [contractOfferName(offer), contractPayName(offer), mp(contractAmount(offer))+' / GPU·시간', '#'+offer.offerId].join(' · ')]);
+    return `<article class="mv-contractcard featured"><span class="mv-chip">${key==='spot'?'중단 가능':'장기 약정'}</span><h3>${title}</h3>
+      ${selected?`${contractSelect('contractChoice'+key,'비교 요금제',choices,selected.offerId)}
+      <strong>${fxPrice(contractAmount(selected))}<small>USD / GPU·시간</small></strong>
+      <div>${contractDiscount(selected,baseline)}</div><p>${key==='spot'?'':mh(contractPayName(selected))+' · '}${contractPriceNote(selected)}</p>
+      <small>수집 · ${mutc(selected.collectedAt)}</small>${contractEvidence(selected)}`:
+      '<strong>미확보</strong><p>선택 조건의 요금제가 없습니다.</p>'}</article>`;
+  }).join('')}</div>`;
+}
+
+function contractResults(product, rows, comparison) {
+  const baseline = comparison.baseline;
+  const offerCount = rows.filter(offer => offer.contractType === 'SPOT' || offer.contractType === 'COMMITMENT').length;
+  const calculated = rows.filter(offer => contractRate(offer) != null).length;
+  return `${contractCards(rows,baseline)}<div class="mv-note">
+    <b>스팟·약정 ${offerCount}개 · 약정 할인율 산출 ${calculated}건</b>
+    <p>약정 할인율은 같은 상품 ID의 단일 온디맨드 기준가를 사용합니다. 최근 48시간 내 확인한 확정가, 환산 규칙, 최소 물량, 기간 및 지불 조건을 확인합니다.</p>
+    <p>공개 할인율을 적용한 추정 단가는 시나리오로 표시합니다. 스팟은 중단될 수 있으며 약정 할인율과 별개로 관측가를 표시합니다. ${mh(comparison.disclaimer)}</p></div>
+    <div class="mv-tablebox" tabindex="0" role="region" aria-label="계약별 가격 표"><table class="mv-table"><thead><tr>
+    <th>사업자 / 모델 / 상품</th><th>리전 / GPU 수</th><th>요금제 / 약정 / 지불</th><th>원본 가격 구성</th>
+    <th>USD / GPU·시간</th><th>온디맨드 기준가</th><th>온디맨드 대비 차이 / 할인율</th><th>수집일 (UTC) / 출처</th>
+    </tr></thead><tbody>${rows.map(offer => `<tr>
+      <td>${mh(product.providerName)} · ${mh(product.modelName)}<span>${mv(product.originalProductName)}</span></td>
+      <td>${mv(product.regionCode)}<span>${product.gpuCount == null?'GPU 수 미확인':mh(product.gpuCount)+' GPU'}</span></td>
+      <td>${mh(contractOfferName(offer))}<span>${mh(contractTermName(offer.term))} · ${mh(contractPayName(offer))}</span></td>
+      <td>${contractOriginalPrice(offer)}</td><td>${fxPrice(contractAmount(offer))}<span>${contractPriceNote(offer)}</span></td>
+      <td>${baseline?fxPrice(contractAmount(baseline))+'<span>'+mutc(baseline.collectedAt)+'</span>':'기준가 미확정'}</td>
+      <td>${contractDiscount(offer,baseline)}</td><td>${mutc(offer.collectedAt)}${contractEvidence(offer)}</td>
+    </tr>`).join('')}</tbody></table></div>`;
+}
+
+function exportContracts(product, rows, comparison) {
+  const baseline = comparison.baseline;
+  downloadCSV('GPU_spot_commitments_discounts.csv',
+    ['상품ID','오퍼ID','관측ID','사업자','모델','상품','SKU','리전','GPU수','계약종류','약정개월','지불방식',
+      '원본가격요소','실효USD_GPU시간','가격구분','가격상태','최신성','온디맨드USD_GPU시간','온디맨드오퍼ID','할인율퍼센트',
+      '할인율상태','할인율산출사유','수집UTC','출처'],
+    rows.map(offer => [
+      product.id,offer.offerId,offer.observationId,product.providerName,product.modelName,product.originalProductName,
+      product.sku,product.regionCode,product.gpuCount,offer.contractProductType,offer.months,offer.paymentOption,
+      JSON.stringify(offer.observation?.components ?? []),contractAmount(offer),offer.effective?.kind,offer.effective?.status,offer.freshness,
+      contractAmount(baseline),baseline?.offerId,contractRate(offer) == null ? '' : (Number(contractRate(offer))*100).toFixed(4),
+      offer.discount?.status,offer.discount?.reason,offer.collectedAt,
+      (offer.observation?.evidence ?? []).map(source => source.sourceUrl).filter(Boolean).join(' '),
+    ]));
+}
+
+RENDER.discounts = async () => {
+  const view = $('#v-discounts');
+  const context = $('#dataContext');
+  const request = ++contractRequest;
+  const isCurrent = () => request === contractRequest && state.view === 'discounts';
+  const loading = '<div class="mv-note" role="status">계약 비교를 조회하고 있습니다.</div>';
+  const failure = error => `<div class="mv-note" role="alert"><b>계약 비교 조회 실패</b>
+    <p>${mh(error.message)}</p><button type="button" class="mv-btn" id="contractRetry">다시 시도</button></div>`;
+  const setContext = asOf => {
+    context.innerHTML = `<span class="mv-dot"></span><div><b>Spring PostgreSQL 계약 비교</b><span>${asOf?mtime(asOf)+' · 조회 기준':'공개 관측가와 가격 근거'}</span></div>`;
+    context.hidden = false;
+  };
+
+  document.body.classList.add('market-v4','contract-v4');
+  $('#pageTitle').textContent = '계약별 관측가와 약정 할인율';
+  $('#pageDesc').textContent = '같은 상품의 온디맨드·스팟·장기 약정 가격을 비교합니다.';
+  setContext();
+  mountFx();
+  view.innerHTML = `<div class="mv">${loading}</div>`;
+
+  try {
+    const client = await import('/static/spring-contracts.mjs');
+    const catalog = await client.fetchContractCatalog(api);
+    if (!isCurrent()) return;
+    const offerIndex = catalog.products.flatMap(product => [...product.offers.values()])
+      .filter(offer => client.isContractOffer(offer.contractType));
+    const all = ['ALL','전체'];
+    const filters = [
+      ['contractModel','GPU 모델','modelId',[all,...catalog.models.map(model => [model.id,model.name])]],
+      ['contractProvider','사업자','providerId',[all,...catalog.providers.map(provider => [provider.id,provider.name])]],
+      ['contractType','요금제','type',[all,...[...new Set(offerIndex.map(offer => offer.contractProductType).filter(Boolean))].sort().map(type => [type,type])]],
+      ['contractTerm','약정기간','term',[all,...[...new Set(offerIndex.map(client.contractTerm))].map(term => [term,contractTermName(term)])]],
+    ];
+    for (const [,,key,options] of filters) {
+      if (!options.some(([value]) => value === contractFilters[key])) contractFilters[key] = 'ALL';
+    }
+    let comparison = null, selectedRequest = 0;
+    const chooseProduct = id => {
+      if (contractProductId !== id) {
+        contractProductId = id;
+        contractChoices = {};
+      }
+    };
+
+    const paint = (products, product, message = '') => {
+      const focusId = view.contains(document.activeElement) ? document.activeElement.id : '';
+      const rows = message ? [] : comparison.items.filter(offer =>
+        offer.contractType === 'ON_DEMAND' || client.matchesContractTerms(offer,contractFilters));
+      view.innerHTML = `<div id="mvContracts" class="mv"><section class="mv-controls"><div class="mv-filterline">
+        ${filters.map(([id,label,key,options]) => contractSelect(id,label,options,contractFilters[key])).join('')}
+        <button type="button" class="mv-btn" id="contractCSV" ${rows.length?'':'disabled'}>선택 자료 CSV ↓</button>
+        </div></section><section class="discount-comparison">
+        ${contractSelect('contractBaseline','비교할 상품 · 리전',products.map(item => [item.id,contractProductName(item)]),contractProductId)}
+        ${message || contractResults(product,rows,comparison)}</section>
+        <footer class="mv-sourcebar"><b>Spring PostgreSQL 공개 관측 가격</b><span>원본 요금과 출처는 상세·근거에서 확인하세요.</span><a href="#trend">과거 가격 이력 ↗</a></footer></div>`;
+
+      for (const [id,,key] of filters) $('#'+id).onchange = event => {
+        contractFilters[key] = event.target.value;
+        loadProduct();
+      };
+      $('#contractBaseline').onchange = event => {
+        chooseProduct(event.target.value);
+        loadProduct();
+      };
+      for (const key of ['spot','12','36']) {
+        const select = $('#contractChoice'+key);
+        if (select) select.onchange = event => {
+          contractChoices[key] = event.target.value;
+          paint(products,product);
+        };
+      }
+      $('#contractCSV').onclick = () => exportContracts(product,rows,comparison);
+      if ($('#contractRetry')) $('#contractRetry').onclick = () => loadProduct();
+      if (focusId) document.getElementById(focusId)?.focus({preventScroll:true});
+    };
+
+    const loadProduct = async () => {
+      const pending = ++selectedRequest;
+      const products = client.filterContractProducts(catalog.products,contractFilters);
+      const product = products.find(option => option.id === contractProductId) ?? products[0];
+      chooseProduct(product?.id ?? '');
+      if (!product) {
+        comparison = null;
+        setContext();
+        paint(products,product,'<div class="mv-empty" role="status"><h3>선택 조건의 상품이 없습니다.</h3><p>GPU 모델, 사업자 또는 요금제를 변경해 보세요.</p></div>');
+        return;
+      }
+      try {
+        if (comparison?.productId !== product.id) {
+          comparison = null;
+          setContext();
+          paint(products,product,loading);
+          const result = await client.fetchContractComparison(api,product);
+          if (!isCurrent() || pending !== selectedRequest) return;
+          comparison = result;
+        }
+        setContext(comparison.asOf);
+        const hasPlans = comparison.items.some(offer => client.isContractOffer(offer.contractType) &&
+          client.matchesContractTerms(offer,contractFilters));
+        paint(products,product,hasPlans?'':'<div class="mv-empty" role="status"><h3>선택 조건의 스팟·약정 가격 자료가 없습니다.</h3></div>');
+      } catch (error) {
+        if (isCurrent() && pending === selectedRequest) paint(products,product,failure(error));
+      }
+    };
+    await loadProduct();
+  } catch (error) {
+    if (!isCurrent()) return;
+    view.innerHTML = `<div class="mv">${failure(error)}</div>`;
+    $('#contractRetry').onclick = RENDER.discounts;
+  }
 };
 PAGES.discounts.tools=false;
 
@@ -158,10 +399,13 @@ const erdComponent={hourly_rate:'반복 시간요금',upfront_fee:'선납금',co
 marketEvidence=async id=>{const offer=await api('/api/market/offer/'+encodeURIComponent(id));if(offer?.observation_id)await showErdObservation(offer.observation_id);};
 async function showErdObservation(id){
   if(String(id).startsWith('spring-')) return showSpringObservation(id);
+  const ticket = ++marketDetailTicket;
+  const trigger = document.activeElement;
   const d=await api('/api/erd/observation/'+encodeURIComponent(id));
   const fxInfo=await fxData();
+  if (ticket !== marketDetailTicket) return;
   const o=d.observation,p=d.product,f=d.offer,c=d.check,n=d.normalizations[0];
-  evidenceTrigger=document.activeElement;
+  evidenceTrigger=trigger;
   const val=x=>x===null||x===undefined||x===''?'미확인':mh(x);
   const money=x=>x==null?'계산값 없음':mp(x);
   const section=(title,items)=>`<section class="mv-detail-section"><h3>${title}</h3><dl>${items.map(([a,b])=>`<div><dt>${a}</dt><dd>${b}</dd></div>`).join('')}</dl></section>`;

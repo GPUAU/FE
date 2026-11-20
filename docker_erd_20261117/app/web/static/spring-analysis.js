@@ -22,6 +22,14 @@
     amount: '금액', currency: '통화', period: '기간', sourceUrl: '출처',
     referenceDate: '기준일', includedInItemType: '상위 항목'
   };
+  const agentMessagesPath = '/api/v1/agent-messages';
+
+  class AgentSessionExpiredError extends Error {
+    constructor() {
+      super('대화가 만료되었거나 종료되었습니다. 조회 조건을 포함해 다시 질문하면 새 대화가 시작됩니다.');
+      this.name = 'AgentSessionExpiredError';
+    }
+  }
 
   function validationMessage(body, errors) {
     const fields = (errors || []).map(error => {
@@ -46,6 +54,9 @@
       response = await fetcher(path, options);
     } catch {
       throw new Error('Spring 서버에 연결하지 못했습니다. 연결을 확인한 뒤 다시 시도하세요.');
+    }
+    if (response.status === 404 && path === agentMessagesPath && body?.sessionId) {
+      throw new AgentSessionExpiredError();
     }
     if (response.status === 403 || response.status === 404) {
       const name = path.endsWith('/irr-simulations') ? 'IRR' : '공개가격 조회';
@@ -114,8 +125,23 @@
     }, fetcher);
   }
 
-  function askPrice(message, fetcher = fetch) {
-    return request('/api/v1/agent-messages', { message: message.trim() }, fetcher);
+  function askPrice(message, fetcher = fetch, sessionId) {
+    const body = { message: message.trim() };
+    if (sessionId) body.sessionId = sessionId;
+    return request(agentMessagesPath, body, fetcher);
+  }
+
+  async function deleteAgentSession(sessionId, fetcher = fetch) {
+    const failure = '새 대화를 시작하지 못했습니다. 잠시 후 다시 시도하세요.';
+    let response;
+    try {
+      response = await fetcher('/api/v1/agent-sessions/' + encodeURIComponent(sessionId), {
+        method: 'DELETE'
+      });
+    } catch {
+      throw new Error(failure);
+    }
+    if (response.status !== 204) throw new Error(failure);
   }
 
   function sourceLink(value) {
@@ -133,7 +159,8 @@
       .map(id => available.get(id)).filter(Boolean);
   }
 
-  const client = { requestEnvelope, loadModels, simulateIrr, askPrice, sourceLink, sourcesForResult };
+  const client = { requestEnvelope, loadModels, simulateIrr, askPrice, deleteAgentSession,
+    AgentSessionExpiredError, sourceLink, sourcesForResult };
   root.GpuSpringAnalysis = client;
   if (typeof module !== 'undefined') module.exports = client;
 })(globalThis);

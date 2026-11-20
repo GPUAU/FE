@@ -583,7 +583,7 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <link rel="stylesheet" href="/static/workspace-v2.css?v=20261107-v2-4">
 <link rel="stylesheet" href="/static/portal-v3.css?v=20261107-v3-4">
 <link rel="stylesheet" href="/static/portal-home.css?v=20261107-v3-4">
-<link rel="stylesheet" href="/static/provider-pairs.css?v=20261109"><link rel="stylesheet" href="/static/market-v4.css?v=4">
+<link rel="stylesheet" href="/static/provider-pairs.css?v=20261109"><link rel="stylesheet" href="/static/market-v4.css?v=spring-main19">
 <link rel="stylesheet" href="/static/vendor/sk-ui.css?v=20261109-sk5">
 <link rel="stylesheet" href="/static/sk-theme.css?v=20261109-sk5">
 <link rel="stylesheet" href="/static/studio.css?v=integration1119">
@@ -838,16 +838,16 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
   <section class="view" id="v-agent" hidden>
     <p class="pnote" id="agentDesc"></p>
     <div class="agent copilot-layout">
-      <div class="panel feedwrap"><div class="chat-panel-head"><span class="copilot-brand-icon" aria-hidden="true"><span class="bi-icon" style="--bi:url(/static/icons/chat-square-text.svg)"></span></span><div><b>Pricing Copilot</b><span>수집된 가격에서 답을 찾습니다.</span></div><span class="evidence-indicator">가격 조회 도우미</span></div>
+      <div class="panel feedwrap"><div class="chat-panel-head"><span class="copilot-brand-icon" aria-hidden="true"><span class="bi-icon" style="--bi:url(/static/icons/chat-square-text.svg)"></span></span><div><b>Pricing Copilot</b><span>수집된 가격에서 답을 찾습니다.</span></div><button type="button" class="btn" id="agentReset" disabled>새 대화</button></div>
         <div class="feed" id="feed"><div class="agent-welcome" id="agentWelcome"><p class="eyebrow">수집 가격 질의</p><h2>궁금한 GPU 가격을<br>질문하세요.</h2><p>모델과 궁금한 내용을 입력하거나<br>아래 질문으로 시작해 보세요.</p><div class="intent-grid">
           <button type="button" data-welcome-ask="B300 온디맨드 GPU당 시간 가격과 출처 알려줘"><span class="intent-symbol"><span class="bi-icon" style="--bi:url(/static/icons/bar-chart-line.svg)" aria-hidden="true"></span></span><span><b>시장 가격 확인</b><small>B300 GPU당 단가와 출처</small></span><i>→</i></button>
           <button type="button" data-welcome-ask="미국 AWS B300 온디맨드 가격 알려줘"><span class="intent-symbol"><span class="bi-icon" style="--bi:url(/static/icons/sliders.svg)" aria-hidden="true"></span></span><span><b>사업자·지역 조건</b><small>미국 AWS B300</small></span><i>→</i></button>
           <button type="button" data-welcome-ask="H100 온디맨드 가격과 수집 시각 알려줘"><span class="intent-symbol"><span class="bi-icon" style="--bi:url(/static/icons/clock-history.svg)" aria-hidden="true"></span></span><span><b>관측 시각 확인</b><small>H100 가격 수집 시각</small></span><i>→</i></button>
           <button type="button" data-welcome-ask="VR200 온디맨드 가격 알려줘"><span class="intent-symbol"><span class="bi-icon" style="--bi:url(/static/icons/calculator.svg)" aria-hidden="true"></span></span><span><b>확보 상태 확인</b><small>VR200 공개가격</small></span><i>→</i></button>
         </div></div></div>
-        <form class="askbar" id="askForm"><label for="askIn" class="sr">Copilot에게 질문</label><textarea id="askIn" rows="2" maxlength="500" placeholder="예: B300 온디맨드 가격과 출처 알려줘"></textarea><button class="btn primary" type="submit" aria-label="질문하기">질문하기 <span>↑</span></button></form><div class="composer-note"><span>Enter로 질문 · Shift+Enter로 줄바꿈</span><span>미래 가격을 예측하지 않습니다.</span></div>
+        <form class="askbar" id="askForm"><label for="askIn" class="sr">Copilot에게 질문</label><textarea id="askIn" rows="2" maxlength="500" placeholder="예: B300 온디맨드 가격과 출처 알려줘"></textarea><button class="btn primary" type="submit" aria-label="질문하기">질문하기 <span>↑</span></button></form><div class="composer-note"><span>Enter로 질문 · Shift+Enter로 줄바꿈</span><span id="agentSessionStatus" role="status"></span></div>
       </div>
-      <aside class="side copilot-context"><div class="copilot-guide"><span class="guide-icon">ⓘ</span><h3>판단할 때 함께 확인하세요</h3><ol><li><b>조건이 같은가요?</b><span>모델·계약·지역·구성 차이를 확인하세요.</span></li><li><b>언제 수집했나요?</b><span>과거 관측값은 현재 견적과 다를 수 있습니다.</span></li><li><b>근거가 있나요?</b><span>출처 원문과 환산 기준까지 확인하세요.</span></li></ol><a href="#dashboard">조건을 직접 선택해 비교하기 ↗</a></div><details class="chat-extras"><summary>더 많은 질문 예시 <span>⌄</span></summary><div class="qlist" id="exQs"></div></details><details class="chat-extras"><summary>이번 대화의 질문 <span>⌄</span></summary><div class="qlist" id="histQs"><span class="muted">아직 질문이 없습니다.</span></div></details><details class="chat-extras"><summary>워크스페이스 사용량 <span>⌄</span></summary><div id="usageBox"></div></details></aside>
+      <aside class="side copilot-context"><div class="copilot-guide"><span class="guide-icon">ⓘ</span><h3>판단할 때 함께 확인하세요</h3><ol><li><b>조건이 같은가요?</b><span>모델·계약·지역·구성 차이를 확인하세요.</span></li><li><b>언제 수집했나요?</b><span>과거 관측값은 현재 견적과 다를 수 있습니다.</span></li><li><b>근거가 있나요?</b><span>출처 원문과 환산 기준까지 확인하세요.</span></li></ol><a href="#dashboard">조건을 직접 선택해 비교하기 ↗</a></div><details class="chat-extras"><summary>더 많은 질문 예시 <span>⌄</span></summary><div class="qlist" id="exQs"></div></details><details class="chat-extras"><summary>이번 대화의 질문 <span>⌄</span></summary><div class="qlist" id="histQs"><span class="muted">아직 질문이 없습니다.</span></div></details><details class="chat-extras"><summary>대화 안내 <span>⌄</span></summary><div id="usageBox"></div></details></aside>
     </div>
   </section>
 
@@ -935,18 +935,19 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <script src="/static/disc.js"></script>
 <script src="/static/cat.js?v=20261106-4"></script>
 <script src="/static/catalog-list.js?v=20261104-1"></script>
-<script src="/static/app.js?v=pr2-review"></script>
+<script src="/static/app.js?v=spring-main19"></script>
 <script src="/static/redesign.js?v=20261107-v2-4"></script>
 <script src="/static/workspace-v2.js?v=20261109-final"></script>
 <script src="/static/portal-v3.js?v=20261109-sk2"></script>
-<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=20261118-a11y1"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=be167655a-fix1119"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/requirements-v02.js?v=fix1119"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=pr2-review"></script><script src="/static/calculator-ui.js?v=pr2-review"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=fix1119"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
+<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=spring-main19"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=spring-main19"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/requirements-v02.js?v=fix1119"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=spring-main19"></script><script src="/static/calculator-ui.js?v=pr2-review"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=spring-main19"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
 <script src="/static/research.js?v=fx1119"></script>
-<script src="/static/signature.js?v=be167655a"></script><script src="/static/quality-ui.js?v=be167655a"></script><script src="/static/backend-quality.js?v=be167655a"></script>
+<script src="/static/signature.js?v=spring-main19"></script><script src="/static/quality-ui.js?v=be167655a"></script><script src="/static/backend-quality.js?v=be167655a"></script>
+<script src="/static/spring-changes-ui.js?v=spring-main19"></script>
 <link rel="stylesheet" href="/static/montecarlo.css?v=pm1119">
 <script src="/static/montecarlo.js?v=review1119"></script>
 <link rel="stylesheet" href="/static/decision.css?v=review1119">
 <script src="/static/decision-ui.js?v=review1119"></script>
-<script src="/static/spring-copilot.js?v=pr2-review"></script>
+<script src="/static/spring-copilot.js?v=spring-main19"></script>
 <link rel="stylesheet" href="/static/sk-color-system.css?v=20261119-clean3">
 </body>
 </html>

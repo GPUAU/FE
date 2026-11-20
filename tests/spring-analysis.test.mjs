@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const { simulateIrr, askPrice, sourceLink } =
+const { simulateIrr, askPrice, deleteAgentSession, AgentSessionExpiredError, sourceLink } =
   require('../docker_erd_20261117/app/web/static/spring-analysis.js');
 const input = { initial: 100000, years: 1, opex: 31400, gpu: 1, util: 1, salvage: 10000,
   target: .1, price: 15 };
@@ -37,14 +37,60 @@ test('contains no fallback result when the IRR endpoint is missing or the input 
     /입력/);
 });
 
-test('Agent sends a single public price query and preserves price unavailable', async () => {
+test('Agent starts a session without an ID and preserves price unavailable', async () => {
   const reply = await askPrice(' VR200 온디맨드 가격 ', async (url, options) => {
     assert.equal(url, '/api/v1/agent-messages');
     assert.deepEqual(JSON.parse(options.body), { message: 'VR200 온디맨드 가격' });
-    return success({ status: 'NO_DATA', answer: '조건에 맞는 공개 가격이 없습니다.', results: [] });
+    return success({ sessionId: 'conversation-1', status: 'NO_DATA',
+      answer: '조건에 맞는 공개 가격이 없습니다.', results: [] });
   });
+  assert.equal(reply.sessionId, 'conversation-1');
   assert.equal(reply.status, 'NO_DATA');
   assert.deepEqual(reply.results, []);
+});
+
+test('Agent sends the previous session ID with a follow-up', async () => {
+  const reply = { sessionId: 'conversation-1', status: 'ANSWERED', retainedConditions: ['countryCode'] };
+  let request;
+  const result = await askPrice(' B300 ', async (url, options) => {
+    request = { url, body: JSON.parse(options.body) };
+    return success(reply);
+  }, 'conversation-1');
+  assert.deepEqual(request, {
+    url: '/api/v1/agent-messages',
+    body: { message: 'B300', sessionId: 'conversation-1' }
+  });
+  assert.deepEqual(result, reply);
+});
+
+test('Agent reports a missing session without replaying the follow-up', async () => {
+  let calls = 0;
+  const missing = async () => {
+    calls++;
+    return new Response(null, { status: 404 });
+  };
+  await assert.rejects(askPrice('B300', missing, 'conversation-1'), error => {
+    assert.equal(typeof AgentSessionExpiredError, 'function');
+    assert.ok(error instanceof AgentSessionExpiredError);
+    assert.match(error.message, /대화.*종료/);
+    return true;
+  });
+  assert.equal(calls, 1);
+  await assert.rejects(askPrice('B300', missing), /공개가격 조회 API/);
+});
+
+test('Agent deletes a session and accepts an empty 204 response', async () => {
+  await deleteAgentSession('conversation-1', async (url, options) => {
+    assert.equal(url, '/api/v1/agent-sessions/conversation-1');
+    assert.equal(options.method, 'DELETE');
+    assert.equal(options.body, undefined);
+    return new Response(null, { status: 204 });
+  });
+});
+
+test('Agent surfaces a failed reset so the existing session can be kept', async () => {
+  await assert.rejects(deleteAgentSession('conversation-1',
+    async () => new Response(null, { status: 503 })), /새 대화.*다시 시도/);
 });
 
 test('allows valid HTTPS evidence links and rejects unsupported schemes', () => {

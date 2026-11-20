@@ -5,22 +5,34 @@ const publicPriceExamples = [
   'H100 온디맨드 가격과 수집 시각 알려줘',
   'VR200 온디맨드 가격 알려줘'
 ];
+const springAgentWelcome = $('#agentWelcome');
+let springAgentSessionId = null;
+let springAgentBusy = false;
+
+function syncSpringCopilotControls() {
+  $('#agentReset').disabled = springAgentBusy || !state.hist.length;
+  document.querySelectorAll('#askForm button[type="submit"], #exQs button, #histQs button, #feed [data-welcome-ask]')
+    .forEach(button => { button.disabled = springAgentBusy; });
+}
 
 RENDER.agent = () => {
   $('#agentDesc').textContent = '저장된 온디맨드 가격과 출처를 질문으로 확인합니다.';
   $('#exQs').innerHTML = publicPriceExamples
     .map(message => `<button type="button" class="qbtn" data-q="${esc(message)}">${esc(message)}</button>`)
     .join('');
-  $('#usageBox').textContent = '이번 화면의 질문은 단건 공개가격 조회로 처리됩니다.';
+  $('#usageBox').textContent = '후속 질문에는 앞서 선택한 조회 조건이 이어집니다. 조건을 처음부터 설정하려면 ‘새 대화’를 누르세요.';
   renderHist();
+  syncSpringCopilotControls();
 };
 
 async function askSpringPrice(text) {
   const message = text.trim();
-  if (!message) return;
+  if (!message || springAgentBusy) return;
 
   const feed = $('#feed');
   if (!feed) return;
+  springAgentBusy = true;
+  $('#agentSessionStatus').textContent = '';
   $('#agentWelcome')?.remove();
   const question = document.createElement('div');
   question.className = 'msg-u';
@@ -32,8 +44,10 @@ async function askSpringPrice(text) {
   feed.append(question, reply);
   state.hist.unshift(message);
   renderHist();
+  syncSpringCopilotControls();
   try {
-    const result = await GpuSpringAnalysis.askPrice(message);
+    const result = await GpuSpringAnalysis.askPrice(message, undefined, springAgentSessionId);
+    springAgentSessionId = result.sessionId || null;
     const label = {
       ANSWERED: '확인된 공개가격',
       NO_DATA: '가격 미확보',
@@ -62,9 +76,43 @@ async function askSpringPrice(text) {
       <div class="md"><p>${esc(answer)}</p>
       ${items.length ? '<h4>조회 가격·수집 시각·출처</h4><ul>' + items.join('') + '</ul>' : ''}</div>`;
   } catch (error) {
+    if (error instanceof GpuSpringAnalysis.AgentSessionExpiredError) springAgentSessionId = null;
     reply.textContent = error.message;
+  } finally {
+    springAgentBusy = false;
+    syncSpringCopilotControls();
   }
   reply.scrollIntoView({ block: 'nearest' });
 }
 
+async function resetSpringCopilot() {
+  if (springAgentBusy || !state.hist.length) return;
+  const status = $('#agentSessionStatus');
+  springAgentBusy = true;
+  status.textContent = '이전 대화 종료 중…';
+  syncSpringCopilotControls();
+  try {
+    if (springAgentSessionId) await GpuSpringAnalysis.deleteAgentSession(springAgentSessionId);
+    springAgentSessionId = null;
+    state.hist.length = 0;
+    $('#feed').replaceChildren(springAgentWelcome);
+    renderHist();
+    const input = $('#askIn');
+    input.value = '';
+    input.focus();
+    status.textContent = '새 대화를 시작할 수 있습니다.';
+  } catch (error) {
+    status.textContent = error.message;
+  } finally {
+    springAgentBusy = false;
+    syncSpringCopilotControls();
+  }
+}
+
+$('#askForm').addEventListener('submit', event => {
+  if (!springAgentBusy) return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+}, true);
+$('#agentReset').onclick = resetSpringCopilot;
 ask = askSpringPrice;
