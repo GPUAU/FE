@@ -57,7 +57,7 @@ export function mapMarketOffer(offer) {
   const observation = offer.lastSuccessfulObservation;
   const price = observation?.effective;
   const normalizationId = price?.normalizationId || observation?.nominal?.normalizationId || 'none';
-  const source = observation?.evidence?.[0] || offer.latestDisclosure?.evidence?.[0];
+  const source = observation?.evidence?.[0];
   const hourly = (observation?.components || []).filter(component => component.type === 'HOURLY_RATE');
   const term = contract.type === 'COMMITMENT'
     ? ({12: '1_YEAR', 36: '3_YEAR'}[contract.months] || 'OTHER')
@@ -75,4 +75,33 @@ export function mapMarketOffer(offer) {
     freshness: offer.freshness?.status, eligible: offer.comparison?.eligibleForAggregate === true,
     group: marketGroupId(offer.comparison?.groupKey), excludedReasons: offer.comparison?.excludedReasons ?? [],
   };
+}
+
+export function getPairPrice(row) {
+  if (row?.price == null || String(row.price).trim() === '' || row.freshness !== 'CURRENT'
+    || row.excludedReasons?.some(reason => [
+      'notFoundOffers', 'nonExactOffers', 'missingPriceOffers', 'unavailableNormalizationOffers',
+    ].includes(reason))) return null;
+  const price = Number(row.price);
+  return Number.isFinite(price) && price >= 0 ? price : null;
+}
+
+export function pickPairOffer(options, offerId) {
+  return options.find(row => row.id === offerId)
+    || options.find(row => getPairPrice(row) !== null)
+    || options[0];
+}
+
+export function pairPriceGap(left, right) {
+  const a = getPairPrice(left), b = getPairPrice(right);
+  if (a === null || b === null) return null;
+  return {amount: b - a, percent: a === 0 ? null : (b - a) / a * 100};
+}
+
+export function compareMarketObservationTime(left, right) {
+  const timestamp = value => {
+    const millis = Date.parse(value);
+    return Number.isFinite(millis) ? millis : -Infinity;
+  };
+  return (timestamp(right.collected) - timestamp(left.collected)) || 0;
 }

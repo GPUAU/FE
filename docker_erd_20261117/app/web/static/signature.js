@@ -40,12 +40,14 @@ async function sgData() {
   const products = new Map(offers.map(row => [String(row.id), row.product]));
   const history = base.history.map(row => row.original_product_name || !products.has(String(row.offer_id)) ? row
     : {...row, original_product_name: products.get(String(row.offer_id))});
-  return {...base, history, catalog, offers, summary, groupId: client.marketGroupId};
+  return {...base, history, catalog, offers, summary, groupId: client.marketGroupId,
+    compareObservationTime: client.compareMarketObservationTime};
 }
 function sgCurrentRows(){
   const q=SG.query.trim().toLowerCase();
   const rows=SG.data.offers.filter(r=>r.model===SG.model&&r.term===SG.term&&(SG.provider==='ALL'||r.provider===SG.provider)&&(SG.region==='ALL'||r.region===SG.region)&&(!q||`${r.provider} ${r.product} ${r.region} ${r.contract}`.toLowerCase().includes(q)));
-  return rows.sort((a,b)=>SG.sort==='latest'?String(b.collected).localeCompare(String(a.collected)):SG.sort==='provider'?a.provider.localeCompare(b.provider)||(a.price??Infinity)-(b.price??Infinity):(a.price??Infinity)-(b.price??Infinity));
+  if (SG.sort === 'latest') return rows.sort(SG.data.compareObservationTime);
+  return rows.sort((a,b)=>SG.sort==='provider'?a.provider.localeCompare(b.provider)||(a.price??Infinity)-(b.price??Infinity):(a.price??Infinity)-(b.price??Infinity));
 }
 function sgHistoryRows(){
   let rows=SG.data.history.filter(r=>r.model_name===SG.model&&r.term===SG.term&&(SG.provider==='ALL'||r.provider_name===SG.provider)&&(SG.region==='ALL'||r.region_code===SG.region));

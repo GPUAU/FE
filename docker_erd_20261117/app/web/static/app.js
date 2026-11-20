@@ -775,7 +775,13 @@ function askFromAnywhere(q) { if (!q) return; location.hash = '#agent'; setTimeo
 /* 목록 공통: 필터 칩 · 결과 수 · CSV · 빈 상태 */
 const emptyHTML = () => `<div class="empty"><div class="e-ic"><svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v6"/><circle cx="12" cy="16.5" r=".8" fill="currentColor"/></svg></div><b>${tr('empty')}</b></div>`;
 function downloadCSV(name, header, rows) {
-  const cell = v => { const s = v == null ? '' : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+  const cell = value => {
+    let text = value == null ? '' : String(value);
+    const formula = /^[=+@-]/.test(text.trimStart().normalize('NFKC'));
+    const numeric = /^[+-]?(?:\d+\.?\d*|\.\d+)(?:[eE][+-]?\d+)?$/.test(text);
+    if (/^[\t\r\n]/.test(text) || (formula && !numeric)) text = "'" + text;
+    return /[",\r\n]/.test(text) ? '"' + text.replace(/"/g, '""') + '"' : text;
+  };
   const text = '﻿' + [header, ...rows].map(r => r.map(cell).join(',')).join('\n');
   const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'text/csv;charset=utf-8' }));
   a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);

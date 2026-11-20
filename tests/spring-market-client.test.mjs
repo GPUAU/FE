@@ -26,7 +26,7 @@ test('last observed price is retained as a reference with its exact normalizatio
       nominal: {status: 'UNAVAILABLE', normalizationId: '239', amount: null},
       components: [{type: 'UPFRONT_FEE', amount: '7500.00', currency: 'USD', timeUnit: 'TERM'}],
     },
-    latestDisclosure: {status: 'NOT_DISCLOSED'},
+    latestDisclosure: {status: 'NOT_DISCLOSED', evidence: [{sourceName:'공개 상태 확인', sourceUrl:'https://example.test/status'}]},
     freshness: {status: 'CURRENT'},
     comparison: {eligibleForAggregate: false, excludedReasons: ['notFoundOffers']},
   });
@@ -36,6 +36,33 @@ test('last observed price is retained as a reference with its exact normalizatio
   assert.equal(row.disclosure, 'NOT_DISCLOSED');
   assert.equal(row.hourlyComponent, null);
   assert.equal(row.excludedReasons[0], 'notFoundOffers');
+  assert.equal(row.source, undefined);
+  assert.equal(row.sourceName, undefined);
+  assert.equal(market.getPairPrice(row), null);
+});
+
+test('pair comparison prefers recently confirmed prices and keeps older selections as references', () => {
+  const unavailable = {id:'1', price:'1', freshness:'CURRENT', excludedReasons:['notFoundOffers']};
+  const current = {id:'2', price:'5', freshness:'CURRENT', excludedReasons:[]};
+  const stale = {id:'3', price:'2', freshness:'STALE', excludedReasons:['staleOffers']};
+  const approximate = {id:'4', price:'3', freshness:'CURRENT', excludedReasons:['nonExactOffers']};
+  assert.equal(market.pickPairOffer([unavailable, stale, approximate, current]), current);
+  assert.equal(market.pickPairOffer([unavailable, current], '1'), unavailable);
+  assert.equal(market.pairPriceGap(unavailable, current), null);
+  assert.equal(market.getPairPrice(stale), null);
+  assert.equal(market.getPairPrice(approximate), null);
+});
+
+test('a confirmed zero is a real comparison value and never creates an infinite percentage', () => {
+  const five = {price:'5', freshness:'CURRENT', excludedReasons:[]};
+  const zero = {price:'0', freshness:'CURRENT', excludedReasons:[]};
+  assert.deepEqual(market.pairPriceGap(five, zero), {amount:-5, percent:-100});
+  assert.deepEqual(market.pairPriceGap(zero, five), {amount:5, percent:null});
+});
+
+test('recent sorting places observations with missing timestamps last', () => {
+  const rows = [{id:'0'}, {id:'1', collected:'2026-11-10T00:00:00Z'}, {id:'2', collected:'2026-11-20T00:00:00Z'}];
+  assert.deepEqual(rows.sort(market.compareMarketObservationTime).map(row => row.id), ['2','1','0']);
 });
 
 test('server summary uses the selected scope and preserves independent groups and zero prices', async () => {

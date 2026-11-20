@@ -82,12 +82,11 @@ function exportMarketOffers(filename, rows) {
   const headers = ['오퍼ID','상품ID','관측ID','사업자','모델','상품','SKU','국가','리전','GPU수','시스템 유형','vCPU','RAM_GB','스토리지','노드 내 연결','계약','약정개월','선납','최소 물량','최소 물량 단위','가격 원문','반복 요금 원본','실효USD_GPU시간','최근공개상태','최신성','수집UTC','출처'];
   const values = rows.map(row => {
     const product = row.configuration, contract = row.contractInfo;
-    const fields = [row.id, row.productId, row.observationId, row.provider, row.model, row.product, product.sku, row.country,
+    return [row.id, row.productId, row.observationId, row.provider, row.model, row.product, product.sku, row.country,
       row.region, row.gpus, product.systemType, product.vcpuCount, product.ramGb, product.storageDescription,
       product.intraNodeInterconnect, row.contract, contract.months, contract.paymentOption, contract.minimumQuantity,
       contract.minimumQuantityUnit, row.rawPriceText, row.hourlyComponent ? marketHourly(row.hourlyComponent) : '',
       row.price, row.disclosure, row.freshness, row.collected, row.source];
-    return fields.map(value => typeof value === 'string' && /^\s*[=+@-]/.test(value) ? "'" + value : value);
   });
   downloadCSV(filename, headers, values);
 }
@@ -99,6 +98,7 @@ function marketPriceFrame(title, description) {
   const context = $('#dataContext');
   context.innerHTML = '<span class="mv-dot"></span><div><b>저장 가격 관측</b><span>마지막 성공 관측 가격과 최근 공개 상태를 확인할 수 있습니다.</span></div>';
   context.hidden = false;
+  mountFx();
 }
 
 
@@ -139,7 +139,7 @@ async function marketDashboard() {
     mbind(el, marketDashboard);
     $('#mvTerm').onchange = event => { MV.term = event.target.value; MV.pick = ['','']; marketDashboard(); };
     $('#mvSupplement').onchange = event => { MV.includeStale = event.target.checked; MV.pick = ['','']; marketDashboard(); };
-    drawMarketPair(offers.map(client.mapMarketOffer));
+    drawMarketPair(offers.map(client.mapMarketOffer), client);
     const groups = summary?.groups || [];
     const drawSummary = () => {
       const chosen = groups.find(item => client.marketGroupId(item.groupKey) === MV.summaryGroup) || groups[0];
@@ -174,7 +174,15 @@ function marketHourly(component) {
   return [component.currency, amount, component.timeUnit, component.appliesTo].filter(Boolean).join(' ');
 }
 
-function drawMarketPair(pool) {
+function pairUnavailableLabel(row) {
+  if (row?.excludedReasons?.includes('notFoundOffers')) return '최근 점검에서 공개가 미확보';
+  if (row?.freshness === 'STALE') return '48시간 초과 · 과거 참고';
+  if (row?.excludedReasons?.includes('nonExactOffers')) return '확정가 미확보';
+  if (row?.price != null && row.freshness !== 'CURRENT') return '최신 관측 확인 불가';
+  return '실효 단가 미확보';
+}
+
+function drawMarketPair(pool, client) {
   const group = MG[MV.group], picked = [];
   const cards = group.ids.map((pid, i) => {
     const name = marketProviderNames[pid];
@@ -182,27 +190,29 @@ function drawMarketPair(pool) {
     const regions = [...new Set(rows.map(row => row.region || ''))].sort();
     if (MV.region[i] !== 'ALL' && !regions.includes(MV.region[i])) MV.region[i] = 'ALL';
     const options = rows.filter(row => MV.region[i] === 'ALL' || (row.region || '') === MV.region[i])
-      .sort((a, b) => (a.freshness === 'STALE') - (b.freshness === 'STALE') || (a.price ?? Infinity) - (b.price ?? Infinity));
-    const row = options.find(item => item.id === MV.pick[i]) || options.find(item => item.price != null) || options[0];
+      .sort((a, b) => (client.getPairPrice(a) ?? Infinity) - (client.getPairPrice(b) ?? Infinity)
+        || (a.price ?? Infinity) - (b.price ?? Infinity));
+    if (!options.some(item => item.id === MV.pick[i])) MV.pick[i] = '';
+    const row = client.pickPairOffer(options, MV.pick[i]);
     picked.push(row);
-    MV.pick[i] = row?.id || '';
+    const reference = row?.price != null && client.getPairPrice(row) === null;
     return `<article class="mv-provider"><div class="mv-provider-head"><span class="mv-monogram ${pid}">${{aws:'aws',azure:'A',nebius:'N',verda:'V'}[pid]}</span><div><small>${group.label}</small><h3>${name}</h3></div><span class="mv-muted">${rows.length}개 오퍼</span></div>
       <div class="mv-selects"><label>리전<select data-region="${i}"><option value="ALL">전체 관측 지역</option>${regions.map(region => `<option value="${mh(region)}" ${region===MV.region[i]?'selected':''}>${mh(mr(region))}</option>`).join('')}</select></label>
-      <label>비교 상품<select data-pick="${i}" ${options.length?'':'disabled'}>${options.map(item => `<option value="${mh(item.id)}" ${row?.id===item.id?'selected':''}>${mh(item.configuration.sku || item.product)} · ${item.gpus??'?'} GPU · ${mh(mr(item.region))} · ${mp(item.price)}</option>`).join('') || '<option>관측 자료 없음</option>'}</select></label></div>
-      ${row ? `<div class="mv-quote"><div><span class="mv-badge ${row.eligible?'good':''}">${mh(marketFreshness[row.freshness] || '미확인')}</span> <span class="mv-chip">${mv(row.sourceName)}</span></div><small>마지막 관측 실효 단가 · ${mh(marketCertainty[row.certainty] || '가격 미관측')}</small><strong>${fxPrice(row.price)}<em>/ GPU·시간</em></strong><p>${mh(row.product)}</p><span class="mv-chip">${mv(row.configuration.systemType)} · ${row.gpus ?? '미확인'} GPU</span></div>
+      <label>비교 상품<select data-pick="${i}" ${options.length?'':'disabled'}>${options.map(item => `<option value="${mh(item.id)}" ${row?.id===item.id?'selected':''}>${mh(item.configuration.sku || item.product)} · ${item.gpus??'?'} GPU · ${mh(mr(item.region))} · ${mp(item.price)}${item.price != null && client.getPairPrice(item) === null ? ' (참고)' : ''}</option>`).join('') || '<option>관측 자료 없음</option>'}</select></label></div>
+      ${row ? `<div class="mv-quote"><div><span class="mv-badge ${row.eligible?'good':''}">${mh(reference ? pairUnavailableLabel(row) : marketFreshness[row.freshness] || '미확인')}</span> <span class="mv-chip">${mv(row.sourceName)}</span></div><small>${reference ? '과거 참고 · ' : ''}마지막 관측 실효 단가 · ${mh(marketCertainty[row.certainty] || '가격 미관측')}</small><strong>${fxPrice(row.price)}<em>/ GPU·시간</em></strong><p>${mh(row.product)}</p><span class="mv-chip">${mv(row.configuration.systemType)} · ${row.gpus ?? '미확인'} GPU</span></div>
       <dl class="mv-quick"><div><dt>원본 반복 요금</dt><dd>${mh(marketHourly(row.hourlyComponent))}</dd></div><div><dt>vCPU / 시스템 RAM</dt><dd>${mv(row.configuration.vcpuCount)} / ${mv(row.configuration.ramGb)} GB</dd></div><div><dt>최근 가격 공개 상태</dt><dd>${mh(marketDisclosure[row.disclosure] || '미확인')}</dd></div></dl>
       <div class="mv-cardfoot"><small>${mtime(row.collected)}</small><button class="mv-btn primary" data-market-offer="${mh(row.id)}">상품 상세·가격 근거 ↗</button></div>` : '<div class="mv-empty"><span>—</span><h3>선택 조건의 가격 미확보</h3><p>저장된 가격 관측이 없습니다.</p></div>'}</article>`;
   });
-  const chartRows = group.ids.map((pid, i) => ({label:marketProviderNames[pid], price:picked[i]?.price == null ? null : Number(picked[i].price),
-    missingLabel:'실효 단가 미확보', source:picked[i]?.sourceName || '', observedAt:picked[i]?.collected || ''}));
-  const gap = MarketLogic.gap(...picked.map(row => row && {normalized_price:row.price == null ? null : Number(row.price)}));
+  const chartRows = group.ids.map((pid, i) => ({label:marketProviderNames[pid], price:client.getPairPrice(picked[i]),
+    missingLabel:pairUnavailableLabel(picked[i]), source:picked[i]?.sourceName || '', observedAt:picked[i]?.collected || ''}));
+  const gap = client.pairPriceGap(...picked);
   $('#mvPair').innerHTML = `<section class="sk-comparison-chart" aria-label="선택 상품의 GPU당 시간 요금 차트"><div class="sk-chart-heading"><div><h3>선택 상품의 시간당 가격</h3><p>${mh(MV.model)} · ${MT[MV.term]} · ${group.label}</p></div><span>USD / GPU·시간</span></div><div data-sk-price-chart data-rows="${mh(JSON.stringify(chartRows))}"></div><p class="sk-comparison-note">참고 단가에는 서로 다른 리전·CPU·메모리·GPU 수·연결망 조건이 포함될 수 있습니다.</p></section>
-    <div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(pid => marketProviderNames[pid]).join(' → ')} · GPU당 차이</small><strong>${gap ? `${gap.amount>=0?'+':'−'}${mp(Math.abs(gap.amount))}` : '비교 가능한 양쪽 가격이 필요합니다.'}</strong>${gap?`<span>왼쪽 기준 ${gap.percent>0?'+':''}${gap.percent.toFixed(1)}%</span>`:''}</div><p>선택 상품의 실효 단가를 사용한 참고 비교입니다.</p></div>`;
+    <div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(pid => marketProviderNames[pid]).join(' → ')} · GPU당 차이</small><strong>${gap ? `${gap.amount>=0?'+':'−'}${mp(Math.abs(gap.amount))}` : '비교 가능한 양쪽 가격이 필요합니다.'}</strong>${gap ? `<span>${gap.percent == null ? '기준가 0 · 비교율 산출 불가' : `왼쪽 기준 ${gap.percent>0?'+':''}${gap.percent.toFixed(1)}%`}</span>` : ''}</div><p>48시간 이내 확인한 확정가의 참고 비교입니다.</p></div>`;
   $('#mvPair').onchange = event => {
     const {region, pick} = event.target.dataset;
     if (region !== undefined) { MV.region[Number(region)] = event.target.value; MV.pick[Number(region)] = ''; }
     if (pick !== undefined) MV.pick[Number(pick)] = event.target.value;
-    drawMarketPair(pool);
+    drawMarketPair(pool, client);
     if (region !== undefined) $('#mvPair').querySelector(`[data-region="${region}"]`).focus();
     if (pick !== undefined) $('#mvPair').querySelector(`[data-pick="${pick}"]`).focus();
   };
