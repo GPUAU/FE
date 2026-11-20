@@ -1,0 +1,130 @@
+/* studio.css — sk-theme.css 다음에 불러와 전체 인상을 바꾸는 덮어쓰기 시트.
+   방향: 카드 더미 대신 한 장의 요금표처럼, 빨강은 브랜드 포인트로만, 숫자가 주인공. */
+
+/* 1. 색 — 중립 회색 대신 남색 잉크, 데이터는 청록, SK 레드는 현재 위치·추천 표시에만 */
+html body, html body:not(.is-home), html body.is-home, html .market-v4, html .mv {
+  --ink: #12263a; --ink-2: #46586a; --ink-3: #667686;
+  --line: #d3dae1; --line-2: #e4e9ee;
+  --bg: #edf0f3; --surface: #fff; --surface-2: #f5f7f9;
+  --accent: #ea002c; --accent-2: #c70025; --accent-soft: #fdecef;
+  --portal-ink: #12263a; --portal-muted: #5b6c7c; --portal-line: #d3dae1;
+  --mv-ink: #12263a; --mv-muted: #5b6c7c; --mv-line: #d3dae1; --mv-accent: #ea002c; --mv-soft: #f5f7f9;
+  --data: #1f5c7a; --shadow: none;
+}
+html body, html body:not(.is-home), html body.is-home { background: var(--bg); color: var(--ink); }
+html .sk-chart-figure { --sk-chart-bar: var(--data); }
+
+/* 2. 홈 첫 화면 — 어두운 칩 일러스트·궤도·떠다니는 태그를 걷어내고 문장과 수치로 시작 */
+html body .hello { background: var(--surface) !important; border-bottom: 1px solid var(--line); }
+html body .hero-art { display: none !important; }
+html body .hero-layout { min-height: 0; padding-block: 72px 48px; }
+html body .hero-copy { width: 100%; max-width: 900px; }
+html body .hero-copy h1 {
+  color: var(--ink) !important; font-size: clamp(34px, 4.4vw, 60px);
+  font-weight: 800; line-height: 1.18; letter-spacing: -.05em;
+}
+html body .hero-copy .eyebrow, html body .hero-copy .eyebrow span {
+  color: var(--ink-3) !important; font-size: 13px !important; letter-spacing: 0 !important; font-weight: 500;
+}
+html body .hello-sub { color: var(--ink-2) !important; font-size: 16px; max-width: 52ch; }
+html body .hello-why { color: var(--ink-3) !important; font-size: 13px !important; }
+html body .hero-primary span, html body .hero-secondary span { display: none; }
+html body .hero-secondary { color: var(--ink) !important; font-weight: 650; text-decoration: underline; text-underline-offset: 5px; }
+html body .hero-status { background: transparent !important; border-top: 1px solid var(--line); }
+html body .hero-status, html body .hero-status * { color: var(--ink-2) !important; font-size: 13px; }
+html body .hero-status b, html body .hero-status strong { color: var(--ink) !important; font-weight: 700; }
+
+/* 3. 라벨·이모티콘 같은 장식 걷어내기 */
+html .mv-eyebrow, html body .page-eyebrow, html .eyebrow, html .portal-next-heading > span {
+  text-transform: none !important; letter-spacing: 0 !important;
+  font-size: 12px !important; font-weight: 500 !important; color: var(--ink-3) !important;
+}
+html .snb-foot { display: none; }
+
+/* 4. 제목 */
+html body:not(.is-home) .band-title h1, html .mv h1 {
+  font-size: 36px; font-weight: 800; line-height: 1.2; letter-spacing: -.05em; color: var(--ink);
+}
+html .mv h2, html .explorer-heading h2, html .result-heading h2 { font-weight: 750; letter-spacing: -.035em; }
+
+/* 5. 사이드 메뉴 — 박스·분홍 배경을 없애고 왼쪽 선 하나로 현재 위치 표시 */
+html .snb .pcard, html .workspace-identity { background: transparent; border: 0; box-shadow: none; border-radius: 0; padding-left: 0; }
+html body:not(.is-home) .nav-section > a[aria-current=page] {
+  background: transparent; color: var(--ink); font-weight: 700; border-radius: 0; box-shadow: inset 2px 0 var(--accent);
+}
+html body:not(.is-home) .nav-section > a[aria-current=page]::after { display: none; }
+
+/* 6. 패널 — 모서리와 그림자를 줄여 위계를 평평하게 */
+html .panel, html .kpi, html .qac, html .gl, html .filters, html .fpanel, html .explorer-controls,
+html .offers-panel, html .market-coverage, html .comparison-chart, html .mv-controls, html .mv-provider,
+html .mv-extra, html .mv-tablebox, html .tw, html .pair-table-wrap,
+html .market-card, html .home-shortcuts a, html .home-support a, html .home-research a {
+  border-radius: 6px; box-shadow: none; border-color: var(--line); transform: none;
+}
+
+/* 7. 나란한 카드는 한 장의 표로 묶고, 칸 사이는 세로 실선 */
+html .mv-contractgrid, html .mv-modelcards, html .portal-next-grid {
+  gap: 0; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); overflow: hidden;
+}
+html .mv-contractcard, html .mv-modelcards > a, html .portal-next-grid > a {
+  border: 0; border-radius: 0; background: transparent; box-shadow: none; transform: none;
+}
+html .mv-contractcard + .mv-contractcard, html .mv-modelcards > a + a, html .portal-next-grid > a + a {
+  border-left: 1px solid var(--line);
+}
+html .mv-contractcard.featured { background: var(--surface); box-shadow: inset 0 3px 0 var(--accent); }
+html .mv-contractcard > strong { font-size: 42px; font-weight: 600; letter-spacing: -.045em; }
+html .mv-quote > strong { font-weight: 600; letter-spacing: -.045em; }
+html .mv-bar { height: 4px; border-radius: 0; }
+html .mv-bar i { background: var(--data); border-radius: 0; }
+html .mv-contractcard.featured .mv-bar i { background: var(--accent); }
+html .mv-group:hover, html .portal-next-grid > a:hover { transform: none; border-color: var(--ink); }
+html .mv-group, html .mv-detailhero { background: var(--surface); }
+html .mv-tabs > a.active { background: var(--surface); box-shadow: inset 3px 0 var(--accent); }
+
+/* 8. 라벨 칩은 채움 없이 외곽선만 */
+html .mv-chip, html .mv-badge {
+  background: transparent; border: 1px solid var(--line); color: var(--ink-3);
+  border-radius: 3px; font-size: 11px; font-weight: 500;
+}
+html .mv-badge.good { color: #24704e; border-color: #b9d8c8; }
+html .mv-badge.bad { color: #a73732; border-color: #e3bcb9; }
+
+/* 9. 안내 문구 — 크림색 상자 대신 왼쪽 선만 */
+html .mv-note, html body:not(.is-home) .readable-context, html .market-v4 #dataContext {
+  background: transparent; border: 0; border-left: 3px solid var(--line); border-radius: 0;
+  padding: 4px 0 4px 18px; color: var(--ink-2);
+}
+html .mv-note b { color: var(--ink); }
+html .mv-gap { background: var(--ink); border-radius: 6px; }
+
+/* 10. 버튼과 선택 상태 — 기본은 남색, 빨강은 쓰지 않음 */
+html .btn, html .mv-btn { border-radius: 6px; box-shadow: none; }
+html .btn.primary, html .mv-btn.primary, html body .hero-primary {
+  background: var(--ink); border-color: var(--ink); color: #fff; border-radius: 6px; box-shadow: none;
+}
+html .btn.primary:hover, html .mv-btn.primary:hover, html body .hero-primary:hover {
+  background: #21415f; border-color: #21415f; transform: none;
+}
+html .mv-models button[aria-pressed=true], html .chip[aria-pressed=true], html .seg button[aria-pressed=true],
+html .contract-region .seg button[aria-pressed=true] { background: var(--ink); border-color: var(--ink); color: #fff; }
+
+/* 11. 표 — 머리글 아래 굵은 선, 행은 가는 선 */
+html .mv-table th, html .t th {
+  background: transparent; color: var(--ink-2); font-size: 12px; font-weight: 650;
+  letter-spacing: 0; text-transform: none; border-bottom: 2px solid var(--ink);
+}
+html .mv-table td, html .t td { border-top: 1px solid var(--line-2); }
+html .mv-table tbody tr:hover, html .t tbody tr:hover { background: var(--surface-2); }
+
+/* 12. 접근성·모션 */
+html :focus-visible { outline: 2px solid var(--data); outline-offset: 2px; }
+@media (max-width: 820px) {
+  html .mv-contractcard + .mv-contractcard, html .mv-modelcards > a + a, html .portal-next-grid > a + a {
+    border-left: 0; border-top: 1px solid var(--line);
+  }
+  html body .hero-layout { padding-block: 44px 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
