@@ -1,0 +1,12 @@
+.git
+.github
+k8s
+docs
+tests
+ui-spec
+montecarlo
+**/__pycache__
+**/*.py[cod]
+.env
+.env.*
+*.log
