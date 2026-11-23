@@ -1,0 +1,163 @@
+/* Shared SK-inspired visual language: image-led headings, open data surfaces,
+   quiet rules, square controls. Business logic and chart data stay unchanged. */
+html body.workspace-sidebar{--cw-gutter:40px;--ui-ink:#202124;--ui-muted:#686c73;--ui-line:#dde0e4;--ui-red:#df1b36;--ui-shadow:none}
+html body.workspace-sidebar:not(.is-home){background:#fff!important;color:#202124}
+html body.workspace-sidebar:not(.is-home)::before,html body.workspace-sidebar:not(.is-home)::after{display:none}
+html body.workspace-sidebar .gnb{background:#fff;border-color:#e4e5e7;box-shadow:none;backdrop-filter:none}
+html body.workspace-sidebar .portal-search{background:#fff;border-radius:0;border-color:#dedfe2}
+html body.workspace-sidebar #workspaceSidebar{background:#fff;border-color:#e3e5e8;padding-top:29px}
+html body.workspace-sidebar #workspaceSidebar :is(a,summary){border-radius:0;font-weight:400}
+html body.workspace-sidebar #workspaceSidebar a{color:#696d73;min-height:44px;box-shadow:none}
+html body.workspace-sidebar #workspaceSidebar a:hover{background:#f5f5f6;color:#202124}
+html body.workspace-sidebar #workspaceSidebar a[aria-current=page]{background:#f8f4f5;color:#d61934;box-shadow:none;font-weight:500}
+html body.workspace-sidebar #workspaceSidebar a[aria-current=page]:before{top:0;bottom:0;border-radius:0;width:2px}
+html body.workspace-sidebar #workspaceSidebar .ws-identity b{font-weight:500;color:#202124}
+html body.workspace-sidebar:not(.is-home) #layout{padding:0 var(--cw-gutter)!important}
+html body.workspace-sidebar:not(.is-home) #content{max-width:none!important;min-width:0}
+html body.workspace-sidebar .cp-page{--cp-red:#df1b36;--cp-ink:#202124;--cp-muted:#686c73;--cp-line:#dde0e4;color:#202124;max-width:none}
+/* Every research route shares a compact version of the homepage photograph. */
+html body.workspace-sidebar .cp-page .cp-hero{position:relative;isolation:isolate;overflow:hidden;text-align:left;min-height:266px;padding:49px var(--cw-gutter) 44px;margin:0 calc(-1 * var(--cw-gutter)) 34px;background:#171d23;display:flex;flex-direction:column;justify-content:center;border:0;border-radius:0;box-sizing:border-box}
+html body.workspace-sidebar .cp-page .cp-hero:before{content:'';position:absolute;inset:0;z-index:-2;background:url('/static/img/gpu-datacenter-hero.jpg') 76% 48%/cover no-repeat;opacity:.7}
+html body.workspace-sidebar .cp-page .cp-hero:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#11171eea 15%,#11171eb3 52%,#11171e15)}
+html body.workspace-sidebar .cp-page .cp-hero .cp-eyebrow{display:flex;align-items:center;gap:12px;color:#fff;font-size:14px;font-weight:400;letter-spacing:.045em;margin:0 0 16px}
+html body.workspace-sidebar .cp-page .cp-hero .cp-eyebrow:before{content:'';height:2px;width:25px;background:#f52c48}
+html body.workspace-sidebar .cp-page .cp-hero h1{color:#fff;font-weight:300;font-size:clamp(32px,3.1vw,46px);line-height:1.4;letter-spacing:-.055em;margin:0 0 17px}
+html body.workspace-sidebar .cp-page .cp-hero h1 em{color:#fff;font-weight:500}
+html body.workspace-sidebar .cp-page .cp-hero>p:last-child{color:#e4e6e9;font-size:16px;font-weight:300;line-height:1.85;max-width:680px}
+/* Detail headers retain the requested upper-right price history chart. */
+html body.workspace-sidebar .cp-page .rw-catalog-top{position:relative;isolation:isolate;display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,.88fr);gap:30px;align-items:center;background:#171d23 url('/static/img/gpu-datacenter-hero.jpg') 70% center/cover;margin:0 calc(-1 * var(--cw-gutter)) 34px;padding:30px var(--cw-gutter)}
+html body.workspace-sidebar .cp-page .rw-catalog-top:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#11171ef2,#11171eb3)}
+html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero{min-height:250px;background:none;margin:0;padding:20px 0;overflow:visible}
+html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero:before,html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero:after{display:none}
+html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero h1{font-size:clamp(28px,2.8vw,40px)}
+html body.workspace-sidebar .cp-page .rw-catalog-trend{border:0;border-radius:0;box-shadow:none;background:#fff;padding:20px 22px 14px}
+html body.workspace-sidebar .cp-page .rw-mini-heading h2{font-size:18px;font-weight:400;color:#202124}
+html body.workspace-sidebar .cp-page .rw-mini-heading>span{font-size:12px;color:#6c727b}
+html body.workspace-sidebar .cp-page .rw-mini-terms{border-radius:0;border:0;border-bottom:1px solid #e1e3e6;background:#fff;padding:0;width:100%;gap:0}
+html body.workspace-sidebar .cp-page .rw-mini-terms button{border-radius:0;flex:1;padding:9px 4px;font-size:13px;box-shadow:none;border-bottom:2px solid transparent;margin-bottom:-1px}
+html body.workspace-sidebar .cp-page .rw-mini-terms button[aria-pressed=true]{background:#fff;color:#cf1c35;border-bottom-color:#df1b36;box-shadow:none;font-weight:500}
+html body.workspace-sidebar .cp-page .rw-mini-status{font-size:12px!important;color:#686f79!important}
+/* Metrics use open columns instead of floating cards. */
+html body.workspace-sidebar .cp-page .cp-overview{padding:0 0 30px;margin:0 0 36px;border:0;border-bottom:1px solid #dfe2e6;border-radius:0;background:none;box-shadow:none}
+html body.workspace-sidebar .cp-page .cp-overview>div{padding:0 25px;border-left:1px solid #e3e5e8}
+html body.workspace-sidebar .cp-page .cp-overview>div:first-child{padding-left:0;border-left:0}
+html body.workspace-sidebar .cp-page .cp-overview span{font-size:14px;color:#696d74;margin-bottom:9px}
+html body.workspace-sidebar .cp-page .cp-overview strong{font-weight:300;font-size:34px;line-height:1.4;color:#202124;letter-spacing:-.035em}
+html body.workspace-sidebar .cp-page .cp-overview strong small{font-size:14px;font-weight:400}
+html body.workspace-sidebar .cp-page .cp-overview p,html body.workspace-sidebar .cp-page .cp-overview>div>small{font-size:12px;color:#72767d;line-height:1.6}
+html body.workspace-sidebar .cp-page .cp-overview .cp-freshness strong{font-size:24px;font-weight:400}
+html body.workspace-sidebar .cp-page h2{font-size:26px;font-weight:400;color:#202124;letter-spacing:-.045em;line-height:1.5}
+html body.workspace-sidebar .cp-page .cp-explorer{padding:0 0 25px;border:0;border-bottom:1px solid #e0e3e6;border-radius:0;background:none;box-shadow:none;margin-bottom:25px}
+html body.workspace-sidebar .cp-page .cp-explorer .cp-advanced>summary{right:100px;bottom:41px}
+html body.workspace-sidebar .cp-page .cp-model-tabs{gap:0;margin:20px 0 28px;border-bottom:1px solid #d8dce0}
+html body.workspace-sidebar .cp-page .cp-model-tabs button{background:#fff;border:0;border-bottom:2px solid transparent;border-radius:0;box-shadow:none;min-height:76px;padding:12px 15px;margin-bottom:-1px}
+html body.workspace-sidebar .cp-page .cp-model-tabs button:hover{background:#f7f7f8}
+html body.workspace-sidebar .cp-page .cp-model-tabs button[aria-pressed=true]{background:#faf6f7;box-shadow:none;border-color:#df1b36}
+html body.workspace-sidebar .cp-page .cp-model-tabs b{font-weight:500;font-size:17px}
+html body.workspace-sidebar .cp-page .cp-model-tabs span{font-size:12px;color:#72777f}
+html body.workspace-sidebar .cp-page :is(select,input[type=search]){border-radius:0;border-color:#d8dce1;background-color:#fff;box-shadow:none;font-size:15px;min-height:46px}
+html body.workspace-sidebar .cp-page label{font-size:14px;color:#5f646c;font-weight:400}
+html body.workspace-sidebar .cp-page .cp-modes{background:none;border:0;border-bottom:1px solid #dadde1;border-radius:0;padding:0;gap:0}
+html body.workspace-sidebar .cp-page .cp-modes .mv-btn{border-radius:0;background:none;box-shadow:none;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:10px 17px;color:#777c84;font-size:14px;font-weight:400}
+html body.workspace-sidebar .cp-page .cp-modes .mv-btn.primary{background:none;color:#cb1a34;border-bottom-color:#df1b36;font-weight:500;box-shadow:none}
+html body.workspace-sidebar .cp-page .mv-btn{border-radius:0;border-color:#d7dbe1;box-shadow:none;background:#fff;color:#40464f;font-size:14px;font-weight:400;min-height:39px}
+html body.workspace-sidebar .cp-page .mv-btn:hover{background:#f6f6f7;border-color:#878e98;box-shadow:none}
+html body.workspace-sidebar .cp-page .mv-btn:disabled{opacity:.45}
+html body.workspace-sidebar .cp-page :is(.cp-context,.mv-note,.rw-warning,.cp-advanced-grid,.cp-summary){border-radius:0;box-shadow:none}
+html body.workspace-sidebar .cp-page .cp-context{background:#f5f6f7;color:#676e78;border-left:2px solid #df1b36;padding:15px 18px;margin-bottom:28px}
+html body.workspace-sidebar .cp-page .cp-context>p{font-size:13px;line-height:1.9}
+html body.workspace-sidebar .cp-page .cp-context>p b{font-weight:500;color:#303640}
+html body.workspace-sidebar .cp-page .cp-results-head h2 small{background:none;border-radius:0;color:#d21c36;font-weight:400;padding:0 4px;font-size:17px}
+html body.workspace-sidebar .cp-page .cp-results-head p{font-size:13px;line-height:1.8;color:#747980}
+/* Tables are the primary data surface: strong top rule, neutral header, legible rows. */
+html body.workspace-sidebar .cp-page .mv-tablebox{border:0;border-top:1px solid #252a30;border-bottom:1px solid #dfe3e6;border-radius:0;box-shadow:none;background:#fff}
+html body.workspace-sidebar .cp-page .mv-table thead th{background:#f5f5f6;color:#666c75;border-bottom:1px solid #dedfe3;padding:16px 18px;font-weight:400;font-size:13px}
+html body.workspace-sidebar .cp-page .mv-table td{border-bottom-color:#e5e7ea;padding:25px 18px;font-size:15px;color:#414852}
+html body.workspace-sidebar .cp-page .mv-table tbody tr:hover{background:#faf7f8}
+html body.workspace-sidebar .cp-page .mv-table td>b{color:#303640;font-weight:500}
+html body.workspace-sidebar .cp-page .mv-table td span{font-size:13px;color:#747b86}
+html body.workspace-sidebar .cp-page .cp-product b{font-size:20px;font-weight:500;color:#202124}
+html body.workspace-sidebar .cp-page .mv-table .cp-price>strong{color:#202124;font-size:27px;font-weight:400;letter-spacing:-.04em}
+html body.workspace-sidebar .cp-page .mv-table td .cp-status{border-radius:0;padding:3px 7px;font-size:12px}
+html body.workspace-sidebar .cp-page .cp-evidence .mv-btn{font-size:13px;border:0;border-bottom:1px solid #b2b8c1;padding:4px 0;background:none;min-height:30px}
+html body.workspace-sidebar .cp-page :is(.rw-chart-card,.discount-comparison){border:1px solid #dfe2e7;border-top:2px solid #282e35;border-radius:0;box-shadow:none;padding:27px 28px;background:#fff;margin-block:28px}
+html body.workspace-sidebar .cp-page .rw-chart-card h2{font-size:24px;font-weight:400}
+html body.workspace-sidebar .cp-page .rw-pair-grid{gap:24px;margin-top:26px}
+html body.workspace-sidebar .cp-page .rw-pair-card{border:1px solid #dfe2e7;border-top:3px solid #df1b36;border-radius:0;box-shadow:none;background:#fff;padding:28px}
+html body.workspace-sidebar .cp-page .rw-pair-card:last-child{border-top-color:#343c48}
+html body.workspace-sidebar .cp-page .rw-pair-price{padding:28px 0;border-top:1px solid #e4e6e9;margin-top:25px}
+html body.workspace-sidebar .cp-page .rw-pair-price>strong{font-size:43px;font-weight:300;color:#202124}
+html body.workspace-sidebar .cp-page .rw-pair-price .cp-status{border-radius:0}
+html body.workspace-sidebar .cp-page .rw-back{border:0;border-bottom:1px solid #afb6bf;border-radius:0;padding:0 0 5px;box-shadow:none;background:none;color:#555d68}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-models button{border-radius:0;border:0;border-bottom:2px solid transparent;background:#fff;padding:12px 18px;font-size:16px}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-models button[aria-pressed=true]{border-color:#df1b36;background:#faf6f7;color:#c81c35}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-contractcard{border-radius:0;box-shadow:none;background:#fff;border:1px solid #dfe3e7;border-top:2px solid #333b45;padding:25px}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-contractcard.featured{border-top-color:#df1b36;background:#fcf8f9}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-contractcard>strong{font-weight:300;font-size:34px;color:#202124}
+html body.workspace-sidebar .cp-page.rw-contracts .mv-contractcard :is(.mv-chip,.mv-bar){border-radius:0}
+/* The separate collected-data page participates in the same system. */
+html body.workspace-data>main{padding:0 var(--cw-gutter) 60px!important;max-width:none!important}
+html body.workspace-data .scroll{border:0;border-top:1px solid #272e37;border-bottom:1px solid #dfe3e6;border-radius:0;box-shadow:none}
+html body.workspace-data :is(input,select,button,dialog){border-radius:0;box-shadow:none}
+html body.workspace-data th{font-weight:400;background:#f5f5f6;font-size:13px}
+html body.workspace-data td{font-size:14px;padding-block:22px}
+html body.workspace-data td.price{font-size:26px;font-weight:400}
+html body.workspace-data .notice{background:#f5f6f7;font-size:14px;line-height:1.8;border-left-width:2px}
+/* Shared band used by favorites, calculators, AI, quality and other auxiliary pages. */
+html body.workspace-sidebar:not(.is-home) #band{background:#171d23 url('/static/img/gpu-datacenter-hero.jpg') 75% 48%/cover;position:relative;isolation:isolate;margin-bottom:32px;border:0}
+html body.workspace-sidebar:not(.is-home) #band:before{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#11171ef0 10%,#11171eb3 55%,#11171e30)}
+html body.workspace-sidebar:not(.is-home) .band-in{max-width:none;padding:0!important;margin:0;display:block}
+html body.workspace-sidebar:not(.is-home) .band-title{padding:43px var(--cw-gutter)!important;margin:0!important;min-height:255px;box-sizing:border-box;border:0!important;background:none!important;border-radius:0;box-shadow:none}
+html body.workspace-sidebar:not(.is-home) .band-title #portalVisual{display:none}
+html body.workspace-sidebar:not(.is-home) .band-title .page-eyebrow{color:#fff;font-size:14px;letter-spacing:.04em;display:flex;align-items:center;gap:12px;margin:0 0 15px}
+html body.workspace-sidebar:not(.is-home) .band-title .page-eyebrow:before{content:'';width:25px;height:2px;background:#f52c48}
+html body.workspace-sidebar:not(.is-home) .band-title h1{font-size:clamp(32px,3.1vw,44px);font-weight:300;letter-spacing:-.055em;color:#fff;line-height:1.4;margin:0 0 15px}
+html body.workspace-sidebar:not(.is-home) .band-title #pageDesc{color:#e4e6e9;font-size:16px;font-weight:300;line-height:1.8;max-width:850px}
+html body.workspace-sidebar:not(.is-home) .band-title :is(.page-data,.page-data>summary,.portal-guide-button){color:#e1e4e9;font-size:13px}
+html body.workspace-sidebar:not(.is-home) .band-title .band-meta{background:#fff;color:#354050;padding:15px;border-radius:0}
+html body.workspace-sidebar:not(.is-home) .crumbs{padding-left:var(--cw-gutter);font-size:12px}
+html body.workspace-sidebar:not(.is-home) :is(.card,.panel,.mv-controls,.mc-panel,.review-panel,.review-card,.fav-provider,.agent-panel,.kpis,.kpi,.mc-kpis,.display-settings,.mv-note,.v02-warning,.v02-fx){border-radius:0!important;box-shadow:none!important;border-color:#dfe2e7}
+html body.workspace-sidebar:not(.is-home) :is(.card,.panel,.mc-panel,.fav-provider){border-top:2px solid #313943;background:#fff}
+html body.workspace-sidebar:not(.is-home) :is(.mv-controls,.review-flow a){background:#fff;border:1px solid #dfe2e7;border-radius:0;box-shadow:none;padding:24px}
+html body.workspace-sidebar:not(.is-home) .rw-contracts .mv-controls{border:0;padding:0}
+html body.workspace-sidebar:not(.is-home) :is(.mv-btn,.btn,.chip,.mc-chip,.review-tab,.review-flow a,.seg button,.tabs button){border-radius:0!important;box-shadow:none!important}
+html body.workspace-sidebar:not(.is-home) :is(.mv-btn.primary,.btn.primary,.btn-primary){background:#db1b36;border-color:#db1b36;color:#fff}
+html body.workspace-sidebar:not(.is-home) :is(.mv input,.mv select,.mc input,.mc select,.card input,.card select,.agent-input,textarea){border-radius:0!important;box-shadow:none;font-size:15px;min-height:43px}
+html body.workspace-sidebar:not(.is-home) :is(.mv h2,.mc h2,.review h2){font-weight:400;color:#202124}
+html body.workspace-sidebar:not(.is-home) :is(.mv h3,.mc h3,.card h3,.panel h3){font-weight:500;color:#303640}
+html body.workspace-sidebar:not(.is-home) :is(.kpi .v,.mc-kpis strong,.v02-results strong){font-weight:300;color:#202124}
+html body.workspace-sidebar:not(.is-home) #v02Fx{border-radius:0;box-shadow:none;border-color:#dfe2e7!important;border-left:2px solid #df1b36!important}
+html body.workspace-sidebar:not(.is-home) :is(.tbl-wrap,.table-wrap,.sk-contract-chart){border-radius:0;box-shadow:none}
+html body.workspace-sidebar:not(.is-home) .main-footer{color:#747b84;border-color:#e2e5e9;font-size:12px;background:#fff}
+/* A restrained entrance, with the OS reduced-motion preference respected. */
+@media(prefers-reduced-motion:no-preference){html body.workspace-sidebar .polish-enter{animation:corporate-enter .6s cubic-bezier(.2,.65,.2,1) both;animation-delay:var(--polish-delay,0ms)}@keyframes corporate-enter{from{opacity:.3;translate:0 12px}to{opacity:1;translate:0 0}}}
+@media(prefers-reduced-motion:reduce){html body.workspace-sidebar .polish-enter{animation:none}}
+@media(max-width:1100px){html body.workspace-sidebar{--cw-gutter:28px}html body.workspace-sidebar .cp-page .rw-catalog-top{grid-template-columns:1fr 1fr;gap:20px}html body.workspace-sidebar .cp-page .rw-catalog-trend{padding:18px 15px 12px}html body.workspace-sidebar .cp-page .cp-overview>div{padding-inline:18px}html body.workspace-sidebar .cp-page .rw-pair-card{padding:20px}}
+@media(max-width:760px){
+ html body.workspace-sidebar{--cw-gutter:22px}
+ html body.workspace-sidebar .cp-page .cp-hero{min-height:245px;padding-block:38px;margin-bottom:28px}
+ html body.workspace-sidebar .cp-page .cp-hero h1{font-size:34px}
+ html body.workspace-sidebar .cp-page .cp-hero>p:last-child{font-size:15px;max-width:500px}
+ html body.workspace-sidebar .cp-page .rw-catalog-top{grid-template-columns:1fr;gap:10px;padding-block:25px}
+ html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero{min-height:0;padding:15px 0}
+ html body.workspace-sidebar .cp-page .rw-catalog-trend{padding:19px 18px 14px}
+ html body.workspace-sidebar .cp-page .cp-overview{grid-template-columns:repeat(2,minmax(0,1fr));padding-bottom:10px}
+ html body.workspace-sidebar .cp-page .cp-overview>div{padding:14px 12px;border:0}
+ html body.workspace-sidebar .cp-page .cp-overview>div:nth-child(odd){padding-left:0}
+ html body.workspace-sidebar .cp-page .cp-overview>div:nth-child(even){border-left:1px solid #e5e7ea}
+ html body.workspace-sidebar .cp-page .cp-overview>div:nth-child(n+3){border-top:1px solid #e5e7ea}
+ html body.workspace-sidebar .cp-page .cp-overview strong{font-size:30px}
+ html body.workspace-sidebar .cp-page .cp-overview .cp-freshness strong{font-size:21px}
+ html body.workspace-sidebar .cp-page .cp-overview strong small{font-size:12px}
+ html body.workspace-sidebar .cp-page h2{font-size:23px}
+ html body.workspace-sidebar .cp-page .cp-model-tabs{grid-template-columns:repeat(3,minmax(0,1fr))}
+ html body.workspace-sidebar .cp-page .cp-model-tabs button{padding:10px 8px}
+ html body.workspace-sidebar .cp-page .cp-modes .mv-btn{padding:10px 12px;font-size:13px}
+ html body.workspace-sidebar .cp-page .cp-explorer .cp-advanced>summary{position:static}
+ html body.workspace-sidebar .cp-page :is(.rw-chart-card,.discount-comparison){padding:20px 15px}
+ html body.workspace-sidebar .cp-page .rw-pair-grid{grid-template-columns:1fr}
+ html body.workspace-sidebar:not(.is-home) .band-title{min-height:235px;padding-block:35px!important}
+ html body.workspace-sidebar:not(.is-home) .band-title h1{font-size:33px}
+ html body.workspace-sidebar:not(.is-home) .band-title #pageDesc{font-size:15px}
+ html body.workspace-sidebar:not(.is-home) :is(.mv-controls,.review-flow a){padding:18px}
+}

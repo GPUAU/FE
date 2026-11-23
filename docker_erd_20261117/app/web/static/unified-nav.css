@@ -1,0 +1,14 @@
+/* One persistent navigation; market pages live in the header disclosure. */
+html body .market-menu{position:relative;align-self:stretch;display:flex;align-items:center}
+html body .market-menu>summary{display:flex;align-items:center;justify-content:center;gap:7px;height:100%;min-height:66px;padding:0 10px;font-size:14px;font-weight:650;color:var(--ink);cursor:pointer;list-style:none;border-bottom:2px solid transparent;box-sizing:border-box}
+html body .market-menu>summary::-webkit-details-marker{display:none}
+html body .market-menu[data-active=true]>summary,html body .market-menu[open]>summary{color:#e5233c;border-bottom-color:#e5233c}
+html body .market-menu>summary:focus-visible{outline:2px solid #e5233c;outline-offset:-5px;border-radius:6px}
+.market-chevron{font-size:13px;transition:transform .15s}
+.market-menu[open] .market-chevron{transform:rotate(180deg)}
+html body .market-menu-panel{position:absolute;top:100%;left:-12px;width:210px;padding:8px;background:#fff;border:1px solid #e8e9ee;border-radius:12px;box-shadow:0 12px 32px #17223816;z-index:1000}
+html body .gmenu .market-menu-panel a{display:block;min-height:40px;padding:11px 14px;line-height:1.4;font-size:13px;border:0;border-radius:7px;color:#303645;white-space:nowrap;text-decoration:none}
+html body .gmenu .market-menu-panel a:hover,html body .gmenu .market-menu-panel a:focus-visible{background:#f6f7f9;color:#e5233c}
+html body .gmenu .market-menu-panel a[aria-current=page]{background:#fff0f2;color:#e5233c}
+@media(prefers-reduced-motion:reduce){.market-chevron{transition:none}}
+

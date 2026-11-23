@@ -4,6 +4,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
+from urllib.parse import urlsplit
 
 STATIC = Path(__file__).parent / 'docker_erd_20261117/app/web/static'
 SPRING = 'http://127.0.0.1:18092'
@@ -41,6 +42,9 @@ class Handler(SimpleHTTPRequestHandler):
         super().end_headers()
 
     def do_GET(self):
+        if urlsplit(self.path).path.rstrip('/') == '/public-data':
+            self.path = '/public-data.html'
+            return super().do_GET()
         if self.path.startswith('/api/') or self.path.startswith('/public-data'):
             return self.proxy()
         if self.path in ('/', '/index.html'):

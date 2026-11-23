@@ -3,8 +3,8 @@
 화면: http://127.0.0.1:18091/#forecast
 
 `몬테카를로_실행.command`로 계산 서버를 시작하고 화면을 연다.
-통합 ZIP의 `사이트_DB_실행.command` 실행에도 계산 서버 시작을 포함했다.
-FE 저장소만 받은 경우 `python3 serve.py`로 화면 서버를 실행한다.
+기존 `사이트_DB_실행.command` 실행에도 계산 서버 시작을 포함했다.
+기존 사이트가 꺼져 있으면 전체 실행 파일을 먼저 실행한다.
 
 ## 계산 흐름
 
@@ -40,7 +40,7 @@ PM 난수 소비 순서를 보존하기 위해 예측에서도 투자 분석 기
 ```sh
 python3 -m unittest discover -s montecarlo/engine -p tests.py
 python3 -m unittest discover -s montecarlo -p 'test*.py'
-node --test tests/*.test.mjs
+node --test frontend/GPU_Frontend/tests/*.test.mjs
 ```
 
 원본 테스트 18개, 연동 회귀·입력 검증 테스트 6개, 기존·신규 FE 테스트 58개 통과.

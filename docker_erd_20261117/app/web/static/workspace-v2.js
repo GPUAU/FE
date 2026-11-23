@@ -1,15 +1,15 @@
 /* Task-oriented inner workspace. Home and login keep their existing design. */
 const READABLE_PAGES = {
-  dashboard:['PRICE EXPLORER','GPU 가격 비교','모델과 계약 조건을 고르고, 상품의 가격과 근거를 확인하세요.'],
-  compare:['CONTRACT COMPARISON','계약 조건별 가격 비교','같은 계약 조건의 가격을 나란히 보고 비교 기준을 바꿔보세요.'],
-  trend:['PRICE HISTORY','가격 추이와 관측 이력','수집된 과거 가격에서 변화의 시점과 관측 범위를 확인하세요.'],
-  agent:['PRICING COPILOT','Pricing Copilot','질문에서 시작해, 판단에 필요한 가격의 근거까지.'],
-  cost:['COST WORKSPACE','원가와 제안가 점검','입력한 원가·가동률 가정으로 손익분기점과 제안가를 확인하세요.'],
-  bizcase:['BUSINESS SCENARIO','사업성 시나리오','가정을 직접 조정하고, 시나리오에 따라 달라지는 결과를 확인하세요.'],
-  discounts:['DISCOUNT EXPLORER','계약기간별 할인 비교','온디맨드와 짝이 있는 상품의 할인과 비교 조건을 확인하세요.'],
-  favorites:['YOUR WATCHLIST','관심 사업자 모아보기','관심 사업자의 가격과 관측 상태를 한곳에서 확인하세요.'],
-  qa:['DATA QUALITY','데이터 품질 확인','수집·환산·답변의 정확도와 확인이 필요한 항목을 살펴보세요.'],
-  inquiries:['SUPPORT','워크스페이스 문의','이 워크스페이스에서 함께 확인하는 문의와 답변입니다.']
+  dashboard:['시세 분석','GPU 가격 비교','모델과 계약 조건을 고르고, 상품의 가격과 근거를 확인하세요.'],
+  compare:['시세 분석','계약 조건별 가격 비교','같은 계약 조건의 가격을 나란히 보고 비교 기준을 바꿔보세요.'],
+  trend:['시세 분석','가격 추이와 관측 이력','수집된 과거 가격에서 변화의 시점과 관측 범위를 확인하세요.'],
+  agent:['AI 질의','Pricing Copilot','GPU 가격과 상품 조건을 질문하고 출처를 확인합니다.'],
+  cost:['원가 분석','원가와 제안가 점검','입력한 원가·가동률 가정으로 손익분기점과 제안가를 확인하세요.'],
+  bizcase:['사업성 검토','사업성 시나리오','가정을 직접 조정하고, 시나리오에 따라 달라지는 결과를 확인하세요.'],
+  discounts:['시세 분석','계약기간별 할인 비교','온디맨드와 짝이 있는 상품의 할인과 비교 조건을 확인하세요.'],
+  favorites:['시세 분석','관심 사업자 모아보기','관심 사업자의 가격과 관측 상태를 한곳에서 확인하세요.'],
+  qa:['품질 관리','데이터 품질 확인','수집·환산·답변의 정확도와 확인이 필요한 항목을 살펴보세요.'],
+  inquiries:['문의','워크스페이스 문의','이 워크스페이스에서 함께 확인하는 문의와 답변입니다.']
 };
 const NAV_ICONS={gMarket:'M3 17l6-6 4 3 8-10M15 4h6v6',gCost:'M5 4h14v16H5zM8 8h8M8 12h3M14 12h2M8 16h3M14 16h2',gBiz:'M4 20V10h4v10M10 20V4h4v16M16 20v-8h4v8',gAi:'M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z',gQuality:'M12 3l8 3v6c0 4-4 7-8 9-4-2-8-5-8-9V6zM8 12l3 3 5-6',gSettings:'M4 5h16v12H9l-5 4z',gAdmin:'M6 9V6a6 6 0 0 1 12 0v3M4 9h16v12H4z'};
 function prepareReadableNav(){
@@ -26,7 +26,7 @@ function prepareReadableNav(){
 }
 function updateReadableShell(view){
  const previousView=document.body.dataset.page;document.body.dataset.page=view;prepareReadableNav();
- const pg=READABLE_PAGES[view];$('#pageEyebrow').textContent=pg?.[0]||'WORKSPACE';
+ const pg=READABLE_PAGES[view];$('#pageEyebrow').textContent=pg?.[0]||'GPU 시세 인덱스';
  if(pg&&lang==='ko'){$('#pageTitle').textContent=pg[1];$('#pageDesc').textContent=pg[2];}
  $('#currencyLabel').textContent=state.cur;
  $('#displaySettings').hidden=!PAGES[view]?.tools;
