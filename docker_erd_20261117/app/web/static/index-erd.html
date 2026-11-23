@@ -591,17 +591,38 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <link rel="stylesheet" href="/static/signature.css?v=fx1119">
 <link rel="stylesheet" href="/static/fx-display.css?v=fx1119">
 <link rel="stylesheet" href="/static/reliability.css?v=reference1119">
+<link rel="stylesheet" href="/static/unified-nav.css?v=20261120-2">
+<link rel="stylesheet" href="/static/home-overview.css?v=20261123-motion">
+<link rel="stylesheet" href="/static/comparison-catalog.css?v=compare1123">
+<link rel="stylesheet" href="/static/research-workspace.css?v=catalogtrend1123">
+<link rel="stylesheet" href="/static/workspace-sidebar.css?v=left1123">
+<link rel="stylesheet" href="/static/product-polish.css?v=atmosphere1123">
+<link rel="stylesheet" href="/static/sk-typography.css?v=sk1123">
+<link rel="stylesheet" href="/static/home-corporate.css?v=corporate1123">
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
-<div class="workspace-bar"><div class="wrap"><span><i></i> GPU 가격 리서치</span><span><a href="/public-data" style="color:inherit;text-decoration:underline">전체 수집 데이터 열기 ↗</a> <b>· GPU 인스턴스 클라우드 · GPU 전문 클라우드</b></span></div></div>
+<div class="workspace-bar"><div class="wrap"><span><i></i> GPU 가격 리서치</span><span><a href="/static/public-data.html" style="color:inherit;text-decoration:underline">전체 수집 데이터 열기 ↗</a> <b>· GPU 인스턴스 클라우드 · GPU 전문 클라우드</b></span></div></div>
 <div id="loader"><div class="box"><div class="spin"></div><div id="loadmsg">파이프라인 DB에 연결하는 중…</div></div></div>
 
 <header class="gnb">
   <div class="wrap gnb-in"><button class="mobile-menu" id="mobileMenu" type="button" aria-label="전체 메뉴 열기" aria-expanded="false" aria-controls="mobileNav">☰</button>
     <a class="logo" href="#home" aria-label="GPU 시세 인덱스 홈"><img src="/static/img/skt-logo.png" alt="SK telecom"><span class="logo-svc" data-i18n="product"></span></a>
     <nav class="gmenu" aria-label="주 메뉴">
-      <a href="#dashboard" data-grp="market" data-i18n="gMarket"></a>
+      <a href="#home" class="home-nav-link">홈</a>
+      <details class="market-menu" id="marketMenu">
+        <summary><span>가격 비교</span><span class="market-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="market-menu-panel">
+          <a href="#compare">조건별 가격 비교</a>
+          <a href="#catalog">GPU 카탈로그</a>
+          <a href="#dashboard">사업자 비교</a>
+          
+          <a href="#discounts">계약 할인</a>
+          <a href="#trend">가격 이력</a>
+          <a href="#favorites">관심 사업자</a>
+          <a href="/static/public-data.html">전체 수집 데이터 ↗</a>
+        </div>
+      </details>
       <a href="#cost" data-grp="cost" data-i18n="gCost"></a>
       <a href="#bizcase" data-grp="biz" data-i18n="gBiz"></a>
       <a href="#decision" data-grp="decision">가격 검토</a>
@@ -627,7 +648,7 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 </header>
 
 <nav id="mobileNav" class="mobile-nav" aria-label="전체 페이지" hidden>
-<a href="#home">워크스페이스 홈</a><a href="#dashboard">가격 대시보드</a><a href="#catalog">GPU·사업자 카탈로그</a><a href="#compare">모델별 가격 비교</a><a href="#discounts">계약기간별 할인</a><a href="#trend">추이·생애주기</a><a href="#favorites">관심 사업자</a><a href="#cost">원가·제안가</a><a href="#bizcase">사업성 시나리오</a><a href="#decision">가격 검토·가동률 비교</a><a href="#forecast">몬테카를로 시뮬레이션</a><a href="#agent">Pricing Copilot</a><a href="#qa">데이터 품질</a><a href="#inquiries">워크스페이스 문의</a>
+<a href="#home">홈</a><a href="#compare">조건별 가격 비교</a><a href="#dashboard">가격 대시보드</a><a href="#catalog">GPU·사업자 카탈로그</a><a href="#discounts">계약기간별 할인</a><a href="#trend">추이·생애주기</a><a href="#favorites">관심 사업자</a><a href="#cost">원가·제안가</a><a href="#bizcase">사업성 시나리오</a><a href="#decision">가격 검토·가동률 비교</a><a href="#forecast">몬테카를로 시뮬레이션</a><a href="#agent">Pricing Copilot</a><a href="#qa">데이터 품질</a><a href="#inquiries">워크스페이스 문의</a>
 </nav>
 <section class="hello" id="hello" hidden>
  <div class="wrap hero-layout">
@@ -692,7 +713,7 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
       <a href="#compare" data-i18n="pCompare"></a>
       <a href="#discounts" data-i18n="pDiscounts"></a>
       <a href="#trend" data-i18n="pTrend"></a>
-      <a href="/public-data">수집 데이터 · 전체 원본</a>
+      <a href="/static/public-data.html">수집 데이터 · 전체 원본</a>
       <a href="#favorites" data-i18n="pFavorites"></a>
       <div class="snb-grp" data-i18n="gCost"></div>
       <a href="#cost" data-i18n="pCost"></a>
@@ -935,13 +956,13 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <script src="/static/disc.js"></script>
 <script src="/static/cat.js?v=20261106-4"></script>
 <script src="/static/catalog-list.js?v=20261104-1"></script>
-<script src="/static/app.js?v=spring-main19-review2"></script>
+<script src="/static/app.js?v=merge1123"></script>
 <script src="/static/redesign.js?v=20261107-v2-4"></script>
 <script src="/static/workspace-v2.js?v=20261109-final"></script>
 <script src="/static/portal-v3.js?v=20261109-sk2"></script>
-<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=spring-main19-review2"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=spring-main19"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/requirements-v02.js?v=fix1119"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=spring-main19"></script><script src="/static/calculator-ui.js?v=pr2-review"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=spring-main19"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
+<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=merge1123"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=merge1123"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/requirements-v02.js?v=fix1119"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=spring-main19"></script><script src="/static/calculator-ui.js?v=pr2-review"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=merge1123"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
 <script src="/static/research.js?v=fx1119"></script>
-<script src="/static/signature.js?v=spring-main19-review2"></script><script src="/static/quality-ui.js?v=be167655a"></script><script src="/static/backend-quality.js?v=be167655a"></script>
+<script src="/static/signature.js?v=merge1123"></script><script src="/static/spring-legacy-bridge.js?v=merge1123"></script><script src="/static/home-overview.js?v=merge1123"></script><script src="/static/research-workspace.js?v=merge1123"></script><script src="/static/quality-ui.js?v=be167655a"></script><script src="/static/backend-quality.js?v=be167655a"></script>
 <script src="/static/spring-changes-ui.js?v=spring-main19"></script>
 <link rel="stylesheet" href="/static/montecarlo.css?v=pm1119">
 <script src="/static/montecarlo.js?v=review1119"></script>
@@ -949,5 +970,12 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <script src="/static/decision-ui.js?v=review1119"></script>
 <script src="/static/spring-copilot.js?v=spring-main19"></script>
 <link rel="stylesheet" href="/static/sk-color-system.css?v=20261119-clean3">
+<script src="/static/unified-nav.js?v=20261123-1"></script>
+<script src="/static/workspace-sidebar.js?v=sk1123"></script>
+<script src="/static/product-polish.js?v=all1123"></script>
+<script src="/static/sk-typography.js?v=sk1123"></script>
+<link rel="stylesheet" href="/static/corporate-workspace.css?v=all1123">
+<link rel="stylesheet" href="/static/market-alerts.css?v=demo1123">
+<script src="/static/market-alerts.js?v=demo1123"></script>
 </body>
 </html>

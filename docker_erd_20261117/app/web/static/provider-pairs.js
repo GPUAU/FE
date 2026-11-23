@@ -4,7 +4,7 @@ const pairState={group:'general',single:false,region:['ALL','ALL'],keys:['',''],
 const pairRegion=r=>r==='GLOBAL_UNSPECIFIED'?'지역 미명시 / 공통 요금':r||'미제공';
 const pairPrice=n=>n==null?'—':'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:4});
 const pairAt=t=>t?fullAt(t):'관측 시각 미제공';
-const pairSources=()=>'<div class="pair-sources">가격: <a href="https://gpuledger.dev/data/" target="_blank" rel="noopener">GPU Ledger</a> · <a href="https://gpueconomy.com/data" target="_blank" rel="noopener">GPU Economy</a> · <a href="https://gpurentwatch.com/data/" target="_blank" rel="noopener">GPU Rent Watch</a> <span>CC BY 4.0 · 선별·정규화 적용</span> <a href="/public-data">수집 자료·과거 이력 ↗</a></div>';
+const pairSources=()=>'<div class="pair-sources">가격: <a href="https://gpuledger.dev/data/" target="_blank" rel="noopener">GPU Ledger</a> · <a href="https://gpueconomy.com/data" target="_blank" rel="noopener">GPU Economy</a> · <a href="https://gpurentwatch.com/data/" target="_blank" rel="noopener">GPU Rent Watch</a> <span>CC BY 4.0 · 선별·정규화 적용</span> <a href="/static/public-data.html">수집 자료·과거 이력 ↗</a></div>';
 function pairGroupButtons(home=false){return Object.entries(PAIR_GROUPS).map(([key,g])=>`<button type="button" class="pair-group ${key===pairState.group&&!home?'selected':''}" data-pair-group="${key}" ${home?'':`aria-pressed="${key===pairState.group}"`}><span class="pair-group-top">${g.title}<span>${home?'시작하기 ↗':key===pairState.group?'선택됨 ✓':'선택'}</span></span><strong>${g.left} <i>↔</i> ${g.right}</strong><small>${g.note}</small></button>`).join('')}
 function choosePair(group){if(group!==pairState.group){pairState.group=group;pairState.single=group==='specialist';pairState.region=['ALL','ALL'];pairState.keys=['',''];}const hash='#dashboard/'+group;if(location.hash!==hash)location.hash=hash;else renderPairDashboard();}
 async function renderPairHome(){
@@ -12,8 +12,8 @@ async function renderPairHome(){
  $('#heroHeadline').innerHTML='비슷한 사업자끼리,<br>조건을 나란히 비교하세요.';
  $('#helloSub').textContent='AWS와 Oracle OCI, RunPod과 Nebius. 두 비교 그룹에서 가격과 상품 조건을 함께 확인하세요.';
  $('#helloWhy').textContent='메인 B300 · GB300 NVL72 · VR200 NVL72 / 참조 GB200 NVL72 · H100 · H200';
- $('#heroStatus').innerHTML=`<span><i class="status-mark"></i>데이터 적재 <b>${esc(fullAt(state.meta.run.started_at))}</b></span><span>비교 그룹 <b>2개</b></span><span>대상 사업자 <b>4곳</b></span><a href="/public-data">원본과 이력 보기 ↗</a>`;
- $('#homeBody').innerHTML=`<section class="pair-home"><div class="section-heading"><div><p class="eyebrow">CHOOSE YOUR COMPARISON</p><h2>어떤 두 사업자를 비교할까요?</h2><p>같은 모델과 계약 조건을 선택한 뒤, 각 사업자의 상품을 골라보세요.</p></div></div><div class="pair-groups">${pairGroupButtons(true)}</div><div class="pair-home-note"><b>GPU당 가격 ≠ 1 GPU 상품</b><span>GPU당 단가로 단위를 맞추고, 실제 상품의 GPU 수는 별도로 표시합니다. NVL72 자료도 4 GPU 노드와 72 GPU 전체 랙을 구분합니다.</span></div><div class="pair-home-links"><a href="/public-data">B300·B200 과거 차트와 수집 자료 ↗</a><a href="#catalog">전체 모델·상품 카탈로그 ↗</a></div>${pairSources()}</section>`;
+ $('#heroStatus').innerHTML=`<span><i class="status-mark"></i>데이터 적재 <b>${esc(fullAt(state.meta.run.started_at))}</b></span><span>비교 그룹 <b>2개</b></span><span>대상 사업자 <b>4곳</b></span><a href="/static/public-data.html">원본과 이력 보기 ↗</a>`;
+ $('#homeBody').innerHTML=`<section class="pair-home"><div class="section-heading"><div><p class="eyebrow">CHOOSE YOUR COMPARISON</p><h2>어떤 두 사업자를 비교할까요?</h2><p>같은 모델과 계약 조건을 선택한 뒤, 각 사업자의 상품을 골라보세요.</p></div></div><div class="pair-groups">${pairGroupButtons(true)}</div><div class="pair-home-note"><b>GPU당 가격 ≠ 1 GPU 상품</b><span>GPU당 단가로 단위를 맞추고, 실제 상품의 GPU 수는 별도로 표시합니다. NVL72 자료도 4 GPU 노드와 72 GPU 전체 랙을 구분합니다.</span></div><div class="pair-home-links"><a href="/static/public-data.html">B300·B200 과거 차트와 수집 자료 ↗</a><a href="#catalog">전체 모델·상품 카탈로그 ↗</a></div>${pairSources()}</section>`;
  $('#homeBody').onclick=e=>{const b=e.target.closest('[data-pair-group]');if(b)choosePair(b.dataset.pairGroup)};
 }
 function pairShell(){
