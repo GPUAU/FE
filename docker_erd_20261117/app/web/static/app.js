@@ -404,7 +404,7 @@ function render() {
     $('#bandTools').hidden = !pg.tools; $('#bandMeta').hidden = !pg.tools;
   }
   document.querySelectorAll('.snb-nav a').forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#' + v ? 'page' : 'false'));
-  document.querySelectorAll('.gmenu a').forEach(a => a.setAttribute('aria-current', pg.grp && a.dataset.grp === pg.grp ? 'page' : 'false'));
+  document.querySelectorAll('.gmenu a').forEach(a => a.setAttribute('aria-current', a.getAttribute('href') === '#' + v ? 'page' : 'false'));
   VIEWS.forEach(x => { document.getElementById('v-' + x).hidden = x !== v; });
   updateDataContext(v);
   updateReadableShell(v);

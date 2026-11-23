@@ -1,0 +1,55 @@
+/* Font family and weight hierarchy observed on www.sk.co.kr, 2026-11-23.
+   Locally hosted Noto Sans KR; license in fonts/sk-reference/OFL.txt. */
+@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:100;font-display:swap;src:url('/static/fonts/sk-reference/NotoSansKR-Thin.woff2') format('woff2')}
+@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:300;font-display:swap;src:url('/static/fonts/sk-reference/NotoSansKR-Light.woff2') format('woff2')}
+@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:400;font-display:swap;src:url('/static/fonts/sk-reference/NotoSansKR-Regular.woff2') format('woff2')}
+@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:500;font-display:swap;src:url('/static/fonts/sk-reference/NotoSansKR-Medium.woff2') format('woff2')}
+@font-face{font-family:'Noto Sans KR';font-style:normal;font-weight:700;font-display:swap;src:url('/static/fonts/sk-reference/NotoSansKR-Bold.woff2') format('woff2')}
+html body.workspace-sidebar{--sk-type:'Noto Sans KR','Malgun Gothic','맑은 고딕','Nanum Gothic','나눔 고딕',돋움,dotum,sans-serif;font-family:var(--sk-type)!important;font-weight:400;letter-spacing:-.025em;line-height:1.7}
+html body.workspace-sidebar :is(.ho,.cp-page,.mv,#workspaceSidebar,.gnb,.mc,.review,.band,.crumbs,.main-footer,h1,h2,h3,h4,p,a,button,input,select,textarea,table,label,summary,dialog){font-family:var(--sk-type)!important}
+html body.workspace-sidebar .ho h1{font-size:clamp(36px,4vw,52px);font-weight:300;line-height:1.4;letter-spacing:-.055em;margin:25px 0 22px}
+html body.workspace-sidebar .ho h1 em{font-weight:500}
+html body.workspace-sidebar .ho-hero>.ho-kicker{border:0;background:none;border-radius:0;padding:0;font-size:15px;font-weight:500;letter-spacing:-.025em;color:#a5243f}
+html body.workspace-sidebar .ho-lead{font-size:17px;font-weight:400;line-height:1.85;letter-spacing:-.035em}
+html body.workspace-sidebar .ho h2{font-size:28px;font-weight:500;letter-spacing:-.04em;line-height:1.5}
+html body.workspace-sidebar .ho h3{font-weight:500;letter-spacing:-.025em}
+html body.workspace-sidebar .ho-section-heading{align-items:center}
+html body.workspace-sidebar .ho-section-description{font-size:14px;line-height:1.9;font-weight:400;letter-spacing:-.025em}
+html body.workspace-sidebar .ho .ho-button{font-weight:500;font-size:15px}
+html body.workspace-sidebar .ho :is(.ho-card-action,.ho-text-link,.ho-tool>span){font-weight:500}
+html body.workspace-sidebar .ho select{font-size:16px;font-weight:500}
+html body.workspace-sidebar .ho .ho-model-name>span{font-size:12px;font-weight:400;letter-spacing:.08em}
+html body.workspace-sidebar .ho :is(.ho-quote strong,.ho-statbar strong){font-weight:500;letter-spacing:-.03em}
+html body.workspace-sidebar .ho .ho-business h2{font-size:34px;font-weight:400;letter-spacing:-.055em;line-height:1.5}
+html body.workspace-sidebar .ho :is(.ho-trust b,.ho-updated b){font-weight:500}
+html body.workspace-sidebar .cp-page .cp-eyebrow{font-size:14px;font-weight:500;letter-spacing:-.025em;color:#a5243f;margin-bottom:13px}
+html body.workspace-sidebar .cp-page .cp-hero h1{font-size:clamp(31px,3.4vw,42px);font-weight:300;line-height:1.4;letter-spacing:-.055em}
+html body.workspace-sidebar .cp-page .cp-hero h1 em{font-weight:500}
+html body.workspace-sidebar .cp-page .cp-hero>p:last-child{font-size:16px;font-weight:400;letter-spacing:-.035em;line-height:1.8}
+html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero h1{font-size:clamp(29px,3vw,38px);font-weight:300;letter-spacing:-.05em}
+html body.workspace-sidebar .cp-page h2{font-size:24px;font-weight:500;line-height:1.5;letter-spacing:-.04em}
+html body.workspace-sidebar .cp-page :is(label,select,input[type=search],.mv-btn,.cp-modes .mv-btn){font-weight:400}
+html body.workspace-sidebar .cp-page :is(.cp-model-tabs b,.cp-product b,.cp-overview strong,.cp-price>strong,.rw-pair-price>strong){font-weight:500}
+html body.workspace-sidebar .cp-page .mv-table :is(th,td>b){font-weight:500}
+html body.workspace-sidebar .cp-page .mv-table .cp-price>strong{font-weight:500;letter-spacing:-.03em}
+html body.workspace-sidebar .cp-page .rw-mini-heading h2{font-size:17px;font-weight:500;letter-spacing:-.035em}
+html body.workspace-sidebar .cp-page .rw-mini-terms button{font-weight:400}
+html body.workspace-sidebar .cp-page .rw-mini-terms button[aria-pressed=true]{font-weight:500}
+html body.workspace-sidebar .cp-page .rw-mini-status{letter-spacing:-.02em}
+html body.workspace-sidebar #workspaceSidebar :is(a,summary){font-size:14px;font-weight:400;letter-spacing:-.035em}
+html body.workspace-sidebar #workspaceSidebar a[aria-current=page]{font-weight:500}
+html body.workspace-sidebar #workspaceSidebar .ws-identity b{font-weight:500}
+html body.workspace-sidebar #workspaceSidebar .ws-foot{font-size:12px;font-weight:400;letter-spacing:-.025em}
+html body.workspace-sidebar .logo-svc{font-weight:500}
+html body.workspace-sidebar .band-title h1{font-weight:400;letter-spacing:-.05em}
+html body.workspace-sidebar :is(.mc-intro h2,.mc-panel h3,.card h3){font-weight:500;letter-spacing:-.04em}
+@media(max-width:700px){
+ html body.workspace-sidebar .ho h1{font-size:38px;letter-spacing:-.055em}
+ html body.workspace-sidebar .ho-hero>.ho-kicker{font-size:14px}
+ html body.workspace-sidebar .ho-lead{font-size:16px;line-height:1.8}
+ html body.workspace-sidebar .ho h2{font-size:25px}
+ html body.workspace-sidebar .cp-page .cp-hero h1,html body.workspace-sidebar .cp-page .rw-catalog-top .cp-hero h1{font-size:31px}
+ html body.workspace-sidebar .cp-page .cp-eyebrow{font-size:13px}
+ html body.workspace-sidebar .ho-section-heading{align-items:flex-start}
+ html body.workspace-sidebar .ho .ho-business h2{font-size:29px}
+}
