@@ -1,0 +1,33 @@
+name: deploy
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  id-token: write
+  contents: read
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+jobs:
+  deploy:
+    runs-on: [self-hosted, u1-3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: arn:aws:iam::430986759212:role/gha-u1-3
+          aws-region: ap-northeast-2
+      - uses: aws-actions/amazon-ecr-login@v2
+        id: ecr
+      - name: Build & push (linux/amd64 + linux/arm64)
+        run: |
+          IMAGE=${{ steps.ecr.outputs.registry }}/teams/u1-3/app:frontend-${{ github.sha }}
+          docker buildx build --platform linux/amd64,linux/arm64 -t "$IMAGE" --push .
+          echo "IMAGE=$IMAGE" >> "$GITHUB_ENV"
+      - name: Deploy
+        run: |
+          aws eks update-kubeconfig --name skala-us --region ap-northeast-2 --kubeconfig "$RUNNER_TEMP/kubeconfig"
+          export KUBECONFIG="$RUNNER_TEMP/kubeconfig"
+          sed "s|IMAGE_PLACEHOLDER|$IMAGE|" k8s/frontend.yaml | kubectl apply -f -
+          kubectl -n u1-3 rollout status deployment/frontend --timeout=180s

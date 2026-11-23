@@ -78,6 +78,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404)
 
 if __name__ == '__main__':
+    host = environ.get('GPU_FE_HOST', '127.0.0.1')
     port = int(environ.get('GPU_FE_PORT', '18091'))
-    print(f'화면: http://127.0.0.1:{port}', flush=True)
-    ThreadingHTTPServer(('127.0.0.1', port), partial(Handler, directory=str(STATIC))).serve_forever()
+    print(f'화면: http://{host}:{port}', flush=True)
+    ThreadingHTTPServer((host, port), partial(Handler, directory=str(STATIC))).serve_forever()
