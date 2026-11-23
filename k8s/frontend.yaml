@@ -67,7 +67,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/whitelist-source-range: "110.10.153.80/28,175.114.173.160/28"
 spec:
-  ingressClassName: public-nginx
+  ingressClassName: nginx
   rules:
     - host: u1-3.skala-us.com
       http:
