@@ -1,4 +1,4 @@
-/* Character launcher: reuse the current Copilot route and conversation. */
+/* Branded launcher: reuse the current Copilot route and conversation. */
 (() => {
   'use strict';
   if (document.getElementById('agentLauncher')) return;
@@ -8,7 +8,7 @@
   launcher.href = standalone ? '/#agent' : '#agent';
   launcher.setAttribute('aria-label', 'AI 에이전트에게 질문하기');
   launcher.title = 'AI 에이전트 열기';
-  launcher.innerHTML = '<img src="/static/img/agent-button.png?v=orange1124" alt="" width="1024" height="1024" draggable="false">';
+  launcher.innerHTML = '<span class="agent-launcher-mark" aria-hidden="true"><img src="/static/img/skt-logo.png" alt="" width="640" height="252" draggable="false"></span><span class="agent-launcher-label">에이전트</span>';
   document.body.append(launcher);
   let focusRequested = false;
   function sync() {
