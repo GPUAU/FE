@@ -16,3 +16,16 @@
 .bill-lines tr.bill-low td{background:#fff7f8}
 .bill-lines small{display:block;color:#c55a11}
 .bill-role{color:#6b7280;font-size:12px}
+.bill-missing-box{margin:10px 0;padding:10px 14px;border:1px solid #f3a9b6;border-radius:8px;background:#fff1f3;color:#b0102a}
+.bill-missing-box span{display:inline-block;margin:0 4px;padding:1px 10px;border-radius:10px;background:#c0122f;color:#fff;font-size:12px}
+.bill-missing-box p{margin:6px 0 0;color:#7a1020}
+.bill-missing-summary{color:#c0122f;font-weight:700}
+#v02CostForm tr.bill-missing td{background:#fff1f3 !important}
+#v02CostForm tr.bill-missing [data-field="amount"],#v02CostForm tr.bill-missing select[data-field="state"]{border:2px solid #c0122f !important;background:#fff7f8 !important}
+#v02CostForm tr.bill-missing td:first-child{box-shadow:inset 4px 0 0 #c0122f}
+#v02CostForm label.bill-missing input,#v02CostForm label.bill-missing select{border:2px solid #c0122f !important;background:#fff7f8 !important}
+#v02CostForm label.bill-missing{color:#c0122f}
+.bill-missing-note{display:block;margin-top:4px;color:#c0122f !important;font-weight:700;font-size:12.5px}
+.bill-llm{margin:8px 0;font-size:12px}
+.bill-llm pre{max-height:220px;overflow:auto;padding:8px;background:#f6f7f9;border-radius:6px;white-space:pre-wrap;word-break:break-all}
+.bill-llm-none{font-size:12px;color:#6b7280}

@@ -24,7 +24,7 @@ const draftA = {
 
 test('maps agent cost items to calculator rows without touching server acquisition', () => {
   const m = toCostForm(draftA);
-  assert.deepEqual(m.rows.rack, { state: 'user', amount: 57600000, currency: 'KRW', period: 'year' });
+  assert.deepEqual(m.rows.rack, { state: 'user', amount: 57600000, currency: 'KRW', period: 'year', types: ['RACK_FACILITY'] });
   assert.deepEqual(m.rows.rent, { state: 'included', includedIn: 'rack' });
   assert.equal(m.rows.ops.amount, 22600000);           // 운영 + 기타
   assert.equal(m.rows.server, undefined);
@@ -70,4 +70,55 @@ test('rendered review escapes file content', () => {
   assert.ok(!html.includes('<script>'));
   assert.ok(html.includes('&lt;script&gt;'));
   assert.ok(html.includes('총액 대조 일치'));
+});
+
+import { findMissing } from '../docker_erd_20261117/app/web/static/bill-import.mjs';
+
+const filled = {
+  rows: { server: { state: 'user', amount: '1500000' }, rent: { state: 'user', amount: '108000000', currency: 'KRW' },
+    rack: { state: 'included' }, network: { state: 'user', amount: '1' }, ops: { state: 'missing', amount: '' } },
+  fields: { v02CostModel: '29', v02Gpu: '32', v02Util: '70', v02Rate: '8', v02Margin: '20', v02CostFx: '1400' },
+  electricMode: 'amount', anyKrw: true
+};
+
+test('flags bill-missing core items and empty required inputs', () => {
+  const m = findMissing({ missing_items: ['OPERATIONS'] }, {
+    ...filled, rows: { ...filled.rows, server: { state: 'missing', amount: '' } },
+    fields: { ...filled.fields, v02Gpu: '', v02CostFx: '' }
+  });
+  assert.deepEqual(m.map(x => x.key), ['row:server', 'row:ops', 'field:v02Gpu', 'field:v02CostFx']);
+  assert.ok(m.find(x => x.key === 'row:ops').reason.includes('청구서에 없음'));
+});
+
+test('nothing missing once the manager fills or marks items as included', () => {
+  assert.deepEqual(findMissing({ missing_items: ['OPERATIONS'] },
+    { ...filled, rows: { ...filled.rows, ops: { state: 'included' } } }), []);
+  // 공간: 랙·임차료 중 하나라도 있으면 누락 아님
+  assert.deepEqual(findMissing({ missing_items: ['RENT'] }, filled), []);
+  // 전기료 누락은 전기료 방식이 미확인일 때만
+  assert.equal(findMissing({ missing_items: ['ELECTRICITY'] }, { ...filled, electricMode: 'missing' })[0].key, 'electric');
+});
+
+test('review shows missing box and what was sent to the LLM (escaped)', () => {
+  const html = renderDraft({ ...draftA, missing_items: ['OPERATIONS'],
+    llm: { destination: 'OpenAI (gpt-4o-mini)', masked: true, sent: '{"cells":["동력비","#NUM"]} <b>' } });
+  assert.ok(html.includes('청구서에서 빠진 큰 비용 1건'));
+  assert.ok(html.includes('운영·유지보수'));
+  assert.ok(html.includes('AI에 보낸 내용 보기') && html.includes('금액·숫자·식별자 가림'));
+  assert.ok(html.includes('&lt;b&gt;') && !html.includes('"]} <b>'));
+});
+
+test('an ops row filled only with OTHER is still flagged as missing operations', () => {
+  const values = { ...filled, rows: { ...filled.rows, ops: { state: 'user', amount: '2400000', autoTypes: ['OTHER'], autoAmount: '2400000' } } };
+  const m = findMissing({ missing_items: ['OPERATIONS'] }, values);
+  assert.equal(m[0].key, 'row:ops');
+  assert.ok(m[0].reason.includes('기타 항목만'));
+  // 담당자가 금액을 바꾸면 해제
+  values.rows.ops.amount = '30000000';
+  assert.deepEqual(findMissing({ missing_items: ['OPERATIONS'] }, values), []);
+});
+
+test('toCostForm records which item types filled each row', () => {
+  const m = toCostForm(draftA);
+  assert.deepEqual(m.rows.ops.types, ['OPERATIONS', 'OTHER']);
 });
