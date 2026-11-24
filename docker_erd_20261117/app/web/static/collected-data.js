@@ -22,11 +22,20 @@ $('#csv').onclick=()=>{
  const cell=v=>'"'+String(v??'').replace(/^[=+@\-]/,"'$&").replace(/"/g,'""')+'"';
  const blob=new Blob(['\ufeff'+[keys,...shown.map(r=>keys.map(k=>r[k]))].map(r=>r.map(cell).join(',')).join('\r\n')],{type:'text/csv;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='GPU_collected_offers.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
 };
-async function get(url){const r=await fetch(url);if(!r.ok)throw Error('조회 실패: '+r.status);return r.json();}
-Promise.all([get('/api/erd/comparison'),get('/api/market')]).then(([d,m])=>{
- if(!Array.isArray(d.candidates))throw Error('가격 목록 응답을 확인할 수 없습니다.');rows=d.candidates;
- $('#observations').textContent=m.summary.observations.toLocaleString();$('#offers').textContent=rows.length.toLocaleString();
- const providers=[...new Set(rows.map(r=>r.provider_name))];$('#providers').textContent=providers.length;$('#providerNames').textContent=providers.join(' · ');
+// Spring API(/api/v1)에서 모델별 오퍼를 모두 받아 이 화면의 행 형식으로 바꾼다.
+// (예전에는 배포하지 않는 레거시 서버의 /api/erd/comparison·/api/market을 써서 503이 났다)
+async function request(path){const r=await fetch(path,{headers:{Accept:'application/json'}});const body=await r.json().catch(()=>null);if(!r.ok)throw Error('조회 실패: '+r.status);return body;}
+function toRow(o){const c=o.contractInfo||{};return {model_name:o.model,provider_name:o.provider,original_product_name:o.product,gpu_count:o.gpus,region_code:o.region,country_code:o.country,contract_type:c.type?String(c.type).toLowerCase():null,contract_product_type:o.contract,commitment_months:c.months??null,payment_option:c.paymentOption??null,display_price:o.price,collected_at:o.collected,is_stale:o.freshness==='STALE',observation_id:o.observationId??null,offer_id:o.id,source_url:o.source};}
+async function load(){
+ const client=await import('/static/spring-market-client.mjs');
+ const catalog=await client.fetchMarketCatalog(request);
+ const lists=await Promise.all(catalog.models.map(m=>client.fetchMarketOffers(request,{modelId:m.id,includeStale:'true'}).then(raws=>raws.map(raw=>toRow(client.mapMarketOffer(raw))))));
+ return lists.flat();
+}
+load().then(list=>{
+ rows=list;
+ $('#observations').textContent=rows.filter(r=>r.display_price!=null).length.toLocaleString();$('#offers').textContent=rows.length.toLocaleString();
+ const providers=[...new Set(rows.map(r=>r.provider_name).filter(Boolean))];$('#providers').textContent=providers.length;$('#providerNames').textContent=providers.join(' · ');
  const dates=rows.map(r=>Date.parse(r.collected_at)).filter(Number.isFinite);$('#latest').textContent=dates.length?new Date(Math.max(...dates)).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'}):'미확보';
  for(const [id,key] of [['model','model_name'],['provider','provider_name'],['term','contract_type']])for(const value of [...new Set(rows.map(r=>r[key]).filter(Boolean))].sort())$('#'+id).add(new Option(id==='term'?(terms[value]||value):value,value));
  render();
