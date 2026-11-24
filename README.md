@@ -68,3 +68,7 @@ FE 테스트와 PM 엔진 검증은 각각의 명령으로 실행합니다.
 
 최종 서버 추천가격이 아닌 사용자 조건 검토입니다. 경쟁 상품의 동일 조건 판정은 연결하지 않았으며,
 PM 예측은 가상 자료입니다. 자세한 전달 규칙과 검증 기록은 `docs/FRONTEND_REVIEW_FLOW.md`를 참고하세요.
+
+## 배포 구조 (nginx + Vue 점진 이전)
+
+배포 이미지는 nginx입니다. 기존 사이트(`docker_erd_20261117/app/web/static`)는 `/`와 `/static/`에서, 새 Vue 앱(`web/`)은 `/app/`에서 서비스하고 `/api/v1`은 Spring BE로 프록시합니다(gzip·캐시 적용). `serve.py`는 로컬 미리보기용으로 그대로 둡니다. 이전 계획과 경로 규칙은 `docs/VUE_MIGRATION.md`를 참고하세요.

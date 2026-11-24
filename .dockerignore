@@ -5,8 +5,11 @@ docs
 tests
 ui-spec
 montecarlo
+web/node_modules
+web/dist
 **/__pycache__
 **/*.py[cod]
+**/.DS_Store
 .env
 .env.*
 *.log
