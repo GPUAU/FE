@@ -161,3 +161,40 @@ html body.workspace-sidebar:not(.is-home) .main-footer{color:#747b84;border-colo
  html body.workspace-sidebar:not(.is-home) .band-title #pageDesc{font-size:15px}
  html body.workspace-sidebar:not(.is-home) :is(.mv-controls,.review-flow a){padding:18px}
 }
+
+/* Contract comparisons: four standalone cards, without a shared enclosing panel. */
+html body.workspace-sidebar .cp-page.rw-contracts .discount-comparison {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+}
+html body.workspace-sidebar .cp-page.rw-contracts .discount-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 24px;
+  margin: 24px 0 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
+}
+html body.workspace-sidebar .cp-page.rw-contracts .discount-grid > .mv-contractcard {
+  border-radius: 10px;
+  min-width: 0;
+}
+@media (max-width: 1100px) {
+  html body.workspace-sidebar .cp-page.rw-contracts .discount-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+  }
+}
+@media (max-width: 650px) {
+  html body.workspace-sidebar .cp-page.rw-contracts .discount-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+}
