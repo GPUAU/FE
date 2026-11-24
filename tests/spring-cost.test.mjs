@@ -54,3 +54,39 @@ test('included costs require a selected parent and never assume a parent', () =>
   const items = input.items.map(row => row.id === 'memory' ? { ...row, includedIn: null } : row);
   assert.throws(() => costPayload({ ...input, items }), /상위/);
 });
+
+const assetInput = { ...input, capitalMode: 'asset', rate: .08, salvage: 9999,
+  items: input.items.map(row => row.id === 'server'
+    ? {...row,usefulLifeYears:'5',residualValueUsd:'0'}
+    : {...row,usefulLifeYears:'14',residualValueUsd:'100'})
+};
+test('asset payload removes duplicate aggregate residual and inactive asset details', () => {
+  const payload=costPayload(assetInput);
+  assert.equal(payload.assumptions.residualValueUsd,null);
+  assert.equal(payload.assumptions.depreciationYears,5);
+  assert.equal(payload.items[0].usefulLifeYears,5);
+  assert.equal(payload.items[0].residualValueUsd,'0');
+  assert.equal(payload.items[1].usefulLifeYears,undefined);
+  assert.equal(payload.items[2].residualValueUsd,undefined);
+  assert.equal(costPayload({...assetInput,capitalMode:'common'}).items[0].usefulLifeYears,undefined);
+});
+test('blank residual and fractional life cannot silently become defaults', () => {
+  for(const values of [{residualValueUsd:''},{residualValueUsd:null},{usefulLifeYears:'2.5'},{usefulLifeYears:''}]) {
+    assert.throws(()=>costPayload({...assetInput,items:assetInput.items.map(row=>row.id==='server'?{...row,...values}:row)}),/내용연수/);
+  }
+});
+test('an older backend cannot silently ignore per-asset requests', async () => {
+  await assert.rejects(calculateCost(async()=>({isSuccess:true,result:{unit:'USD/GPU-hour',saved:false,appliedAssumptions:{}}}),assetInput),/반영되지 않았습니다/);
+});
+test('maps asset results without inventing a common CRF', async () => {
+  const r=await calculateCost(async()=>({isSuccess:true,result:{unit:'USD/GPU-hour',saved:false,
+    hourlyCost:'2',candidatePrice:'2.5',annualCost:'124000',missingItems:[],warnings:[],costCompleteness:'COMPLETE',
+    appliedAssumptions:{assetSpecificLives:true,capitalRecoveryFactor:null,annualStraightLineDepreciationUsd:'90000',
+      capitalAssets:[{itemType:'RACK_FACILITY',usefulLifeYears:14,acquisitionCostUsd:'140000',residualValueUsd:'0',
+        capitalRecoveryFactor:'0.071428571428',annualCapitalRecoveryUsd:'10000',annualStraightLineDepreciationUsd:'10000'}]}
+  }}),assetInput);
+  assert.equal(r.crf,null);
+  assert.equal(r.annualDepreciation,90000);
+  assert.equal(r.capitalAssets[0].years,14);
+  assert.equal(r.capitalAssets[0].label,'랙·전원·냉각 설비');
+});
