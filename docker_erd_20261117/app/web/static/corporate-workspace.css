@@ -198,3 +198,10 @@ html body.workspace-sidebar .cp-page.rw-contracts .discount-grid > .mv-contractc
     gap: 16px;
   }
 }
+
+/* Keep research table rows white, including alternating rows and hover. */
+html body.workspace-sidebar .cp-page .mv-table tbody tr,
+html body.workspace-sidebar .cp-page .mv-table tbody tr:nth-child(even),
+html body.workspace-sidebar .cp-page .mv-table tbody tr:hover {
+  background: #fff;
+}
