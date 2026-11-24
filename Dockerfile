@@ -1,17 +1,16 @@
-FROM python:3.12-slim
+# 1) 새 Vue 앱 빌드 (빌드 결과물은 아키텍처와 무관하므로 runner 플랫폼에서 네이티브로 빌드)
+FROM --platform=$BUILDPLATFORM node:22-alpine AS web
+WORKDIR /web
+COPY web/package.json web/package-lock.json ./
+RUN npm ci --no-audit --no-fund
+COPY web/ ./
+RUN npm run build
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    GPU_FE_HOST=0.0.0.0 \
-    GPU_FE_PORT=8080 \
-    GPU_LEGACY_BASE_URL=""
-
-WORKDIR /app
-COPY serve.py ./
-COPY docker_erd_20261117/app/web/static ./docker_erd_20261117/app/web/static
-
-RUN useradd --uid 10001 --no-create-home app
-USER 10001
-
+# 2) nginx: 기존 정적 사이트 + Vue 앱 + /api/v1 프록시 (gzip·캐시)
+#    비루트(uid 101) 이미지. 컨테이너 시작 시 templates/*.template을 envsubst로 conf.d에 쓴다.
+FROM nginxinc/nginx-unprivileged:1.29-alpine
+ENV BACKEND_URL=http://backend.u1-3.svc.cluster.local
+COPY deploy/nginx/default.conf.template /etc/nginx/templates/default.conf.template
+COPY docker_erd_20261117/app/web/static /usr/share/nginx/html/static
+COPY --from=web /web/dist /usr/share/nginx/html/app
 EXPOSE 8080
-CMD ["python", "serve.py"]

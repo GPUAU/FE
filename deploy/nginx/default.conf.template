@@ -1,0 +1,80 @@
+# serve.py와 같은 경로 규칙을 nginx로 옮긴 설정. ${BACKEND_URL}은 컨테이너 시작 시 envsubst로 채운다.
+#   /                → 기존 사이트 index-erd.html
+#   /static/*        → 기존 정적 파일
+#   /app/*           → 새 Vue 앱 (점진 이전)
+#   /api/v1/*        → Spring BE 프록시
+#   그 밖의 /api/*    → 503 (레거시 호환 서버는 배포하지 않음)
+#   /public-data     → public-data.html
+
+gzip on;
+gzip_comp_level 5;
+gzip_min_length 1024;
+gzip_proxied any;
+gzip_vary on;
+gzip_types text/plain text/css application/json application/javascript text/javascript image/svg+xml;
+
+server {
+    listen 8080;
+    # 기본 mime.types에 .mjs가 없어 ES 모듈(import)이 거부되므로 추가한다
+    include /etc/nginx/mime.types;
+    types { application/javascript mjs; }
+    server_name _;
+    root /usr/share/nginx/html/static;
+    server_tokens off;
+    client_max_body_size 2m;
+
+    # HTML은 매번 새로 확인한다(새 배포의 스크립트 버전을 바로 반영)
+    location = / {
+        add_header Cache-Control "no-cache" always;
+        try_files /index-erd.html =404;
+    }
+    location = /index.html {
+        add_header Cache-Control "no-cache" always;
+        try_files /index-erd.html =404;
+    }
+    location ~ ^/public-data/?$ {
+        add_header Cache-Control "no-cache" always;
+        try_files /public-data.html =404;
+    }
+
+    # 기존 정적 파일. 대부분 ?v= 버전이 붙어 있어 하루 캐시하고, 바뀌면 ETag로 다시 받는다.
+    location /static/ {
+        alias /usr/share/nginx/html/static/;
+        add_header Cache-Control "public, max-age=86400" always;
+        location ~* \.html$ {
+            add_header Cache-Control "no-cache" always;
+        }
+    }
+
+    # 새 Vue 앱. 빌드 산출물은 파일명에 해시가 있어 오래 캐시한다.
+    location /app/assets/ {
+        alias /usr/share/nginx/html/app/assets/;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+    }
+    location /app/ {
+        alias /usr/share/nginx/html/app/;
+        add_header Cache-Control "no-cache" always;
+        try_files $uri $uri/ /app/index.html;
+    }
+
+    location /api/v1/ {
+        proxy_pass ${BACKEND_URL};
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 60s;
+        add_header Cache-Control "no-store" always;
+    }
+
+    location /api/ {
+        default_type application/json;
+        return 503 '{"isSuccess":false,"code":"LEGACY_UNAVAILABLE","message":"Compatibility backend unavailable"}';
+    }
+
+    # 그 밖의 경로는 기존 정적 폴더에서 찾는다(serve.py와 동일)
+    location / {
+        try_files $uri =404;
+    }
+}

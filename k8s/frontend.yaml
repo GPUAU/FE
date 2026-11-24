@@ -17,17 +17,15 @@ spec:
     spec:
       securityContext:
         runAsNonRoot: true
-        runAsUser: 10001
+        runAsUser: 101          # nginx-unprivileged 이미지의 nginx 사용자
       containers:
         - name: frontend
           image: IMAGE_PLACEHOLDER
           ports:
             - containerPort: 8080
           env:
-            - name: GPU_SPRING_BASE_URL
+            - name: BACKEND_URL          # nginx가 /api/v1을 넘길 BE 주소
               value: http://backend.u1-3.svc.cluster.local
-            - name: GPU_LEGACY_BASE_URL
-              value: ""
           resources:
             requests:
               cpu: 50m
