@@ -3,6 +3,9 @@
  'use strict';
  const MC={defaults:null,forecast:null,pricing:null,busy:false,chart:null,ready:null,flowRevision:null,generation:0,inputOrigin:null};
  const endpoint=`http://${location.hostname==='localhost'?'localhost':'127.0.0.1'}:18096`;
+ // 배포 사이트에는 PM 로컬 계산 서버(18096)가 없다. BE 몬테카를로 API 연동 전까지 계산 버튼을 막고 안내한다.
+ const DEPLOYED=!['localhost','127.0.0.1'].includes(location.hostname);
+ const DEPLOYED_MESSAGE='배포 환경에서는 아직 시뮬레이션 계산 서버가 연결되지 않아 계산을 실행할 수 없습니다. 입력 항목과 PM 기본 가정은 확인할 수 있습니다.';
  const $m=id=>document.getElementById(id), money=v=>v==null?'계산 불가':`$${Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}`;
  const pct=v=>v==null?'산출 불가':`${(v*100).toFixed(1)}%`, safe=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const prob=v=>v==null?'산출 불가':`${(v*100).toFixed(v>0&&v<1&&(v<.0005||v>=.9995)?3:1)}%`;
@@ -18,7 +21,7 @@
   try{
    const r=await fetch(endpoint+path,{method:data?'POST':'GET',headers:data?{'Content-Type':'application/json'}:{},body:data?JSON.stringify(data):undefined,signal:controller.signal,cache:'no-store'});
    const result=await r.json();if(!r.ok)throw Error(result.error||`계산 서버 오류 (${r.status})`);return result;
-  }catch(e){if(e.name==='AbortError')throw Error('계산 대기 시간이 초과되었습니다. 반복 횟수를 줄여 다시 실행하세요.');if(e instanceof TypeError)throw Error('로컬 계산 서버에 연결되지 않았습니다. 프로젝트의 「몬테카를로_실행.command」를 실행한 뒤 다시 눌러주세요.');throw e;}finally{clearTimeout(timer);}
+  }catch(e){if(e.name==='AbortError')throw Error('계산 대기 시간이 초과되었습니다. 반복 횟수를 줄여 다시 실행하세요.');if(e instanceof TypeError)throw Error(DEPLOYED?DEPLOYED_MESSAGE:'로컬 계산 서버에 연결되지 않았습니다. 프로젝트의 「몬테카를로_실행.command」를 실행한 뒤 다시 눌러주세요.');throw e;}finally{clearTimeout(timer);}
  }
  function status(text,type=''){const el=$m('mcStatus');el.textContent=text;el.className='mc-status '+type;}
  function destroyChart(){MC.chart?.destroy();MC.chart=null;}
@@ -158,6 +161,7 @@
   $m('mcInputTag').textContent=' · 가격 검토의 사용자 가정 적용';
   status('가격 검토 입력을 적용했습니다. 시장가격 범위와 판매가를 순서대로 계산하세요.');
  }};
+ if(DEPLOYED){const buildForm=build;build=c=>{buildForm(c);$m('mcForecastButton').disabled=true;$m('mcPriceButton').disabled=true;status(DEPLOYED_MESSAGE,'error');};}
  RENDER.forecast=async()=>{
   calculatorFrame('몬테카를로 시뮬레이션','PM 프로토타입 · 12개월 가격 범위와 목표 IRR 기준 판매가');
   if(MC.defaults)return;

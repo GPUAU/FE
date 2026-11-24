@@ -111,7 +111,7 @@ html body.workspace-sidebar:not(.is-home) .band-title{padding:43px var(--cw-gutt
 html body.workspace-sidebar:not(.is-home) .band-title #portalVisual{display:none}
 html body.workspace-sidebar:not(.is-home) .band-title .page-eyebrow{color:#fff;font-size:14px;letter-spacing:.04em;display:flex;align-items:center;gap:12px;margin:0 0 15px}
 html body.workspace-sidebar:not(.is-home) .band-title .page-eyebrow:before{content:'';width:25px;height:2px;background:#f52c48}
-html body.workspace-sidebar:not(.is-home) .band-title h1{font-size:clamp(32px,3.1vw,44px);font-weight:300;letter-spacing:-.055em;color:#fff;line-height:1.4;margin:0 0 15px}
+html body.workspace-sidebar:not(.is-home) .band-title :is(h1,#pageTitle){font-size:clamp(32px,3.1vw,44px);font-weight:300;letter-spacing:-.055em;color:#fff;line-height:1.4;margin:0 0 15px}
 html body.workspace-sidebar:not(.is-home) .band-title #pageDesc{color:#e4e6e9;font-size:16px;font-weight:300;line-height:1.8;max-width:850px}
 html body.workspace-sidebar:not(.is-home) .band-title :is(.page-data,.page-data>summary,.portal-guide-button){color:#e1e4e9;font-size:13px}
 html body.workspace-sidebar:not(.is-home) .band-title .band-meta{background:#fff;color:#354050;padding:15px;border-radius:0}
@@ -157,7 +157,7 @@ html body.workspace-sidebar:not(.is-home) .main-footer{color:#747b84;border-colo
  html body.workspace-sidebar .cp-page :is(.rw-chart-card,.discount-comparison){padding:20px 15px}
  html body.workspace-sidebar .cp-page .rw-pair-grid{grid-template-columns:1fr}
  html body.workspace-sidebar:not(.is-home) .band-title{min-height:235px;padding-block:35px!important}
- html body.workspace-sidebar:not(.is-home) .band-title h1{font-size:33px}
+ html body.workspace-sidebar:not(.is-home) .band-title :is(h1,#pageTitle){font-size:33px}
  html body.workspace-sidebar:not(.is-home) .band-title #pageDesc{font-size:15px}
  html body.workspace-sidebar:not(.is-home) :is(.mv-controls,.review-flow a){padding:18px}
 }
