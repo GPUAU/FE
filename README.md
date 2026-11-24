@@ -1,3 +1,5 @@
+> 최신 작업본: 토끼 캐릭터 플로팅 버튼 시안입니다. [미리보기·실행 안내](previews/README.md)를 참고하세요. 운영 사이트에는 미배포 상태입니다.
+
 # GPUAU FE — Spring 연동 작업본
 
 HTML·JavaScript·Chart.js 프론트와 PM 몬테카를로 프로토타입 연동 코드입니다.
