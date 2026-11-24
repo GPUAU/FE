@@ -64,6 +64,11 @@ metadata:
   namespace: u1-3
   annotations:
     nginx.ingress.kubernetes.io/whitelist-source-range: "110.10.153.80/28,175.114.173.160/28"
+    # 캠퍼스 안에서도 브라우저 로그인 창(HTTP Basic Auth)을 띄운다.
+    # gpu-basic-auth Secret(키: auth, 값: htpasswd 한 줄)은 팀 포털에서 먼저 생성해야 한다. 없으면 503.
+    nginx.ingress.kubernetes.io/auth-type: basic
+    nginx.ingress.kubernetes.io/auth-secret: gpu-basic-auth
+    nginx.ingress.kubernetes.io/auth-realm: "GPU AU - team only"
 spec:
   ingressClassName: nginx
   tls:
