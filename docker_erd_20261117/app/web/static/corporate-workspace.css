@@ -285,3 +285,45 @@ html body.workspace-sidebar .cp-page .cp-model-tabs button:focus-visible {
   html body.workspace-sidebar .cp-page .cp-model-tabs b { font-size: 14px; }
   html body.workspace-sidebar .cp-page .cp-model-tabs img { width: 24px; height: 24px; }
 }
+
+
+/* The actual footer is .app-footer; it shares the sidebar-aware content width. */
+html body.workspace-sidebar .app-footer {
+  box-sizing: border-box;
+  width: auto;
+  max-width: none;
+  margin: 0 0 0 var(--ws-width);
+  padding: 24px var(--cw-gutter, 28px);
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px 24px;
+  font-size: 12px;
+  line-height: 1.6;
+}
+html body.workspace-sidebar .app-footer > span:nth-child(2) {
+  text-align: center;
+  min-width: 0;
+}
+html body.workspace-sidebar .app-footer > a {
+  justify-self: end;
+  white-space: nowrap;
+}
+html body.workspace-sidebar.has-agent-launcher .app-footer {
+  padding-right: max(128px, env(safe-area-inset-right, 0px));
+}
+@media (max-width: 860px) {
+  html body.workspace-sidebar .app-footer { margin-left: 0; }
+}
+@media (max-width: 650px) {
+  html body.workspace-sidebar .app-footer {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding-block: 20px;
+  }
+  html body.workspace-sidebar .app-footer > span:nth-child(2) { text-align: left; }
+  html body.workspace-sidebar .app-footer > a { justify-self: start; }
+  html body.workspace-sidebar.has-agent-launcher .app-footer {
+    padding-right: max(112px, env(safe-area-inset-right, 0px));
+  }
+}
