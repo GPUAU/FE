@@ -55,8 +55,9 @@ export function toCostForm(draft) {
     if (row && row.state === 'user') {
       if (row.currency !== currency) throw new Error(`${ITEM_LABEL[from]}: 통화가 섞여 있어 자동으로 합칠 수 없습니다.`);
       row.amount = round(row.amount + amount);
+      row.types.push(from);
     } else {
-      rows[rowId] = { state: 'user', amount: round(amount), currency, period: 'year' };
+      rows[rowId] = { state: 'user', amount: round(amount), currency, period: 'year', types: [from] };
     }
   };
   for (const item of draft.cost_items || []) {
@@ -83,6 +84,90 @@ export function toCostForm(draft) {
   return { rows, electricity, notes };
 }
 
+// 청구서에 없는 큰 비용 → 계산기 행
+const MISSING_ROWS = { OPERATIONS: ['ops'], NETWORK_STORAGE: ['network'], RACK_FACILITY: ['rack', 'rent'], RENT: ['rack', 'rent'], ELECTRICITY: ['electric'] };
+const ROW_LABEL = { server: '서버·GPU 취득비', memory: '별도 메모리', network: '네트워크·스토리지', rack: '랙·전원·냉각 설비', rent: '임차료', ops: '운영·유지보수', electric: '전기료' };
+// 계산에 꼭 필요한 입력 (id, 이름)
+export const REQUIRED_FIELDS = [
+  ['v02CostModel', 'GPU 모델'], ['v02Gpu', 'GPU 수'], ['v02Util', '유료 가동률'], ['v02Rate', '연 자본비용률'], ['v02Margin', '목표 마진']
+];
+
+/**
+ * 빠진 값 목록. values = { rows: {id: {state, amount}}, fields: {id: value}, electricMode, anyKrw }
+ * 반환: [{ key, label, reason }]  key는 'row:ops' / 'field:v02Gpu' / 'electric'
+ */
+export function findMissing(draft, values) {
+  const out = [];
+  const seen = new Set();
+  const push = (key, label, reason) => { if (!seen.has(key)) { seen.add(key); out.push({ key, label, reason }); } };
+  const onlyOther = r => r.autoTypes?.length && r.autoTypes.every(t => t === 'OTHER' || t === 'GPU') && String(r.amount) === String(r.autoAmount);
+  const rowEmpty = id => { const r = values.rows[id]; return !r || r.state === 'missing' || ((r.state === 'user' || r.state === 'public') && (r.amount == null || r.amount === '' || onlyOther(r))); };
+  const server = values.rows.server;
+  if (!server || !['user', 'public'].includes(server.state) || server.amount == null || server.amount === '') {
+    push('row:server', ROW_LABEL.server, '청구서에 없는 값 · 직접 입력');
+  }
+  for (const type of draft?.missing_items || []) {
+    const targets = MISSING_ROWS[type] || [];
+    if (targets.includes('electric')) {
+      if (!values.electricMode || values.electricMode === 'missing') push('electric', ROW_LABEL.electric, '청구서에 없음 · 별도 계산 또는 금액 입력');
+      continue;
+    }
+    // 공간처럼 두 행 중 하나만 있으면 되는 경우: 둘 다 비었을 때만 표시
+    if (targets.every(rowEmpty)) targets.forEach(id => push('row:' + id, ROW_LABEL[id],
+      onlyOther(values.rows[id] || {}) ? '청구서에 없음 · 지금 금액은 기타 항목만 · 실제 금액 확인' : '청구서에 없음 · 금액 입력 또는 다른 항목에 포함 선택'));
+  }
+  for (const [id, label] of REQUIRED_FIELDS) {
+    const v = values.fields[id];
+    if (v == null || v === '') push('field:' + id, label, '필수 입력');
+  }
+  if (values.anyKrw && (values.fields.v02CostFx == null || values.fields.v02CostFx === '')) push('field:v02CostFx', '비용 환산용 환율', '원화 비용이 있어 필수');
+  return out;
+}
+
+export function readFormValues(form) {
+  const rows = {};
+  form.querySelectorAll('[data-cost-row]').forEach(tr => {
+    const f = k => tr.querySelector(`[data-field="${k}"]`)?.value ?? '';
+    rows[tr.dataset.costRow] = { state: f('state'), amount: f('amount'), currency: f('currency'),
+      autoTypes: tr.dataset.billTypes ? tr.dataset.billTypes.split(',') : [], autoAmount: tr.dataset.billAmount ?? '' };
+  });
+  const fields = {};
+  for (const id of [...REQUIRED_FIELDS.map(([id]) => id), 'v02CostFx']) fields[id] = form.querySelector('#' + id)?.value ?? '';
+  const electricMode = form.querySelector('#electricMode')?.value;
+  const anyKrw = Object.values(rows).some(r => ['user', 'public'].includes(r.state) && r.currency === 'KRW')
+    || (electricMode === 'amount' && form.querySelector('#electricCurrency')?.value === 'KRW') || electricMode === 'separate';
+  return { rows, fields, electricMode, anyKrw };
+}
+
+function targetOf(form, key) {
+  if (key.startsWith('row:')) return form.querySelector(`[data-cost-row="${key.slice(4)}"]`);
+  if (key === 'electric') return form.querySelector('#electricMode')?.closest('label');
+  return form.querySelector('#' + key.slice(6))?.closest('label');
+}
+
+/** 빠진 값을 빨간색으로 표시하고, 담당자가 값을 넣으면 표시를 지운다. 남은 개수를 돌려준다. */
+export function markMissing(form, draft) {
+  form.querySelectorAll('.bill-missing').forEach(el => el.classList.remove('bill-missing'));
+  form.querySelectorAll('.bill-missing-note').forEach(el => el.remove());
+  const missing = findMissing(draft, readFormValues(form));
+  for (const m of missing) {
+    const el = targetOf(form, m.key);
+    if (!el) continue;
+    el.classList.add('bill-missing');
+    const note = document.createElement('small');
+    note.className = 'bill-missing-note';
+    note.textContent = `⚠ ${m.label} 값이 빠졌습니다 · ${m.reason}`;
+    (el.tagName === 'TR' ? el.querySelector('td') : el).appendChild(note);
+  }
+  if (!form.dataset.billMissingBound) {
+    form.dataset.billMissingBound = '1';
+    const refresh = () => { if (form.querySelector('.bill-missing')) markMissing(form, draft); };
+    form.addEventListener('input', refresh);
+    form.addEventListener('change', refresh);
+  }
+  return missing;
+}
+
 const round = n => Math.round(Number(n) * 100) / 100;
 const fmt = (n, currency) => currency === 'KRW' ? `${Math.round(n).toLocaleString('ko-KR')}원` : `$${Number(n).toLocaleString('en-US')}`;
 
@@ -107,6 +192,8 @@ export function applyToForm(form, mapping) {
       set(field('currency'), row.currency);
       set(field('period'), row.period);
     }
+    tr.dataset.billTypes = (row.types || []).join(',');
+    tr.dataset.billAmount = row.amount ?? '';
   }
   const e = mapping.electricity;
   if (e) {
@@ -127,7 +214,8 @@ function linesTable(draft) {
       const kind = l.role === 'COST'
         ? `<select data-bill-ref="${esc(l.ref)}" aria-label="${esc(l.label)} 분류">${options.replace(`value="${l.item_type}"`, `value="${l.item_type}" selected`)}</select>${l.included_items?.length ? `<small>+ ${l.included_items.map(i => esc(ITEM_LABEL[i] || i)).join(', ')} 포함</small>` : ''}`
         : `<span class="bill-role">${esc(ROLE_LABEL[l.role] || l.role)}</span>`;
-      return `<tr${low ? ' class="bill-low"' : ''}><td>${esc(l.ref)}</td><td>${esc(l.label)}</td><td class="num">${l.amount == null ? '—' : esc(Number(l.amount).toLocaleString())}</td><td>${kind}</td><td class="num">${Math.round(l.confidence * 100)}%</td></tr>`;
+      const flagged = (draft.issues || []).some(i => i.ref === l.ref && i.level !== 'INFO');
+      return `<tr${low || flagged ? ' class="bill-low"' : ''}><td>${esc(l.ref)}</td><td>${esc(l.label)}</td><td class="num">${l.amount == null ? '—' : esc(Number(l.amount).toLocaleString())}</td><td>${kind}</td><td class="num">${Math.round(l.confidence * 100)}%</td></tr>`;
     }).join('')}</tbody></table>`;
 }
 
@@ -140,8 +228,11 @@ export function renderDraft(draft) {
   const r = draft.reconciliation;
   const rec = r.matched === true ? `총액 대조 일치 · ${esc(r.basis)}` : r.matched === false ? `총액 불일치 (${esc(Number(r.difference).toLocaleString())})` : '총액 대조 불가';
   const via = { llm: 'AI 분류', rules: '키워드 규칙', template: '저장된 양식 템플릿' }[draft.mapper] || draft.mapper;
+  const missing = (draft.missing_items || []).map(t => ITEM_LABEL[t] || t);
+  const missingBox = missing.length ? `<div class="bill-missing-box" role="alert"><b>⚠ 청구서에서 빠진 큰 비용 ${missing.length}건</b> ${missing.map(m => `<span>${esc(m)}</span>`).join('')}<p>다른 계약에 포함됐는지 확인하고, 계산기에서 금액을 입력하거나 '다른 항목에 포함'을 선택하세요.</p></div>` : '';
+  const llm = draft.llm ? `<details class="bill-llm"><summary>AI에 보낸 내용 보기 · ${esc(draft.llm.destination)} · ${draft.llm.masked ? '금액·숫자·식별자 가림' : '<b>가림 꺼짐</b>'}</summary><p>파일명과 금액은 보내지 않았습니다. 숫자 칸은 #NUM, 글자 속 숫자는 #로 바꿔 보냈습니다.</p><pre>${esc(draft.llm.sent)}</pre></details>` : '<p class="bill-llm-none">이번 분류는 외부 AI를 호출하지 않았습니다 (저장된 양식 또는 키워드 규칙).</p>';
   return `<div class="bill-summary"><b>${esc(draft.file_name)}</b><span>${esc(via)}</span><span>${esc(draft.currency || '통화 미확인')}</span><span data-ok="${r.matched === true}">${rec}</span></div>
-   ${issuesList(draft)}<div class="mv-tablebox" tabindex="0" role="region" aria-label="청구서 매핑 결과">${linesTable(draft)}</div>
+   ${missingBox}${issuesList(draft)}${llm}<div class="mv-tablebox" tabindex="0" role="region" aria-label="청구서 매핑 결과">${linesTable(draft)}</div>
    <div class="mc-actions"><button type="button" class="mv-btn" data-bill-action="confirm">분류 수정 반영 · 양식 저장</button><button type="button" class="mv-btn primary" data-bill-action="apply" ${draft.issues.some(i => i.level === 'ERROR') ? 'disabled' : ''}>계산기 입력칸에 채우기</button></div>`;
 }
 
@@ -176,7 +267,12 @@ export function mountBillImport({ host, form, fetchImpl = fetch }) {
       } else if (action === 'apply') {
         const mapping = toCostForm(draft);
         applyToForm(form, mapping);
-        status.innerHTML = `<b>입력칸을 채웠습니다.</b> ${mapping.notes.map(esc).join(' ')}`;
+        const missing = markMissing(form, draft);
+        const missingText = missing.length
+          ? `<p class="bill-missing-summary">⚠ 빠진 값 ${missing.length}개: ${missing.map(m => esc(m.label)).join(', ')} — 빨간색 칸을 채우세요.</p>`
+          : '<p>필수 값이 모두 채워졌습니다.</p>';
+        status.innerHTML = `<b>입력칸을 채웠습니다.</b> ${mapping.notes.map(esc).join(' ')}${missingText}`;
+        form.querySelector('.bill-missing')?.scrollIntoView({ block: 'center', behavior: 'smooth' });
       }
     } catch (error) { status.textContent = error.message; }
   });

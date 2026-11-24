@@ -72,7 +72,7 @@ RENDER.cost=async()=>{
  });
  const toggleElectricity=()=>{const separate=$('#electricMode').value==='separate',amount=$('#electricMode').value==='amount';for(const id of ['electricKw','electricPue','electricTariff']){$('#'+id).disabled=!separate;if(!separate)$('#'+id).value='';}for(const id of ['electricAmount','electricCurrency']){$('#'+id).disabled=!amount;$('#'+id).closest('label').hidden=!amount;}if(!amount)$('#electricAmount').value='';$('#electricOwner').disabled=$('#electricMode').value!=='included';};
  toggleElectricity();$('#electricMode').addEventListener('change',toggleElectricity);
- import('/static/bill-import.mjs?v=bill1124').then(({mountBillImport})=>{if($('#billImport'))mountBillImport({host:$('#billImport'),form});}).catch(()=>{const h=$('#billImport');if(h)h.textContent='청구서 불러오기 기능을 불러오지 못했습니다.';});
+ import('/static/bill-import.mjs?v=missing1124c').then(({mountBillImport})=>{if($('#billImport'))mountBillImport({host:$('#billImport'),form});}).catch(()=>{const h=$('#billImport');if(h)h.textContent='청구서 불러오기 기능을 불러오지 못했습니다.';});
  const toggleMonth=()=>$('#costMonth').disabled=$('#costPeriod').value!=='month';toggleMonth();$('#costPeriod').addEventListener('change',toggleMonth);
  bindCostCalendarHints(form);
  let revision = 0;
