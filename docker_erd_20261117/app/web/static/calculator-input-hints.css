@@ -22,3 +22,26 @@ html body #v02CostForm .mv-table th,
 html body #v02CostForm .mv-table td {
   background: #fff;
 }
+
+/* Asset inputs keep the existing white cost table and compact gray labels. */
+html body #v-cost [hidden] { display: none !important; }
+#v-cost .cost-capital-mode { display: flex; flex-wrap: wrap; align-items: end; gap: 12px; margin: 0 0 20px; }
+#v-cost .cost-capital-mode label { display: grid; gap: 7px; min-width: 210px; color: #657184; font-size: 14px; }
+#v-cost .cost-capital-mode select { min-height: 40px; }
+#v-cost .cost-asset-fields { display: grid; grid-template-columns: minmax(95px, 1fr) minmax(140px, 1.4fr); gap: 10px; margin-top: 14px; }
+#v-cost .cost-asset-fields label { display: grid; gap: 6px; color: #657184; font-size: 14px; font-weight: 400; }
+#v-cost .cost-asset-fields input { width: 100%; min-width: 0; box-sizing: border-box; }
+#v-cost .cost-report-reference { padding: 16px 20px; margin: 16px 0; border: 1px solid #dce1e8; background: #fff; }
+#v-cost .cost-report-reference summary, #v-cost .cost-economics summary { cursor: pointer; font-weight: 600; }
+#v-cost .cost-report-reference p, #v-cost .cost-economics p { line-height: 1.75; }
+#v-cost .cost-economics { padding: 22px 0; margin: 24px 0; border-block: 1px solid #dce1e8; background: #fff; }
+html body #v-cost .cost-economics .mv-table,
+html body #v-cost .cost-economics .mv-table tr,
+html body #v-cost .cost-economics .mv-table th,
+html body #v-cost .cost-economics .mv-table td { background: #fff; }
+#v-cost .cost-economics .mv-table caption { padding: 12px 0; text-align: left; color: #657184; font-size: 12px; }
+@media (max-width: 800px) {
+  #v02CostForm > .mv-tablebox > .mv-table { min-width: 1000px; }
+  #v-cost .cost-economics .mv-tablebox > .mv-table { min-width: 780px; }
+  #v-cost .cost-capital-mode > * { width: 100%; }
+}

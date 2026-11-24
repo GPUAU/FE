@@ -34,7 +34,17 @@ export function costPayload(input) {
       throw new Error((item.name || itemLabel[itemType[item.id]]) + ': 실제 비용을 입력한 상위 항목을 선택하세요.');
     }
     const reflected = item.state === 'user' || item.state === 'public';
+    let asset = {};
+    if (input.capitalMode === 'asset' && reflected && item.period === 'once') {
+      const life = Number(item.usefulLifeYears), residual = Number(item.residualValueUsd);
+      if (!Number.isInteger(life) || life < 1 || life > 100 || item.residualValueUsd == null
+          || item.residualValueUsd === '' || !Number.isFinite(residual) || residual < 0) {
+        throw new Error((item.name || itemLabel[itemType[item.id]]) + ': 내용연수(1~100년 정수)와 잔존가치(0도 입력)를 확인하세요.');
+      }
+      asset = { usefulLifeYears: life, residualValueUsd: decimal(item.residualValueUsd) };
+    }
     return {
+      ...asset,
       itemType: itemType[item.id], status: itemStatus[item.state], amount: decimal(item.amount),
       currency: reflected ? item.currency : null, period: reflected ? periods[item.period] : null,
       referenceDate: item.date || null, sourceUrl: item.state === 'public' ? item.source || null : null,
@@ -66,9 +76,9 @@ export function costPayload(input) {
     modelId: input.modelId,
     items,
     assumptions: {
-      gpuCount: input.gpu, depreciationYears: input.years, utilization: fraction(input.util),
+      gpuCount: input.gpu, depreciationYears: input.capitalMode === 'asset' ? Number(acquisition.usefulLifeYears) : input.years, utilization: fraction(input.util),
       annualInterestRate: loanRate, interestRateType: loanRate == null ? 'NOT_APPLIED' : 'ASSUMED',
-      residualValueUsd: decimal(input.salvage), calendarMonth: input.period === 'month' ? input.month : null,
+      residualValueUsd: input.capitalMode === 'asset' ? null : decimal(input.salvage), calendarMonth: input.period === 'month' ? input.month : null,
       costProfile: 'SCREEN_SCENARIO'
     },
     pricing: { method: input.marginType === 'profit' ? 'REVENUE_MARGIN' : 'COST_MARKUP', targetRate: fraction(input.margin) },
@@ -85,11 +95,22 @@ export async function calculateCost(request, input) {
     throw new Error('원가 계산 응답을 읽을 수 없습니다.');
   }
   const a = r.appliedAssumptions;
+  if (input.capitalMode === 'asset' && (!a.assetSpecificLives || !a.capitalAssets?.length)) {
+    throw new Error('자산별 내용연수가 계산에 반영되지 않았습니다. 계산 서버 버전을 확인하세요.');
+  }
   return {
     unit: Number(r.hourlyCost), candidate: Number(r.candidatePrice), annual: Number(r.annualCost),
     capex: Number(a.acquisitionCostUsd), opex: Number(a.annualOperatingCostUsd),
     otherOpex: Number(a.annualOperatingCostExcludingMeteredElectricityUsd),
-    capitalAnnual: Number(a.annualCapitalRecoveryUsd), crf: Number(a.capitalRecoveryFactor),
+    capitalAnnual: Number(a.annualCapitalRecoveryUsd), crf: a.capitalRecoveryFactor == null ? null : Number(a.capitalRecoveryFactor),
+    annualDepreciation: a.annualStraightLineDepreciationUsd == null ? null : Number(a.annualStraightLineDepreciationUsd),
+    assetSpecificLives: a.assetSpecificLives === true,
+    capitalAssets: (a.capitalAssets || []).map(asset => ({
+      type: asset.itemType, label: itemLabel[asset.itemType] || '전체 투자 (공통 가정)',
+      years: asset.usefulLifeYears, capex: Number(asset.acquisitionCostUsd), salvage: Number(asset.residualValueUsd),
+      crf: Number(asset.capitalRecoveryFactor), capitalAnnual: Number(asset.annualCapitalRecoveryUsd),
+      annualDepreciation: Number(asset.annualStraightLineDepreciationUsd)
+    })),
     salvage: Number(a.residualValueUsd), rate: Number(a.annualInterestRateUsed),
     gpu: a.gpuCount, years: a.depreciationYears, util: Number(a.utilization),
     period: a.calendarMonth ? 'month' : 'year', month: a.calendarMonth,
