@@ -2,6 +2,15 @@
   'use strict';
 
   const labels = {
+    gpuCount: '전체 GPU 수', gpusPerRack: '랙당 GPU 수', rackPowerKw: '랙당 IT 전력',
+    pue: 'PUE', utilization: '유료 가동률', powerLoadFraction: '평균 전력 부하율',
+    electricityUsdPerKwh: '전력단가', otherAnnualOpexUsd: '기타 연 운영비',
+    targetMargin: '목표 매출 이익률', bareMetalPrice: 'GPU 판매가격', softwareAttach: '소프트웨어 부가매출률',
+    annualDiscountRate: '연 자본비용률', capitalMethod: '자본회수 계산 방식',
+    SERVER: '서버 자산', NETWORK: '네트워크 자산', FACILITY: '시설 자산',
+    'server.capexUsd': '서버 취득비', 'server.years': '서버 내용연수', 'server.residualUsd': '서버 잔존가치',
+    'network.capexUsd': '네트워크 취득비', 'network.years': '네트워크 내용연수', 'network.residualUsd': '네트워크 잔존가치',
+    'facility.capexUsd': '시설 취득비', 'facility.years': '시설 내용연수', 'facility.residualUsd': '시설 잔존가치',
     modelId: 'GPU 모델', 'assumptions.gpuCount': 'GPU 수',
     'assumptions.depreciationYears': '사용연수', 'assumptions.utilization': '유료 가동률',
     'assumptions.annualInterestRate': '연 자본비용률',
@@ -59,7 +68,7 @@
       throw new AgentSessionExpiredError();
     }
     if (response.status === 403 || response.status === 404) {
-      const name = path.endsWith('/irr-simulations') ? 'IRR' : '공개가격 조회';
+      const name = path.endsWith('/data-center-simulations') ? '데이터센터 원가 계산' : path.endsWith('/irr-simulations') ? 'IRR' : '공개가격 조회';
       throw new Error(`현재 Spring 서버에서 ${name} API를 사용할 수 없습니다.`);
     }
     const envelope = await response.json().catch(() => null);
