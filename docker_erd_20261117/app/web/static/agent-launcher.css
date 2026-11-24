@@ -1,79 +1,115 @@
-/* SK wing motif on a restrained white agent control. */
+/* Original SK wing motif, with a stationary hit area and hover flight. */
 #agentLauncher {
   position: fixed;
   right: calc(24px + env(safe-area-inset-right, 0px));
   bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   z-index: 35;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: 6px;
   box-sizing: border-box;
-  min-height: 64px;
-  padding: 10px 20px 10px 14px;
-  border: 1px solid #ece1e3;
-  border-radius: 32px;
-  background: #fff;
+  width: 88px;
+  height: 94px;
+  padding: 8px;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
   color: #333842;
-  box-shadow: 0 4px 18px rgb(31 38 50 / 10%), 0 1px 3px rgb(31 38 50 / 4%);
+  box-shadow: none;
   font: inherit;
   text-decoration: none;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
 }
 #agentLauncher[hidden], body.ws-menu-open #agentLauncher { display: none; }
-/* Display the original brand wing within a clipped icon viewport. */
 #agentLauncher .agent-launcher-mark {
-  display: block;
   position: relative;
-  flex: 0 0 44px;
-  width: 44px;
-  height: 36px;
-  overflow: hidden;
+  display: block;
+  flex: 0 0 auto;
+  width: 64px;
+  height: 52px;
+  perspective: 240px;
   pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgb(93 38 38 / 10%));
+}
+#agentLauncher .agent-launcher-flight,
+#agentLauncher .agent-launcher-wing {
+  position: absolute;
+  inset: 0;
+  display: block;
+  transform-origin: 46% 39%;
+}
+#agentLauncher .agent-launcher-wing { overflow: hidden; }
+#agentLauncher .agent-launcher-wing-left {
+  clip-path: polygon(0 0, 46.2% 0, 46.2% 39%, 30% 70%, 0 80%);
+}
+#agentLauncher .agent-launcher-wing-right {
+  clip-path: polygon(46.2% 0, 100% 0, 100% 100%, 0 100%, 0 80%, 30% 70%, 46.2% 39%);
 }
 #agentLauncher .agent-launcher-mark img {
   position: absolute;
   display: block;
-  left: -23.5px;
+  left: -34.18px;
   top: 0;
-  width: 134.4px;
-  height: 52.92px;
+  width: 195.49px;
+  height: 76.97px;
   max-width: none;
   clip-path: polygon(17% 0%, 30% 0%, 34% 24%, 46% 29%, 51% 48%, 34% 68%, 29% 56%, 27% 48%, 17% 49%);
   user-select: none;
   pointer-events: none;
 }
 #agentLauncher .agent-launcher-label {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 600;
-  line-height: 1.4;
+  line-height: 20px;
   white-space: nowrap;
-  letter-spacing: -.025em;
+  letter-spacing: .045em;
+  text-shadow: 0 1px 5px #fff, 0 0 10px #fff;
 }
-#agentLauncher:hover {
-  border-color: #e9a8b3;
-  background: #fffafb;
-  color: #c9002b;
+#agentLauncher:hover, #agentLauncher:focus-visible { color: #c9002b; }
+#agentLauncher:focus-visible { outline: 2px solid #c9002b; outline-offset: 3px; }
+body.has-agent-launcher #toast { bottom: calc(134px + env(safe-area-inset-bottom, 0px)); }
+@keyframes agent-hover-flight {
+  0%, 100% { transform: translateY(-2px) rotate(-2deg); }
+  50% { transform: translateY(-7px) rotate(2deg); }
 }
-#agentLauncher:focus-visible { outline: 3px solid #a80026; outline-offset: 4px; }
-body.has-agent-launcher #toast { bottom: calc(104px + env(safe-area-inset-bottom, 0px)); }
+@keyframes agent-wing-left {
+  0%, 100% { transform: rotateY(0deg) rotateZ(0deg); }
+  50% { transform: rotateY(48deg) rotateZ(-5deg); }
+}
+@keyframes agent-wing-right {
+  0%, 100% { transform: rotateY(0deg) rotateZ(0deg); }
+  50% { transform: rotateY(-42deg) rotateZ(5deg); }
+}
 @media (prefers-reduced-motion: no-preference) {
-  #agentLauncher { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease; }
-  #agentLauncher:hover { transform: translateY(-2px); box-shadow: 0 7px 22px rgb(31 38 50 / 12%); }
-  #agentLauncher:active { transform: translateY(0); }
+  #agentLauncher .agent-launcher-flight { animation: var(--agent-flight, none); }
+  #agentLauncher .agent-launcher-wing-left { animation: var(--agent-left, none); }
+  #agentLauncher .agent-launcher-wing-right { animation: var(--agent-right, none); }
+  #agentLauncher:focus-visible {
+    --agent-flight: agent-hover-flight 1.25s ease-in-out infinite;
+    --agent-left: agent-wing-left .48s ease-in-out infinite;
+    --agent-right: agent-wing-right .48s ease-in-out infinite;
+  }
+}
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  #agentLauncher:hover {
+    --agent-flight: agent-hover-flight 1.25s ease-in-out infinite;
+    --agent-left: agent-wing-left .48s ease-in-out infinite;
+    --agent-right: agent-wing-right .48s ease-in-out infinite;
+  }
 }
 @media (max-width: 650px) {
   #agentLauncher {
-    right: calc(16px + env(safe-area-inset-right, 0px));
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-    min-height: 56px;
-    gap: 8px;
-    padding: 8px 16px 8px 12px;
+    right: calc(14px + env(safe-area-inset-right, 0px));
+    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
+    width: 76px;
+    height: 84px;
+    gap: 4px;
   }
-  #agentLauncher .agent-launcher-mark { flex-basis: 36px; width: 36px; height: 30px; }
-  #agentLauncher .agent-launcher-mark img { width: 109.96px; height: 43.3px; left: -19.23px; }
-  #agentLauncher .agent-launcher-label { font-size: 14px; }
-  body.has-agent-launcher #toast { bottom: calc(88px + env(safe-area-inset-bottom, 0px)); }
+  #agentLauncher .agent-launcher-mark { width: 56px; height: 46px; }
+  #agentLauncher .agent-launcher-mark img { width: 171.05px; height: 67.35px; left: -29.91px; }
+  body.has-agent-launcher #toast { bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
 }
 @media print { #agentLauncher { display: none; } }

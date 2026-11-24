@@ -8,7 +8,7 @@
   launcher.href = standalone ? '/#agent' : '#agent';
   launcher.setAttribute('aria-label', 'AI 에이전트에게 질문하기');
   launcher.title = 'AI 에이전트 열기';
-  launcher.innerHTML = '<span class="agent-launcher-mark" aria-hidden="true"><img src="/static/img/skt-logo.png" alt="" width="640" height="252" draggable="false"></span><span class="agent-launcher-label">에이전트</span>';
+  launcher.innerHTML = '<span class="agent-launcher-mark" aria-hidden="true"><span class="agent-launcher-flight"><span class="agent-launcher-wing agent-launcher-wing-left"><img src="/static/img/skt-logo.png" alt="" width="640" height="252" draggable="false"></span><span class="agent-launcher-wing agent-launcher-wing-right"><img src="/static/img/skt-logo.png" alt="" width="640" height="252" draggable="false"></span></span></span><span class="agent-launcher-label">Agent</span>';
   document.body.append(launcher);
   let focusRequested = false;
   function sync() {
