@@ -50,6 +50,7 @@ async function askSpringPrice(text) {
   reply.setAttribute('aria-live', 'polite');
   reply.textContent = '공개가격 조회 중…';
   feed.append(question, reply);
+  if (feed.closest('#agentMiniWindow, #agentEmbeddedPanel')) feed.scrollTop = feed.scrollHeight;
   state.hist.unshift(message);
   renderHist();
   syncSpringCopilotControls();
@@ -92,7 +93,12 @@ async function askSpringPrice(text) {
     springAgentBusy = false;
     syncSpringCopilotControls();
   }
-  reply.scrollIntoView({ block: 'nearest' });
+  // Keep async replies inside the mini window; never scroll the underlying page.
+  if (feed.closest('#agentMiniWindow, #agentEmbeddedPanel')) {
+    feed.scrollTop = feed.scrollHeight;
+  } else if (feed.getClientRects().length) {
+    reply.scrollIntoView({ block: 'nearest' });
+  }
 }
 
 async function resetSpringCopilot() {
@@ -124,5 +130,15 @@ $('#askForm').addEventListener('submit', event => {
   event.preventDefault();
   event.stopImmediatePropagation();
 }, true);
+// Bind immediately as the embedded mini window does not wait for workspace metadata.
+$('#askForm').onsubmit = event => {
+  event.preventDefault();
+  if (springAgentBusy) return;
+  const input = $('#askIn');
+  if (!input.value.trim()) return;
+  const message = input.value;
+  input.value = '';
+  askSpringPrice(message);
+};
 $('#agentReset').onclick = resetSpringCopilot;
 ask = askSpringPrice;
