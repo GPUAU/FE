@@ -55,9 +55,16 @@ export function costPayload(input) {
   items.push({ itemType: 'FINANCING', status: loanRate == null ? 'NOT_INCLUDED' : 'USER_INPUT' });
   let electricity = null;
   if (input.electricity) {
-    const { mode, kw, pue, tariff, includedIn } = input.electricity;
+    const { mode, kw, pue, tariff, includedIn, amount, currency } = input.electricity;
     if (mode === 'separate') {
       electricity = { itPowerKw: decimal(kw), pue: decimal(pue), krwPerKwh: decimal(tariff) };
+    } else if (mode === 'amount') {
+      // 청구서에 찍힌 전기료 금액을 연 운영비로 그대로 반영한다 (kW·PUE·단가 계산 대신).
+      if (amount == null || amount === '' || !Number.isFinite(Number(amount)) || Number(amount) < 0) {
+        throw new Error('전기료 연 금액을 입력하세요.');
+      }
+      items.push({ itemType: 'ELECTRICITY', status: 'USER_INPUT', amount: decimal(amount),
+        currency: currency || 'USD', period: 'YEAR' });
     } else if (mode === 'included') {
       items.push({ itemType: 'ELECTRICITY', status: 'INCLUDED_IN_OTHER',
         includedInItemType: itemType[includedIn] });
