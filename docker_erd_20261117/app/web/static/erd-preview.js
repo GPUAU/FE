@@ -175,12 +175,7 @@ function contractProductName(product) {
 }
 
 function contractEvidence(offer) {
-  const links = [...new Map((offer.observation?.evidence ?? [])
-    .filter(source => /^https?:\/\//.test(source.sourceUrl || ''))
-    .map(source => [source.sourceUrl, source])).values()];
-  const sourceLinks = links.map(source => `<span>${mlink(source.sourceUrl, source.sourceName || '출처 원문')}</span>`).join('');
-  const detail = offer.observationId ? `<button type="button" class="mv-btn" data-observation="spring-${mh(offer.observationId)}-${mh(offer.effective?.normalizationId ?? 'none')}">상세·근거</button>` : '';
-  return sourceLinks+detail || '출처 미확보';
+  return offer.observationId ? `<button type="button" class="mv-btn" data-observation="spring-${mh(offer.observationId)}-${mh(offer.effective?.normalizationId ?? 'none')}">상세·근거</button>` : '출처 미확보';
 }
 
 function contractOriginalPrice(offer) {
