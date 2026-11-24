@@ -1,0 +1,16 @@
+/* Cost examples remain separate from input values and calculation state. */
+html body #v02CostForm input::placeholder {
+  color: #9299a3; opacity: 1; font-weight: 400;
+}
+html body #v02CostForm .cost-calendar-hint {
+  display: block; position: relative; width: 100%; min-width: 0;
+}
+#v02CostForm .cost-calendar-example {
+  display: none; position: absolute; inset: 0 34px 0 10px;
+  align-items: center; color: #9299a3; font-size: 14px; font-weight: 400;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; pointer-events: none;
+}
+#v02CostForm .cost-calendar-hint.is-empty:not(:focus-within) .cost-calendar-example { display: flex; }
+html body #v02CostForm .cost-calendar-hint.is-empty:not(:focus-within) input { color: transparent; }
+#v02CostForm .cost-calendar-hint.is-empty:not(:focus-within) input::-webkit-datetime-edit { color: transparent; }
+html body #v-cost .cost-example-note { color: #747d89; font-size: 12px; }

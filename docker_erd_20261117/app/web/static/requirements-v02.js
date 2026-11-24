@@ -73,7 +73,7 @@ let v02PaintPending=false;
 new MutationObserver(changes=>{if(changes.some(c=>[...c.addedNodes].some(n=>n.nodeType===1&&(n.matches?.('[data-usd]')||n.querySelector?.('[data-usd]'))))&&!v02PaintPending){v02PaintPending=true;queueMicrotask(()=>{refreshKrw();v02PaintPending=false;});}}).observe(document.body,{childList:true,subtree:true});
 
 const costRows=[['server','서버·GPU'],['memory','별도 메모리'],['network','네트워크·스토리지'],['rack','랙·전원·냉각 설비'],['rent','임차료'],['ops','운영·유지보수']];
-const numberInput=(id,title,value='',step='any')=>`<label>${title}<input id="${id}" type="number" step="${step}" value="${mh(value??'')}"></label>`;
+const numberInput=(id,title,value='',step='any',placeholder='')=>`<label>${title}<input id="${id}" type="number" step="${step}" placeholder="${mh(placeholder)}" value="${mh(value??'')}"></label>`;
 const fieldValue=id=>{const v=$('#'+id).value;return v===''?null:Number(v);};
 function calculatorNote(){return `<div class="mv-note"><b>사용자 가정 계산 · 외부 전송 및 저장 없음</b><p>입력값은 현재 브라우저 메모리에서만 사용합니다. 새로고침하면 사라집니다. 실제 견적·수익 보장이 아닙니다. 원화 비용은 입력한 환율로 달러로 환산합니다.</p></div>`;}
 function renderPriceChanges(rows){
