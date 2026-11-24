@@ -2,10 +2,9 @@
 const PORTAL_ROUTES = [
  ['home','워크스페이스 홈','업무 시작 · 시장 요약과 바로가기','grid-3x3-gap','홈 메인 시작'],
  ['dashboard','GPU 가격 비교','모델·계약·지역별 가격과 환산 근거','bar-chart-line','시세 대시보드 최저가 시장'],
- ['catalog','GPU·사업자 카탈로그','GPU 모델과 공급 사업자 탐색','cpu','상품 사양 공급자'],
+ ['catalog','GPU 탐색·가격 비교','모델·사업자 탐색부터 조건별 요금 비교까지','cpu','GPU 카탈로그 상품 사양 공급자 조건별 가격 비교 할인 계약'],
  ['compare','계약 조건별 비교','온디맨드·스팟·약정 가격 비교','sliders','할인 계약'],
  ['trend','가격 추이와 관측 이력','저장된 가격과 변화 시점 확인','graph-up-arrow','과거 차트 시차 생애주기'],
- ['favorites','관심 사업자','관심 있는 사업자 모아보기','buildings','찜 관심 목록'],
  ['cost','원가·제안가 점검','입력 가정으로 손익과 제안가 계산','calculator','원가 비용 손익 마진'],
  ['bizcase','사업성 시나리오','투자·수익 가정별 시나리오 분석','graph-up-arrow','사업성 매출 손익분기'],
  ['agent','Pricing Copilot','자연어로 수집된 가격에 질문하기','chat-square-text','AI 에이아이 질문 챗봇'],
@@ -21,7 +20,6 @@ const PORTAL_NEXT = {
  cost:['원가와 시장가격을 함께 확인하세요.', ['dashboard','bizcase','agent']],
  bizcase:['시나리오의 가정을 더 구체적으로.', ['cost','dashboard','trend']],
  discounts:['관련 비교', ['compare','dashboard','agent']],
- favorites:['관심 사업자를 더 깊이 살펴보세요.', ['dashboard','trend','agent']],
  qa:['검증 결과에서 원본 근거까지.', ['dashboard','trend','agent']]
 };
 function updateEnterpriseShell(view){
@@ -31,7 +29,7 @@ function updateEnterpriseShell(view){
  });
  const visual=$('#portalVisual');
  const route=PORTAL_ROUTES.find(r=>r[0]===view);
- visual.dataset.kind=['dashboard','catalog','compare','trend','favorites','discounts'].includes(view)?'photo':'graphic';
+ visual.dataset.kind=['dashboard','catalog','compare','trend','discounts'].includes(view)?'photo':'graphic';
  visual.innerHTML=visual.dataset.kind==='photo'?'<img src="/static/img/enterprise-datacenter.jpg" alt="" width="1800" height="1200"><span>AI INFRASTRUCTURE</span>':`${portalIcon(route?.[3]||'grid-3x3-gap')}<span>${view==='agent'?'ASK. COMPARE. DECIDE.':'DATA TO DECISION'}</span>`;
  $('#portalGuideButton').hidden=['users','db','admin-inquiries','inquiries'].includes(view);
  const next=$('#portalNext'),config=PORTAL_NEXT[view];next.hidden=!config;
@@ -42,7 +40,7 @@ function updateEnterpriseShell(view){
 let portalSearchRows=[],portalSearchActive=0,portalDialogTrigger=null;
 function paintPortalSearch(){
  const q=$('#portalSearchInput').value.trim().toLocaleLowerCase();
- portalSearchRows=PORTAL_ROUTES.filter(r=>r.join(' ').toLocaleLowerCase().includes(q));portalSearchActive=0;
+ portalSearchRows=PORTAL_ROUTES.filter(r=>r[0]!=='compare'&&r.join(' ').toLocaleLowerCase().includes(q));portalSearchActive=0;
  $('#portalSearchResults').innerHTML=portalSearchRows.map((r,i)=>`<li id="portalOption${i}" role="option" aria-selected="${i===0}" data-portal-route="${r[0]}">${portalIcon(r[3])}<div><b>${r[1]}</b><span>${r[2]}</span></div><span class="search-enter" aria-hidden="true">↵</span></li>`).join('');
  $('#portalSearchEmpty').hidden=!!portalSearchRows.length;
  $('#portalSearchCount').textContent=`${portalSearchRows.length}개 메뉴`;

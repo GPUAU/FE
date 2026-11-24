@@ -16,7 +16,7 @@
  const search=(id,value,placeholder='모델, 상품, 리전 검색')=>`<label class="cp-search"><span>검색</span><div>${sgSearch}<input id="${id}" type="search" placeholder="${placeholder}" value="${mh(value)}"></div></label>`;
  const pager=(prefix,page,pages)=>`<div class="cp-pager"><button class="mv-btn" id="${prefix}Prev" ${page===0?'disabled':''}>이전</button><span>${page+1} / ${pages}</span><button class="mv-btn" id="${prefix}Next" ${page+1>=pages?'disabled':''}>다음</button></div>`;
  const termOptions=Object.entries(cpTerm);
- const compareLink=model=>`#compare/${encodeURIComponent(model)}`;
+ const compareLink=model=>`#compare/${encodeURIComponent(model)}?${new URLSearchParams({provider:RW.catalog.provider,term:RW.catalog.term})}`;
  function destroyCharts(prefix=''){for(const [id,chart] of RW.charts)if(id.startsWith(prefix)){chart.destroy();RW.charts.delete(id);}}
  function researchRoute(){
   const active=['catalog','dashboard','trend','discounts'].includes(route());
@@ -43,18 +43,20 @@
   const providers=[...new Set(shown.map(r=>r.provider_name))];
   RW.charts.set(id,new Chart(canvas,{type:'bar',data:{labels:shown.map(label),datasets:[{data:shown.map(r=>Number(price(r))),backgroundColor:shown.map(r=>providers.indexOf(r.provider_name)===0?'#e5233c':'#546b8d'),borderRadius:4,maxBarThickness:18}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,animation:{duration:matchMedia('(prefers-reduced-motion: reduce)').matches?0:250},scales:{x:{beginAtZero:true,grid:{color:'#eef0f4'},border:{display:false},ticks:{color:'#7b8493',callback:v=>'$'+v}},y:{grid:{display:false},border:{display:false},ticks:{color:'#566172',font:{size:12},autoSkip:false}}},plugins:{legend:{display:false},tooltip:{backgroundColor:'#252c38',padding:12,callbacks:{label:c=>mp(c.parsed.x)+' / GPU·시간',afterLabel:c=>description(shown[c.dataIndex])}}}}}));
  }
- window.renderComparisonPriceChart=(root,rows,selection)=>{
+ window.renderComparisonPriceChart=(root,rows,selection,{collapsed=false}={})=>{
+  const wasOpen=root.querySelector('.rw-comparison-graph')?.open;
   root.querySelector('.rw-comparison-graph')?.remove();
-  const mount=document.createElement('div');mount.className='rw-comparison-graph';
+  const mount=document.createElement(collapsed?'details':'div');mount.className='rw-comparison-graph';if(collapsed)mount.open=Boolean(wasOpen);
   const page=rows.slice(selection.page*20,(selection.page+1)*20);
-  mount.innerHTML=chartCard('rwCompareChart','상품별 가격 그래프',`현재 표의 순서대로 최대 10개 오퍼 표시 · ${selection.mode==='reference'?'구성·계약이 다른 참고 단가':'선택한 동일 조건 집단'} · 막대에 마우스를 올리면 가격 확인`);
+  mount.innerHTML=(collapsed?'<summary>상품별 가격 그래프 보기</summary>':'')+chartCard('rwCompareChart','상품별 가격 그래프',`현재 표의 순서대로 최대 10개 오퍼 표시 · ${selection.mode==='reference'?'구성·계약이 다른 참고 단가':'선택한 동일 조건 집단'} · 막대에 마우스를 올리면 가격 확인`);
   root.querySelector('.cp-results').before(mount);
+  if(collapsed)mount.addEventListener('toggle',()=>{if(mount.open)RW.charts.get('rwCompareChart')?.resize();});
   bars('rwCompareChart',page,{label:r=>r.provider_name+' · '+(r.region_code||'리전 미확인'),description:r=>[r.original_product_name,cpTerm[r.contract_type]+' · '+(r.commitment_months?r.commitment_months+'개월':'기간 약정 없음'),r.is_stale?'48시간 초과 · 과거 참고 자료':'수집 '+sgDay(r.collected_at)]});
  };
- function offerTable(rows){return `<div class="mv-tablebox" tabindex="0" role="region" aria-label="상품 가격 목록: 가로로 스크롤"><table class="mv-table rw-offers"><thead><tr>${['GPU / 상품','사업자','국가 / 리전','계약 조건','시간당 가격','가격 근거'].map(t=>`<th scope="col">${t}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td><div class="cp-product"><img src="/static/icons/nvidia.svg" alt="NVIDIA"><div><b>${mh(r.model_name)}</b><span>${mh(r.original_product_name)}</span></div></div><div class="cp-spec">${cpVal(r.gpu_count)} GPU · ${cpVal(r.system_type)}</div></td><td><b>${mh(r.provider_name)}</b></td><td><b>${cpVal(r.country_code)}</b><span>${cpVal(r.region_code)}</span></td><td><b>${cpTerm[r.contract_type]||cpVal(r.contract_type)}</b><span>${mh(r.contract_product_type)}</span><span>${r.commitment_months?r.commitment_months+'개월':'기간 약정 없음'} · ${cpVal(r.payment_option)}</span></td><td class="cp-price"><strong>${fxPrice(r.display_price)}</strong><span>USD / GPU·시간</span></td><td class="cp-evidence"><span class="cp-status ${r.is_stale?'is-stale':''}">${r.is_stale?'48시간 초과':'수집 자료'}</span><span>${mtime(r.collected_at)}</span><button class="mv-btn" data-observation="${mh(r.observation_id)}">상세·근거</button></td></tr>`).join('')||`<tr><td colspan="6">${empty('선택 조건의 가격 자료가 없습니다.')}</td></tr>`}</tbody></table></div>`;}
+ function offerTable(rows){return `<div class="mv-tablebox" tabindex="0" role="region" aria-label="상품 가격 목록: 가로로 스크롤"><table class="mv-table rw-offers"><thead><tr>${['GPU / 상품','사업자','국가 / 리전','계약 조건','시간당 가격','가격 근거'].map(t=>`<th scope="col">${t}</th>`).join('')}</tr></thead><tbody>${rows.map(r=>`<tr><td><div class="cp-product"><img src="/static/icons/nvidia.svg" alt="NVIDIA"><div><a class="rw-model-link" href="#catalog/gpu/${encodeURIComponent(r.model_name)}?${new URLSearchParams({provider:r.provider_name,term:r.contract_type})}"><b>${mh(r.model_name)}</b></a><span>${mh(r.original_product_name)}</span></div></div><div class="cp-spec">${cpVal(r.gpu_count)} GPU · ${cpVal(r.system_type)}</div></td><td><b>${mh(r.provider_name)}</b></td><td><b>${cpVal(r.country_code)}</b><span>${cpVal(r.region_code)}</span></td><td><b>${cpTerm[r.contract_type]||cpVal(r.contract_type)}</b><span>${mh(r.contract_product_type)}</span><span>${r.commitment_months?r.commitment_months+'개월':'기간 약정 없음'} · ${cpVal(r.payment_option)}</span></td><td class="cp-price"><strong>${fxPrice(r.display_price)}</strong><span>USD / GPU·시간</span></td><td class="cp-evidence"><span class="cp-status ${r.is_stale?'is-stale':''}">${r.is_stale?'48시간 초과':'수집 자료'}</span><span>${mtime(r.collected_at)}</span><button class="mv-btn" data-observation="${mh(r.observation_id)}">상세·근거</button></td></tr>`).join('')||`<tr><td colspan="6">${empty('선택 조건의 가격 자료가 없습니다.')}</td></tr>`}</tbody></table></div>`;}
  function exportOffers(rows,name){downloadCSV(name,['모델','사업자','상품','리전','계약','약정개월','GPU수','USD_GPU시간','수집UTC','관측ID','출처'],rows.map(r=>[r.model_name,r.provider_name,r.original_product_name,r.region_code,r.contract_product_type,r.commitment_months,r.gpu_count,r.display_price,r.collected_at,r.observation_id,r.source_url]));}
  function catalogTrendCard(model,term){return `<section class="rw-catalog-trend" aria-label="${mh(model)} 가격 추이"><div class="rw-mini-heading"><h2>가격 추이</h2><span>USD / GPU·시간</span></div><div class="rw-mini-plot" id="rwCatalogTrendArea"><canvas id="rwCatalogTrend" role="img" aria-label="${mh(model)} ${cpTerm[term]} 저장 가격 추이"></canvas><p id="rwCatalogTrendLoading" role="status">가격 이력 불러오는 중…</p></div><div class="rw-mini-terms" role="group" aria-label="가격 추이 계약 유형">${termOptions.map(([key,label])=>`<button type="button" data-rw-trend-term="${key}" aria-pressed="${term===key}">${label}</button>`).join('')}</div><p id="rwCatalogTrendStatus" class="rw-mini-status" role="status">최근 730일의 저장된 관측 기준</p></section>`;}
- async function renderCatalogTrend(model,term,provider){
+ async function renderCatalogTrend(model,term,provider,offerIds=null){
   const canvas=$('#rwCatalogTrend'),area=$('#rwCatalogTrendArea'),status=$('#rwCatalogTrendStatus');
   const current=()=>canvas&&canvas.isConnected&&$('#rwCatalogTrend')===canvas;
   try{
@@ -62,7 +64,7 @@
    $('#rwCatalogTrendLoading')?.remove();
    const failure=(snapshot.historyFailures||SG.historyFailures||[]).find(r=>r.model===model);
    const wanted=term==='on_demand'?'ON_DEMAND':term==='spot'?'SPOT':'COMMITMENT';
-   const rows=snapshot.history.filter(r=>r.model_name===model&&r.contract_type===wanted&&(provider==='ALL'||r.provider_name===provider)&&valid(r.price)&&Number.isFinite(Date.parse(r.chart_at))).sort((a,b)=>Date.parse(a.chart_at)-Date.parse(b.chart_at));
+   const rows=snapshot.history.filter(r=>r.model_name===model&&r.contract_type===wanted&&(provider==='ALL'||r.provider_name===provider)&&(!offerIds||offerIds.has(String(r.offer_id)))&&valid(r.price)&&Number.isFinite(Date.parse(r.chart_at))).sort((a,b)=>Date.parse(a.chart_at)-Date.parse(b.chart_at));
    if(!rows.length){area.innerHTML=`<div class="rw-mini-empty"><strong>${failure?'가격 이력 조회 실패':cpTerm[term]+' 이력 미확보'}</strong><span>${failure?'가격 이력 페이지에서 다시 조회해 주세요.':'저장된 관측이 확보되면 표시됩니다.'}</span><a href="#trend">가격 이력 보기 →</a></div>`;status.textContent='실시간 가격이 아닌 저장된 이력입니다.';return;}
    const ids=[...new Set(rows.map(r=>String(r.offer_id)))],providers=[...new Set(rows.map(r=>r.provider_name))],first=Date.parse(rows[0].chart_at),last=Date.parse(rows.at(-1).chart_at);
    const colors=['#e5233c','#546b8d','#d98a28'];
@@ -72,17 +74,56 @@
    status.textContent=`${rows.length}개 관측 · ${ids.length}개 오퍼 · ${sgDay(first)} ~ ${sgDay(last)}${failure?' · 일부 조회 실패':''}. 선은 같은 오퍼의 관측점을 연결하며, 45일 초과 공백은 연결하지 않습니다.`;
   }catch(e){if(current()){area.innerHTML='<div class="rw-mini-empty"><strong>가격 이력을 불러오지 못했습니다.</strong><a href="#trend">가격 이력에서 다시 조회 →</a></div>';status.textContent='상품 목록은 계속 확인할 수 있습니다.';}}
  }
+ async function modelDetail(root,model,C){
+  const routeHash=location.hash;
+  RW.priceScopes ||= new Map();
+  if(!RW.priceScopes.has(model))RW.priceScopes.set(model,{...defaultComparisonSelection,model,mode:'reference',provider:C.provider,term:C.term,country:C.country,region:C.region,query:'',page:0,group:''});
+  const selection=RW.priceScopes.get(model);
+  const query=routeHash.split('?')[1]||'';
+  if(query&&selection.linkQuery!==query){
+   const params=new URLSearchParams(query);
+   const provider=params.get('provider'),term=params.get('term');
+   if(provider==='ALL'||Object.values(RW.meta.providers).includes(provider))selection.provider=provider;
+   if(Object.hasOwn(cpTerm,term))selection.term=term;
+   Object.assign(selection,{country:'ALL',region:'ALL',page:0,linkQuery:query});
+  }
+  destroyCharts();
+  root.innerHTML=`<div class="mv cp-page rw-page gx-model-detail"><a class="rw-back" href="#catalog">모델·사업자 목록</a><div class="rw-catalog-top"><header class="cp-hero"><p class="cp-eyebrow">GPU 모델 · 상품과 공개 요금</p><h1>${mh(model)} <em>상품·가격 비교</em></h1><p>국가와 사업자, 계약 유형을 선택해 상품 구성과 가격을 확인하세요.</p><div class="gx-model-meta"><span>NVIDIA GPU</span><span>USD / GPU·시간</span></div></header><div id="gxTrendHost"></div></div><div id="gxPriceHost" role="region" aria-label="${mh(model)} 상품 조건과 가격"><p role="status">상품 가격을 불러오는 중입니다.</p></div></div>`;
+  const priceHost=root.querySelector('#gxPriceHost'),trendHost=root.querySelector('#gxTrendHost');
+  let historyKey='';
+  await renderGpuComparison({host:priceHost,selection,isActive:()=>state.view==='catalog'&&location.hash===routeHash&&priceHost.isConnected,
+   onChange:(current,rows)=>{
+    Object.assign(C,{term:current.term,provider:current.provider,country:current.country,region:current.region});
+    const ids=new Set(rows.map(r=>String(r.offer_id)));
+    const key=[current.term,current.provider,...[...ids].sort()].join('|');
+    if(key===historyKey)return;historyKey=key;
+    trendHost.innerHTML=catalogTrendCard(model,current.term);
+    trendHost.querySelectorAll('[data-rw-trend-term]').forEach(button=>button.onclick=()=>{
+     current.term=button.dataset.rwTrendTerm;current.page=0;
+     priceHost.querySelector('#cpTerm').value=current.term;
+     priceHost.querySelector('#cpTerm').dispatchEvent(new Event('change',{bubbles:true}));
+    });
+    renderCatalogTrend(model,current.term,current.provider,ids);
+   }
+  });
+ }
  async function catalog(){
   const ticket=++RW.seq,root=$('#v-catalog');frame(root,'GPU','카탈로그','GPU 모델별 사양과 수집 가격을 제공합니다.');
   let d;try{d=await data();}catch(e){if(ticket===RW.seq)error(root,e,catalog);return;}if(ticket!==RW.seq||route()!=='catalog')return;
   marketPriceFrame('GPU 카탈로그','모델별 상품과 가격 근거');
-  const parts=location.hash.slice(1).split('/');let id='';try{id=decodeURIComponent(parts.slice(2).join('/'));}catch{}
+  const parts=location.hash.slice(1).split('?')[0].split('/');let id='';try{id=decodeURIComponent(parts.slice(2).join('/'));}catch{}
   const detailModel=parts[1]==='gpu'&&RW.meta.models.includes(id)?id:null;
   const detailProvider=parts[1]==='provider'?Object.entries(RW.meta.providers).find(([k])=>k===id)?.[1]:null;
-  const C=RW.catalog;C.page=0;C.q='';C.provider='ALL';
+  const scope=parts.slice(1).join('/')||'index';
+  RW.catalogScopes ||= new Map([['index',{...RW.catalog,country:'ALL',region:'ALL'}]]);
+  const indexScope=RW.catalogScopes.get('index');
+  if(!RW.catalogScopes.has(scope))RW.catalogScopes.set(scope,{...indexScope,q:'',provider:detailProvider?'ALL':indexScope.provider,country:'ALL',region:'ALL',page:0});
+  const C=RW.catalog=RW.catalogScopes.get(scope);
+  C.country ||= 'ALL'; C.region ||= 'ALL';
+  if(detailModel){await modelDetail(root,detailModel,C);return;}
   function draw(){
    const focus=focusState(root),q=C.q.trim().toLowerCase(),detail=detailModel||detailProvider;
-   const pool=d.candidates.filter(r=>r.contract_type===C.term&&(!detailModel||r.model_name===detailModel)&&(!detailProvider||r.provider_name===detailProvider)&&(C.provider==='ALL'||r.provider_name===C.provider));
+   const pool=d.candidates.filter(r=>r.contract_type===C.term&&(!detailModel||r.model_name===detailModel)&&(!detailProvider||r.provider_name===detailProvider)&&(C.provider==='ALL'||r.provider_name===C.provider)&&(C.country==='ALL'||r.country_code===C.country)&&(C.region==='ALL'||r.region_code===C.region));
    let rows=pool.filter(r=>!q||`${r.model_name} ${r.provider_name} ${r.original_product_name} ${r.region_code}`.toLowerCase().includes(q));
    rows.sort((a,b)=>C.sort==='price'?cpPriceOrder(a.display_price,b.display_price,false):a.model_name.localeCompare(b.model_name)||a.provider_name.localeCompare(b.provider_name));
    let modelRows=models().map(model=>{const r=pool.filter(x=>x.model_name===model),prices=r.map(x=>x.display_price).filter(valid).map(Number);return {model,rows:r,prices,lowest:prices.length?Math.min(...prices):null};}).filter(m=>(!q||('NVIDIA 엔비디아 '+m.model+' '+m.rows.map(r=>r.generation).join(' ')).toLowerCase().includes(q))&&(C.status==='all'||(C.status==='priced')===Boolean(m.prices.length)));
@@ -94,18 +135,21 @@
    const title=heading(detail?mh(detail):'GPU',detail?'상품 카탈로그':'카탈로그',detail?'상품별 GPU 구성, 리전, 계약 조건과 수집 가격을 제공합니다.':'GPU 모델별 사양과 공개 요금, 이용 조건을 제공합니다.');
    root.innerHTML=`<div class="mv cp-page rw-page">${detailModel?`<div class="rw-catalog-top">${title}${catalogTrendCard(detailModel,C.term)}</div>`:title}${overview(d.candidates)}
     ${detail?'<a class="rw-back" href="#catalog">전체 GPU 카탈로그</a>':`<div class="cp-explorer-head"><h2>모델과 사업자</h2><div class="cp-modes" role="group" aria-label="카탈로그 종류"><button class="mv-btn ${C.tab==='models'?'primary':''}" data-rw-cat="models" aria-pressed="${C.tab==='models'}">GPU 모델</button><button class="mv-btn ${C.tab==='providers'?'primary':''}" data-rw-cat="providers" aria-pressed="${C.tab==='providers'}">사업자</button></div></div>`}
-    <div class="cp-filterbar rw-catalog-filters">${search('rwCatSearch',C.q,detail?'상품, GPU, 리전 검색':'GPU 모델 또는 사업자 검색')}${cpSelect('rwCatTerm','계약 유형',termOptions,C.term)}${cpSelect('rwCatProvider','사업자',options(d.candidates,'provider_name'),C.provider)}${cpSelect('rwCatSort','정렬',[['name','기본 순서'],['price','낮은 수집 단가순']],C.sort)}</div>
+    <div class="cp-filterbar rw-catalog-filters">${search('rwCatSearch',C.q,detail?'상품, GPU, 리전 검색':'GPU 모델 또는 사업자 검색')}${cpSelect('rwCatTerm','계약 유형',termOptions,C.term)}${cpSelect('rwCatProvider','사업자',options(d.candidates,'provider_name'),C.provider)}${detailProvider?cpSelect('rwCatCountry','국가',options(d.candidates.filter(r=>r.provider_name===detailProvider),'country_code'),C.country)+cpSelect('rwCatRegion','리전',options(d.candidates.filter(r=>r.provider_name===detailProvider&&(C.country==='ALL'||r.country_code===C.country)),'region_code'),C.region):''}${cpSelect('rwCatSort','정렬',[['name','기본 순서'],['price','낮은 수집 단가순']],C.sort)}</div>
     ${!detail&&C.tab==='models'?`<div class="rw-filter-actions"><div class="cp-modes" role="group" aria-label="가격 확보 상태">${[['all','전체 모델'],['priced','가격 확보'],['unpriced','가격 미확보']].map(([k,v])=>`<button class="mv-btn ${C.status===k?'primary':''}" data-rw-status="${k}" aria-pressed="${C.status===k}">${v}</button>`).join('')}</div></div>`:''}
     ${notice('선택한 계약 유형의 수집 단가 범위입니다. 상품 구성·지역·약정 조건이 다르므로 동일 조건 시장 대표가격을 뜻하지 않습니다.')}
-    ${detail?`<div class="cp-results-head"><h2>수집 상품 <small>${rows.length}</small></h2><button class="mv-btn" id="rwCatCSV">CSV 다운로드</button></div>${offerTable(rows.slice(C.page*20,(C.page+1)*20))}${pager('rwCat',C.page,pages)}`:C.tab==='models'?`<div class="mv-tablebox" tabindex="0" role="region" aria-label="GPU 모델 카탈로그 표"><table class="mv-table rw-model-table"><thead><tr>${['GPU 모델','세대 / 상품 메모리','수집 단가 범위 · 참고','가격 확보 사업자','수집 오퍼','상세 보기'].map(x=>`<th scope="col">${x}</th>`).join('')}</tr></thead><tbody>${modelRows.map(m=>{const gens=[...new Set(m.rows.map(r=>r.generation).filter(Boolean))],vram=[...new Set(m.rows.map(r=>r.vram_gb_per_gpu).filter(valid).map(Number))].sort((a,b)=>a-b);return `<tr><td><a class="cp-product rw-model-link" href="#catalog/gpu/${encodeURIComponent(m.model)}"><img src="/static/icons/nvidia.svg" alt="NVIDIA"><div><b>${mh(m.model)}</b><span>NVIDIA GPU</span></div></a></td><td><b>${mh(gens.join(' · ')||'사양 미확보')}</b><span>${vram.length?vram.map(x=>x.toLocaleString()).join(' / ')+' GB/GPU · 수집 상품 기준':'모델명만으로 사양을 추정하지 않음'}</span></td><td class="cp-price"><strong>${m.prices.length?mp(Math.min(...m.prices)):'가격 미확보'}</strong>${m.prices.length?`<span>${Math.max(...m.prices)!==Math.min(...m.prices)?'~ '+mp(Math.max(...m.prices))+' · ':''}USD / GPU·시간</span><span>48시간 초과 ${m.rows.filter(r=>r.is_stale).length}개</span>`:'<span>0원·미판매를 뜻하지 않음</span>'}</td><td><b>${[...new Set(m.rows.map(r=>r.provider_name))].map(mh).join(' · ')||'미확보'}</b></td><td><b>${count(m.rows,'offer_id')}개</b></td><td><a class="mv-btn" href="#catalog/gpu/${encodeURIComponent(m.model)}">상품 보기</a><a class="rw-inline-link" href="${compareLink(m.model)}">조건별 비교</a></td></tr>`;}).join('')||`<tr><td colspan="6">${empty('검색 조건에 맞는 모델이 없습니다.')}</td></tr>`}</tbody></table></div>`:`<div class="mv-tablebox" tabindex="0" role="region" aria-label="사업자 카탈로그 표"><table class="mv-table rw-provider-table"><thead><tr><th>사업자</th><th>가격 확보 GPU</th><th>수집 오퍼</th><th>수집 국가</th><th>상품 보기</th></tr></thead><tbody>${providerRows.map(p=>`<tr><td><b class="rw-provider-name">${mh(p.name)}</b><span>종합 클라우드</span></td><td><b>${[...new Set(p.rows.map(r=>r.model_name))].map(mh).join(' · ')||'미확보'}</b></td><td><b>${count(p.rows,'offer_id')}개</b></td><td>${count(p.rows,'country_code')}개 국가</td><td><a class="mv-btn" href="#catalog/provider/${encodeURIComponent(p.id)}">상품 보기</a></td></tr>`).join('')||`<tr><td colspan="5">${empty('일치하는 사업자가 없습니다.')}</td></tr>`}</tbody></table></div>`}
+    ${detail?`<div class="cp-results-head"><h2>수집 상품 <small>${rows.length}</small></h2><button class="mv-btn" id="rwCatCSV">CSV 다운로드</button></div>${offerTable(rows.slice(C.page*20,(C.page+1)*20))}${pager('rwCat',C.page,pages)}`:C.tab==='models'?`<div class="mv-tablebox" tabindex="0" role="region" aria-label="GPU 모델 카탈로그 표"><table class="mv-table rw-model-table"><thead><tr>${['GPU 모델','세대 / 상품 메모리','수집 단가 범위 · 참고','가격 확보 사업자','수집 오퍼','상세 보기'].map(x=>`<th scope="col">${x}</th>`).join('')}</tr></thead><tbody>${modelRows.map(m=>{const gens=[...new Set(m.rows.map(r=>r.generation).filter(Boolean))],vram=[...new Set(m.rows.map(r=>r.vram_gb_per_gpu).filter(valid).map(Number))].sort((a,b)=>a-b);return `<tr><td><a class="cp-product rw-model-link" href="#catalog/gpu/${encodeURIComponent(m.model)}"><img src="/static/icons/nvidia.svg" alt="NVIDIA"><div><b>${mh(m.model)}</b><span>NVIDIA GPU</span></div></a></td><td><b>${mh(gens.join(' · ')||'사양 미확보')}</b><span>${vram.length?vram.map(x=>x.toLocaleString()).join(' / ')+' GB/GPU · 수집 상품 기준':'모델명만으로 사양을 추정하지 않음'}</span></td><td class="cp-price"><strong>${m.prices.length?mp(Math.min(...m.prices)):'가격 미확보'}</strong>${m.prices.length?`<span>${Math.max(...m.prices)!==Math.min(...m.prices)?'~ '+mp(Math.max(...m.prices))+' · ':''}USD / GPU·시간</span><span>48시간 초과 ${m.rows.filter(r=>r.is_stale).length}개</span>`:'<span>0원·미판매를 뜻하지 않음</span>'}</td><td><b>${[...new Set(m.rows.map(r=>r.provider_name))].map(mh).join(' · ')||'미확보'}</b></td><td><b>${count(m.rows,'offer_id')}개</b></td><td><a class="mv-btn" href="#catalog/gpu/${encodeURIComponent(m.model)}">상품·가격 보기</a></td></tr>`;}).join('')||`<tr><td colspan="6">${empty('검색 조건에 맞는 모델이 없습니다.')}</td></tr>`}</tbody></table></div>`:`<div class="mv-tablebox" tabindex="0" role="region" aria-label="사업자 카탈로그 표"><table class="mv-table rw-provider-table"><thead><tr><th>사업자</th><th>가격 확보 GPU</th><th>수집 오퍼</th><th>수집 국가</th><th>상품 보기</th></tr></thead><tbody>${providerRows.map(p=>`<tr><td><b class="rw-provider-name">${mh(p.name)}</b><span>종합 클라우드</span></td><td><b>${[...new Set(p.rows.map(r=>r.model_name))].map(mh).join(' · ')||'미확보'}</b></td><td><b>${count(p.rows,'offer_id')}개</b></td><td>${count(p.rows,'country_code')}개 국가</td><td><a class="mv-btn" href="#catalog/provider/${encodeURIComponent(p.id)}">상품 보기</a></td></tr>`).join('')||`<tr><td colspan="5">${empty('일치하는 사업자가 없습니다.')}</td></tr>`}</tbody></table></div>`}
     ${springMarketFooter()}</div>`;
    $('#rwCatSearch').oninput=e=>{C.q=e.target.value;C.page=0;draw();};
    for(const [id,key] of [['rwCatTerm','term'],['rwCatProvider','provider'],['rwCatSort','sort']])$('#'+id).onchange=e=>{C[key]=e.target.value;C.page=0;draw();};
+   for(const [id,key] of [['rwCatCountry','country'],['rwCatRegion','region']]){const input=root.querySelector('#'+id);if(input)input.onchange=e=>{C[key]=e.target.value;if(key==='country')C.region='ALL';C.page=0;draw();};}
    root.querySelectorAll('[data-rw-cat]').forEach(b=>b.onclick=()=>{C.tab=b.dataset.rwCat;C.q='';draw();});
    root.querySelectorAll('[data-rw-status]').forEach(b=>b.onclick=()=>{C.status=b.dataset.rwStatus;draw();});
    if(detail){$('#rwCatPrev').onclick=()=>{C.page--;draw();};$('#rwCatNext').onclick=()=>{C.page++;draw();};$('#rwCatCSV').onclick=()=>exportOffers(rows,'GPU_catalog.csv');}
    if(detailModel){root.querySelectorAll('[data-rw-trend-term]').forEach(button=>button.onclick=()=>{C.term=button.dataset.rwTrendTerm;C.page=0;draw();root.querySelector(`[data-rw-trend-term="${C.term}"]`).focus({preventScroll:true});});renderCatalogTrend(detailModel,C.term,C.provider);}
    refreshKrw();restoreFocus(focus);
+   window.GpuExplorerContext={model:detailModel,provider:detailProvider||C.provider,term:C.term};
+   window.dispatchEvent(new Event('gpu-explorer-context'));
   }draw();
  }
  async function dashboard(){
