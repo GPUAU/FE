@@ -1,6 +1,6 @@
-(() => {
+window.mountCollectedData = function (root) {
 'use strict';
-const $=s=>document.querySelector(s),esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const $=s=>root.querySelector(s),esc=s=>String(s??'—').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const terms={on_demand:'온디맨드',spot:'스팟',commitment:'장기약정'};
 let rows=[],shown=[],page=0;
 const time=v=>v&&Number.isFinite(Date.parse(v))?new Date(v).toLocaleString('ko-KR',{timeZone:'Asia/Seoul'}):'미확인';
@@ -40,4 +40,4 @@ load().then(list=>{
  for(const [id,key] of [['model','model_name'],['provider','provider_name'],['term','contract_type']])for(const value of [...new Set(rows.map(r=>r[key]).filter(Boolean))].sort())$('#'+id).add(new Option(id==='term'?(terms[value]||value):value,value));
  render();
 }).catch(e=>{$('#status').textContent='자료를 불러오지 못했습니다. 새로고침해 주세요. '+e.message;});
-})();
+};

@@ -19,9 +19,9 @@ async function backendQualityPages(box,path,headers,row){
  await page();
 }
 const backendOriginalQuality=RENDER.qa;
-RENDER.qa=async()=>{
- const original=backendOriginalQuality();
- const root=$('#v-qa .mv');
+RENDER.qa=async(options={})=>{
+ const original=backendOriginalQuality(options);
+ const root=(options.root||$('#v-qa')).querySelector('.mv');
  const capabilities=await qualityRequest('/static/backend-capabilities.json');
  if(!capabilities.historyPagination){
   root.insertAdjacentHTML('beforeend','<section class="mv-note"><h3>새 백엔드 연결 대기</h3><p>가격 확보 상태와 수집 실행 이력 화면은 로컬 백엔드 전환 후 사용할 수 있습니다. 현재는 기존 수집 데이터를 표시합니다.</p></section>');

@@ -379,18 +379,18 @@ async function runSQL() {
 }
 
 /* ---------- 라우팅·공통 ---------- */
-const VIEWS = ['home', 'bizcase', 'catalog', 'dashboard', 'compare', 'discounts', 'favorites', 'trend', 'cost', 'agent', 'qa', 'db', 'users', 'inquiries', 'admin-inquiries'];
+const VIEWS = ['home', 'bizcase', 'catalog', 'dashboard', 'compare', 'discounts', 'trend', 'cost', 'agent', 'qa', 'db', 'users', 'inquiries', 'admin-inquiries'];
 const ADMIN_VIEWS = ['db', 'users', 'admin-inquiries'];
-const RENDER = { home: renderHome, bizcase: renderBiz, catalog: renderCatalog, dashboard: renderDash, compare: renderCompare, discounts: renderDiscounts, favorites: renderFavorites, trend: renderTrend, cost: renderCost, agent: renderUsage, qa: () => renderQA(false), db: renderDB, users: renderUsers,
+const RENDER = { home: renderHome, bizcase: renderBiz, catalog: renderCatalog, dashboard: renderDash, compare: renderCompare, discounts: renderDiscounts, trend: renderTrend, cost: renderCost, agent: renderUsage, qa: () => renderQA(false), db: renderDB, users: renderUsers,
   inquiries: () => renderInquiries(false), 'admin-inquiries': () => renderInquiries(true) };
 /* 페이지 메타: 그룹(브레드크럼·메뉴 강조), 제목·설명 키, 상단 띠의 통화·환율 도구 표시 여부 */
 const PAGES = {
-  home: { grp: null }, bizcase: { grp: 'biz', tools: true }, catalog: { grp: 'market', tools: true }, dashboard: { grp: 'market', tools: true }, compare: { grp: 'market', tools: true }, discounts: { grp: 'market', tools: true }, favorites: { grp: 'market', tools: true }, trend: { grp: 'market', tools: true }, cost: { grp: 'cost', tools: true },
+  home: { grp: null }, bizcase: { grp: 'biz', tools: true }, catalog: { grp: 'market', tools: true }, dashboard: { grp: 'market', tools: true }, compare: { grp: 'market', tools: true }, discounts: { grp: 'market', tools: true }, trend: { grp: 'market', tools: true }, cost: { grp: 'cost', tools: true },
   agent: { grp: 'ai', tools: false }, qa: { grp: 'quality' }, db: { grp: 'admin' }, users: { grp: 'admin' },
   inquiries: { grp: 'settings' }, 'admin-inquiries': { grp: 'admin' },
 };
 const GRP_KEY = { market: 'gMarket', cost: 'gCost', biz: 'gBiz', ai: 'gAi', quality: 'gQuality', admin: 'gAdmin', settings: 'gSettings' };
-const PAGE_KEY = { bizcase: 'pBizcase', catalog: 'pCatalog', dashboard: 'pDashboard', compare: 'pCompare', discounts: 'pDiscounts', favorites: 'pFavorites', trend: 'pTrend', cost: 'pCost', agent: 'pAgent', qa: 'pQa', db: 'pDb', users: 'pUsers', inquiries: 'pInquiries', 'admin-inquiries': 'pAdminInq' };
+const PAGE_KEY = { bizcase: 'pBizcase', catalog: 'pCatalog', dashboard: 'pDashboard', compare: 'pCompare', discounts: 'pDiscounts', trend: 'pTrend', cost: 'pCost', agent: 'pAgent', qa: 'pQa', db: 'pDb', users: 'pUsers', inquiries: 'pInquiries', 'admin-inquiries': 'pAdminInq' };
 function render() {
   chartBase();
   const v = state.view, pg = PAGES[v];
@@ -413,6 +413,8 @@ function render() {
 }
 function route() {
   const full = location.hash.slice(1), h = full.split('/')[0];          // #catalog/gpu/H100 → 보기 'catalog' + 하위 경로
+  if(h==='qa'){location.replace('#data/quality');return;}
+  if(h==='compare'){const suffix=full.slice('compare'.length);location.replace(suffix?'#catalog/gpu'+suffix:'#catalog');return;}
   const prev = state.view, prevFull = state.hashFull;
   state.view = VIEWS.includes(h) && (isAdmin() || !ADMIN_VIEWS.includes(h)) ? h : 'home';
   state.hashFull = full;
@@ -431,7 +433,7 @@ function wire() {
     try {
       state.cost = null; state.bc.a = null; state.noti = null;
       let rr = null; try { rr = await api('/api/rates/refresh', {}); } catch (e) { /* 금리 테이블 미적용 등 — 화면 갱신은 계속 */ }
-      await loadMeta(); await Promise.all([loadNoti().catch(() => {}), loadFavs()]);
+      await loadMeta(); await loadNoti().catch(() => {});
       await render(); toast(tr('refreshed', $('#sLast').textContent));
       const bad = rr && Object.entries(rr.this_refresh || {}).filter(([, v]) => v && v.ok === false);   // 이번 새로고침의 결과만
       if (bad && bad.length) toast('수출입은행 갱신 실패 — ' + bad.map(([k, v]) => `${k === 'fx' ? '환율' : '대출금리'}: ${v.error}`).join(' / '), 7000);
@@ -708,67 +710,9 @@ async function renderCompare() {
   $('#cDiscNote').textContent = chartRows.length ? (oursD != null && mk.length ? `${termL(long)} 기준: 자사 제안가 할인 ${oursD}% · 시장 사업자 할인 중앙값 ${(median(mk) * 100).toFixed(0)}% (${mk.length}곳)` : '') : '약정 가격을 공개한 사업자가 없습니다.';
 }
 
-/* 관심 사업자 */
-const STAR = on => `<svg width="15" height="15" viewBox="0 0 24 24" fill="${on ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z"/></svg>`;
-function starBtn(pid, name) {
-  if (!pid) return '';
-  const on = state.favs.has(pid);
-  return `<button type="button" class="star" data-fav="${esc(pid)}" data-name="${esc(name)}" aria-pressed="${on}" aria-label="${esc(tr(on ? 'favUnstar' : 'favStar'))}: ${esc(name)}" title="${esc(tr(on ? 'favUnstar' : 'favStar'))}">${STAR(on)}</button>`;
-}
-async function loadFavs() { try { const l = await api('/api/favorites'); state.favList = l; state.favs = new Set(l.filter(p => p.favorite).map(p => p.provider_id)); } catch (e) { /* 찜 목록은 부가 기능 */ } }
-async function toggleFav(pid, name) {
-  const on = state.favs.has(pid);
-  const r = await apiM(on ? 'DELETE' : 'PUT', '/api/favorites/' + encodeURIComponent(pid));
-  state.favs = new Set(r.favorites);
-  toast(tr(on ? 'favRemoved' : 'favAdded', name));
-}
-async function onStarClick(e) {
-  const b = e.target.closest('[data-fav]'); if (!b) return;
-  e.preventDefault(); b.disabled = true;
-  try { await toggleFav(b.dataset.fav, b.dataset.name); } catch (err) { toast(err.message, 5000); }
-  document.querySelectorAll(`[data-fav="${CSS.escape(b.dataset.fav)}"]`).forEach(x => { const on = state.favs.has(x.dataset.fav); x.setAttribute('aria-pressed', on); x.innerHTML = x.classList.contains('chip') ? favChipInner(state.favList.find(p => p.provider_id === x.dataset.fav)) : STAR(on); x.setAttribute('aria-label', `${tr(on ? 'favUnstar' : 'favStar')}: ${x.dataset.name}`); });
-  b.disabled = false;
-  if (state.view === 'favorites') renderFavorites();
-}
-const favChipInner = p => `<span class="fstar">${STAR(state.favs.has(p.provider_id))}</span>${esc(p.provider_name)}<span class="pc">${p.products}</span>`;
-const HEALTH = { SUCCESS: ['p-ok', 'hOk'], FAILED: ['p-bad', 'hFail'], PARTIAL: ['p-warn', 'hPart'] };
-async function renderFavorites() {
-  await loadFavs();
-  const list = state.favList || [];
-  $('#favChips').innerHTML = list.map(p => `<button type="button" class="chip" data-fav="${esc(p.provider_id)}" data-name="${esc(p.provider_name)}" aria-pressed="${state.favs.has(p.provider_id)}">${favChipInner(p)}</button>`).join('');
-  $('#favChips').onclick = onStarClick;
-  let d;
-  try { d = await api('/api/favorites/dashboard'); } catch (e) { errBox($('#favBody'), e); return; }
-  const P = d.providers;
-  state.favDash = P;
-  const items = P.flatMap(p => p.items.map(i => ({ ...i, provider_name: p.provider_name, provider_type: p.provider_type })));
-  const priced = items.filter(i => i.vs_market != null && i.market_n > 1), below = priced.filter(i => i.vs_market < 0).length;
-  const weekAgo = Date.now() - 7 * 86400e3, chg = items.filter(i => i.changed_at && tsMs(i.changed_at) >= weekAgo && i.prev_price_usd != null).length;
-  const issues = P.filter(p => !p.health || p.health.last_status !== 'SUCCESS' || p.items.some(i => i.stale)).length;
-  $('#favCount').innerHTML = tr('countFmt', P.length);
-  $('#favKpis').hidden = !P.length;
-  $('#favKpis').innerHTML = `
-    <div class="kpi"><div class="lbl">${tr('kFavProv')}</div><div class="v">${P.length}</div><div class="s">${P.map(p => esc(p.provider_name)).join(', ')}</div></div>
-    <div class="kpi"><div class="lbl">${tr('kFavItems')}</div><div class="v">${items.length}</div><div class="s">${[...new Set(items.map(i => i.gpu_model_name))].join(' · ')}</div></div>
-    <div class="kpi"><div class="lbl">${tr('kFavBelow')}</div><div class="v">${priced.length ? Math.round(below / priced.length * 100) + '%' : '—'}</div><div class="s">${below} / ${priced.length}</div></div>
-    <div class="kpi"><div class="lbl">${tr('kFavChg')}</div><div class="v">${chg}</div><div class="s">price_changes_log</div></div>
-    <div class="kpi ${issues ? 'warn' : ''}"><div class="lbl">${tr('kFavIssue')}</div><div class="v">${issues}</div><div class="s">${P.filter(p => p.health && p.health.last_status !== 'SUCCESS').map(p => esc(p.provider_name)).join(', ') || '—'}</div></div>`;
-  if (!P.length) { $('#favBody').innerHTML = `<div class="empty"><div class="e-ic">${STAR(false).replace('width="15" height="15"', 'width="34" height="34"')}</div><b>${tr('favEmpty')}</b><span>${tr('favEmptySub')}</span></div>`; return; }
-  const vm = v => v == null ? '<span class="muted">—</span>' : `<span class="${v < 0 ? 'vm-low' : v > 0 ? 'vm-high' : ''}">${pct(v)}</span>`;
-  const chgCell = i => i.prev_price_usd == null ? '<span class="muted">—</span>' : `${money(i.prev_price_usd)} → ${money(i.changed_to)} <span class="${i.price_delta_rate > 0 ? 'up' : 'down'}">${pct(i.price_delta_rate / 100, 2)}</span>${i.is_raw_price_changed ? '' : `<span class="sub2">${tr('favFx')}</span>`}<span class="sub2">${shortAt(i.changed_at)}</span>`;
-  $('#favBody').innerHTML = P.map(p => {
-    const h = p.health || {};
-    return `<div class="panel fav-card"><div class="ph"><div class="fh">${starBtn(p.provider_id, p.provider_name)}<h3>${esc(p.provider_name)}</h3>${typeTag(p.provider_type)}<span class="pill ${(HEALTH[h.last_status] || ['p-warn'])[0]}">${HEALTH[h.last_status] ? tr(HEALTH[h.last_status][1]) : esc(h.last_status || '—')}</span></div>
-      <div class="fmeta"><span>${tr('favLastOk')} <b class="num">${shortAt(h.last_success_at)}</b></span>${h.error_message ? `<span class="bad">${esc(h.error_message)}</span>` : ''}${p.pricing_url ? `<a href="${esc(p.pricing_url)}" target="_blank" rel="noopener">${tr('favSite')} ↗</a>` : ''}</div></div>
-      ${p.items.length ? `<div class="tw"><table class="t"><thead><tr><th>${tr('colModel')}</th><th>${tr('colProduct')}</th><th>${tr('colRegion')}</th><th>${tr('colTerm')}</th><th class="n">${tr('colPrice')}</th><th class="n">${tr('colMarket')}</th><th class="n">${tr('colVs')}</th><th>${tr('colChange')}</th><th>${tr('colCollected')}</th><th>${tr('colSrc')}</th></tr></thead><tbody>` +
-        p.items.map(i => `<tr class="${i.stale ? 'dim' : ''}"><td class="prov">${esc(i.gpu_model_name)}</td><td>${esc(i.raw_product_name)}<span class="sub2">${i.gpu_count ? i.gpu_count + ' GPU' : ''}</span></td><td>${esc(i.region || '—')}</td><td>${termL(i.contract_term)}</td>
-          <td class="n"><b>${money(i.normalized_price_usd)}</b>${i.stale ? '<span class="sub2">오래된 데이터</span>' : ''}</td><td class="n">${money(i.market_median)}<span class="sub2">n=${i.market_n ?? 0}</span></td><td class="n">${i.market_n > 1 ? vm(i.vs_market) : `<span class="muted">${tr('favSolo')}</span>`}</td>
-          <td class="num">${chgCell(i)}</td><td class="num">${shortAt(i.collected_at)}</td><td>${i.source_url ? `<a href="${esc(i.source_url)}" target="_blank" rel="noopener">원문</a>` : '—'}</td></tr>`).join('') + '</tbody></table></div>'
-        : `<div class="pb muted">${tr('favNoItems')}</div>`}
-      ${p.unavailable.length ? `<div class="fav-hidden">${tr('favHiddenL')} ${p.unavailable.length}: ${p.unavailable.map(u => `${esc(u.raw_product_name)} (${esc(u.non_calculable_reason || u.data_status)})`).join(', ')}</div>` : ''}</div>`;
-  }).join('');
-  $('#favBody').onclick = onStarClick;
-}
+// Compatibility helpers for retained table renderers; provider favorites were removed.
+function starBtn() { return ''; }
+function onStarClick() {}
 
 function askFromAnywhere(q) { if (!q) return; location.hash = '#agent'; setTimeout(() => ask(q), 50); }
 
@@ -848,9 +792,6 @@ function wireShell() {
   $('#cCsv').onclick = () => { const d = state.cmp; if (!d) return;
     downloadCSV(`gpu_compare_${d.model}_${stamp()}.csv`, ['사업자', '유형', '판매 형태', ...d.terms.flatMap(t => [termL(t) + ' (USD/GPU·시간)', termL(t) + ' 자체 약정 할인']), '최대 약정 할인'],
       d.providers.map(p => [p.provider_name, p.provider_type, SALE[p.sale][1], ...d.terms.flatMap(t => { const x = p.terms[t] || {}; return [x.price ?? x.status ?? '', x.commit_discount == null ? '' : (x.commit_discount * 100).toFixed(1) + '%']; }), p.max_commit_discount == null ? '' : (p.max_commit_discount * 100).toFixed(1) + '%'])); };
-  $('#favCsv').onclick = () => downloadCSV(`favorite_providers_${stamp()}.csv`,
-    ['사업자', '유형', '모델', '상품', '지역', '계약', 'GPU 수', '환산 단가(USD/GPU·시간)', '시장 중앙값', '시장 대비', '직전 가격', '최근 변동률', '변동 시각', '수집 시각', '오래된 데이터', '출처'],
-    (state.favDash || []).flatMap(p => p.items.map(i => [p.provider_name, p.provider_type, i.gpu_model_name, i.raw_product_name, i.region, i.contract_term, i.gpu_count, i.normalized_price_usd, i.market_median, i.vs_market == null ? '' : (i.vs_market * 100).toFixed(1) + '%', i.prev_price_usd, i.price_delta_rate == null ? '' : Number(i.price_delta_rate).toFixed(2) + '%', i.changed_at, i.collected_at, i.stale ? 'Y' : '', i.source_url])));
   $('#userCsv').onclick = () => downloadCSV(`users_${stamp()}.csv`, ['이름', '소속', '직위', '이메일', '역할', '가입', '최근 로그인', '질문', 'LLM 호출'],
     (state.users || []).map(u => [u.display_name, u.department, u.position, u.email, u.role, u.created_at, u.last_login_at, u.asks, u.llm_asks]));
 }
@@ -871,7 +812,6 @@ async function boot() {
       $('#exQs').innerHTML = examples.map(x => `<button type="button" class="qbtn" data-q="${esc(x)}">${esc(x)}</button>`).join('');
     }
     loadNoti().catch(() => {});
-    await loadFavs();
     await route();
     $('#loader').remove();
   } catch (e) {

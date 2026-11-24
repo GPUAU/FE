@@ -68,7 +68,6 @@ async function renderHome() {
     <section class="home-support" aria-labelledby="homeSupportTitle"><div class="home-support-intro"><p class="eyebrow">WORKSPACE SUPPORT</p><h2 id="homeSupportTitle">리서치부터 의사결정까지.</h2><p>확인한 가격을 업무의 다음 단계로 연결하세요.</p></div><div class="home-support-links">${[
       ['#cost', '원가·제안가', '원가 구성과 손익분기점 확인'],
       ['#bizcase', '사업성 시나리오', '입력 가정별 투자 결과 비교'],
-      ['#favorites', '관심 사업자', '관심 있는 사업자 모아 보기'],
       ['#inquiries', '문의·지원', '공유 문의와 답변 확인']
     ].map(([href, title, description]) => `<a href="${href}"><span><b>${title}</b><small>${description}</small></span>${homeIcon('arrow-up-right')}</a>`).join('')}</div></section>`;
   state.homeEvidence = refrows;

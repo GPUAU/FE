@@ -117,7 +117,7 @@ RENDER.qa=async()=>{
 };
 
 // These modules need separate application data. Do not substitute old fixtures.
-for(const view of ['cost','bizcase','agent','favorites','inquiries']){
+for(const view of ['cost','bizcase','agent','inquiries']){
   RENDER[view]=async()=>{await marketData();$('#v-'+view).innerHTML=`<div class="mv"><div class="mv-note"><b>이번 ERD 가격 데이터 연결 범위 밖의 기능입니다.</b><p>현재가 비교·상품 상세·과거 이력·수집 상태를 사용할 수 있습니다. 이 메뉴의 원가 가정, AI, 계정 기능은 별도 백엔드 연결이 필요합니다.</p><a class="mv-btn primary" href="#dashboard">수집 가격 보기 ↗</a></div></div>`};
 }
 

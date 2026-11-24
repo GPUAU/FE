@@ -602,7 +602,7 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 </head>
 <body>
 <a class="skip-link" href="#content">본문으로 건너뛰기</a>
-<div class="workspace-bar"><div class="wrap"><span><i></i> GPU 가격 리서치</span><span><a href="/static/public-data.html" style="color:inherit;text-decoration:underline">전체 수집 데이터 열기 ↗</a> <b>· GPU 인스턴스 클라우드 · GPU 전문 클라우드</b></span></div></div>
+<div class="workspace-bar"><div class="wrap"><span><i></i> GPU 가격 리서치</span><span><a href="#data" style="color:inherit;text-decoration:underline">전체 수집 데이터 열기 ↗</a> <b>· GPU 인스턴스 클라우드 · GPU 전문 클라우드</b></span></div></div>
 <div id="loader"><div class="box"><div class="spin"></div><div id="loadmsg">파이프라인 DB에 연결하는 중…</div></div></div>
 
 <header class="gnb">
@@ -613,22 +613,22 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
       <details class="market-menu" id="marketMenu">
         <summary><span>가격 비교</span><span class="market-chevron" aria-hidden="true">⌄</span></summary>
         <div class="market-menu-panel">
-          <a href="#compare">조건별 가격 비교</a>
-          <a href="#catalog">GPU 카탈로그</a>
+          
+          <a href="#catalog">GPU 탐색·가격 비교</a>
           <a href="#dashboard">사업자 비교</a>
           
           <a href="#discounts">계약 할인</a>
           <a href="#trend">가격 이력</a>
-          <a href="#favorites">관심 사업자</a>
-          <a href="/static/public-data.html">전체 수집 데이터 ↗</a>
+          
+          <a href="#data">수집 데이터·품질 ↗</a>
         </div>
       </details>
       <a href="#cost" data-grp="cost" data-i18n="gCost"></a>
-      <a href="#bizcase" data-grp="biz" data-i18n="gBiz"></a>
-      <a href="#decision" data-grp="decision">가격 검토</a>
+      
+      
       <a href="#forecast" data-grp="forecast">시뮬레이션</a>
       <a href="#agent" data-grp="ai" data-i18n="gAi"></a>
-      <a href="#qa" data-grp="quality" data-i18n="gQuality"></a>
+      
       <a href="#users" data-grp="admin" data-admin hidden data-i18n="gAdmin"></a>
     </nav>
     <button type="button" class="portal-search" data-open-launcher aria-label="업무 메뉴 검색" aria-haspopup="dialog"><span class="bi-icon" style="--bi:url(/static/icons/search.svg)" aria-hidden="true"></span><span class="search-label">메뉴 검색</span><kbd>⌘ K</kbd></button>
@@ -648,7 +648,7 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 </header>
 
 <nav id="mobileNav" class="mobile-nav" aria-label="전체 페이지" hidden>
-<a href="#home">홈</a><a href="#compare">조건별 가격 비교</a><a href="#dashboard">가격 대시보드</a><a href="#catalog">GPU·사업자 카탈로그</a><a href="#discounts">계약기간별 할인</a><a href="#trend">추이·생애주기</a><a href="#favorites">관심 사업자</a><a href="#cost">원가·제안가</a><a href="#bizcase">사업성 시나리오</a><a href="#decision">가격 검토·가동률 비교</a><a href="#forecast">몬테카를로 시뮬레이션</a><a href="#agent">Pricing Copilot</a><a href="#qa">데이터 품질</a><a href="#inquiries">워크스페이스 문의</a>
+<a href="#home">홈</a><a href="#dashboard">가격 대시보드</a><a href="#catalog">GPU 탐색·가격 비교</a><a href="#discounts">계약기간별 할인</a><a href="#trend">추이·생애주기</a><a href="#cost">원가·제안가</a><a href="#forecast">몬테카를로 시뮬레이션</a><a href="#agent">Pricing Copilot</a><a href="#inquiries">워크스페이스 문의</a>
 </nav>
 <section class="hello" id="hello" hidden>
  <div class="wrap hero-layout">
@@ -708,22 +708,21 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
     <div class="portal-sidebar-start"><span>업무 메뉴</span><a href="#home" id="portalHomeLink"><span class="bi-icon" style="--bi:url(/static/icons/grid-3x3-gap.svg)" aria-hidden="true"></span>워크스페이스 홈</a></div>
     <nav class="snb-nav" aria-label="페이지 메뉴">
       <div class="snb-grp" data-i18n="gMarket"></div>
-      <a href="#catalog" data-i18n="pCatalog"></a>
+      <a href="#catalog">GPU 탐색·가격 비교</a>
       <a href="#dashboard" data-i18n="pDashboard"></a>
-      <a href="#compare" data-i18n="pCompare"></a>
+      
       <a href="#discounts" data-i18n="pDiscounts"></a>
       <a href="#trend" data-i18n="pTrend"></a>
-      <a href="/static/public-data.html">수집 데이터 · 전체 원본</a>
-      <a href="#favorites" data-i18n="pFavorites"></a>
-      <div class="snb-grp" data-i18n="gCost"></div>
+      <a href="#data">수집 데이터 · 전체 원본</a>
+      
+      <div class="snb-grp">원가·가격 시뮬레이션</div>
       <a href="#cost" data-i18n="pCost"></a>
-      <div class="snb-grp" data-i18n="gBiz"></div>
-      <a href="#bizcase" data-i18n="pBizcase"></a>
-      <a href="#decision">가격 검토·가동률 비교</a><a href="#forecast">몬테카를로 시뮬레이션</a>
+      
+      <a href="#forecast">몬테카를로 시뮬레이션</a>
       <div class="snb-grp" data-i18n="gAi"></div>
       <a href="#agent" data-i18n="pAgent"></a>
-      <div class="snb-grp" data-i18n="gQuality"></div>
-      <a href="#qa" data-i18n="pQa"></a>
+      
+      
       <div class="snb-grp" data-admin hidden data-i18n="gAdmin"></div>
       <a href="#users" data-admin hidden data-i18n="pUsers"></a>
       <a href="#admin-inquiries" data-admin hidden data-i18n="pAdminInq"></a>
@@ -801,12 +800,6 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
       <div class="pb"><div class="chartbox" id="cDiscBox"><canvas id="cDiscChart" role="img" aria-label="사업자별 약정 할인율"></canvas></div><div class="muted" id="cDiscNote" style="margin-top:6px"></div></div></div>
   </section>
 
-  <section class="view" id="v-favorites" hidden>
-    <div class="panel fav-pick"><div class="ph"><h3 data-i18n="favPickTitle"></h3><span class="muted" data-i18n="favPickHint"></span></div><div class="pb"><div class="chips" id="favChips"></div></div></div>
-    <div class="kpis" id="favKpis"></div>
-    <div class="listbar"><div class="count" id="favCount"></div><div class="listbtns"><button class="btn sm" type="button" id="favCsv" data-i18n="downloadAll"></button></div></div>
-    <div id="favBody"></div>
-  </section>
 
   <section class="view" id="v-trend" hidden>
     
@@ -947,22 +940,22 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
  <ol class="portal-guide-steps"><li><span>01</span><div><h3>비교 조건을 맞추세요.</h3><p>같은 GPU 모델이어도 GPU 수·메모리·지역·지원 조건이 다를 수 있습니다. 온디맨드, 스팟, 약정 가격을 구분해 선택하세요.</p></div></li><li><span>02</span><div><h3>단위와 표본을 함께 읽으세요.</h3><p>환산 단가는 GPU 1장·1시간 기준입니다. GPU당 원본 가격은 GPU 수로 다시 나누지 않습니다. 사업자가 적으면 시장 대표가격으로 보기 어렵습니다.</p></div></li><li><span>03</span><div><h3>‘근거 보기’에서 원문을 확인하세요.</h3><p>원본 금액·환산식·환율과 수집 시각을 확인하세요. 오래된 관측값은 현재 견적과 다를 수 있으며, 수집 실패의 직전 값은 유효 가격 통계에서 제외합니다.</p></div></li></ol>
  <div class="portal-guide-note">가격 비교는 공개 피드의 관측값입니다. GPU당 단가와 실제 상품의 GPU 수를 구분하세요. 원가·사업성 결과는 별도 입력 가정에 따른 계산값입니다.</div></div>
 </dialog>
-<footer class="app-footer wrap"><span>SKALA · GPU Market Intelligence</span><span>공개 가격 비교 · 출처 기반 판단 · USD/GPU·시간</span><a href="#qa">데이터 품질 확인 ↗</a></footer>
+<footer class="app-footer wrap"><span>SKALA · GPU Market Intelligence</span><span>공개 가격 비교 · 출처 기반 판단 · USD/GPU·시간</span><a href="#data/quality">수집 데이터·품질 확인 ↗</a></footer>
 <div id="toast" aria-live="polite"></div>
 
 <script src="/static/vendor/chart.umd.min.js"></script>
 <script src="/static/biz.js?v=20261109-sk5"></script>
-<script src="/static/home.js?v=20261107-v3-4"></script>
+<script src="/static/home.js?v=restore-inquiries1124"></script>
 <script src="/static/disc.js"></script>
 <script src="/static/cat.js?v=20261106-4"></script>
 <script src="/static/catalog-list.js?v=20261104-1"></script>
-<script src="/static/app.js?v=merge1123"></script>
+<script src="/static/app.js?v=data-quality1124"></script>
 <script src="/static/redesign.js?v=20261107-v2-4"></script>
-<script src="/static/workspace-v2.js?v=qa1124"></script>
-<script src="/static/portal-v3.js?v=20261109-sk2"></script>
-<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=merge1123"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=contracts1124"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/fx-header.js?v=header1124"></script><script src="/static/requirements-v02.js?v=hints1124"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=dc1124"></script><script src="/static/calculator-ui.js?v=missing1124c"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=merge1123"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
+<script src="/static/workspace-v2.js?v=restore-inquiries1124"></script>
+<script src="/static/portal-v3.js?v=data-quality1124"></script>
+<script src="/static/pair-logic.js?v=20261109"></script><script src="/static/provider-pairs.js?v=20261109"></script><script src="/static/market-logic.js?v=20261109-final"></script><script src="/static/market-erd.js?v=merge1123"></script><script src="/static/sk-analysis-bridge.js?v=20261109-sk5"></script><script src="/static/erd-preview.js?v=restore-inquiries1124"></script><script src="/static/v02-calculations.js?v=fix1119"></script><script src="/static/fx-display.js?v=fx1119"></script><script src="/static/fx-header.js?v=header1124"></script><script src="/static/requirements-v02.js?v=hints1124"></script><script src="/static/decision-logic.js?v=pr2-review"></script><script src="/static/spring-analysis.js?v=dc1124"></script><script src="/static/calculator-ui.js?v=missing1124c"></script><script src="/static/comparison-summary.js?v=reference1119"></script><script src="/static/comparison-v02.js?v=single-discovery1124"></script><script defer src="/static/vendor/sk-ui.js?v=20261109-sk5"></script>
 <script src="/static/research.js?v=fx1119"></script>
-<script src="/static/signature.js?v=merge1123"></script><script src="/static/spring-legacy-bridge.js?v=merge1123"></script><script src="/static/home-overview.js?v=merge1123"></script><script src="/static/research-workspace.js?v=merge1123"></script><script src="/static/quality-ui.js?v=be167655a"></script><script src="/static/backend-quality.js?v=be167655a"></script>
+<script src="/static/signature.js?v=merge1123"></script><script src="/static/spring-legacy-bridge.js?v=merge1123"></script><script src="/static/home-overview.js?v=merge1123"></script><script src="/static/research-workspace.js?v=single-discovery1124"></script><script src="/static/quality-ui.js?v=data-quality1124"></script><script src="/static/backend-quality.js?v=data-quality1124"></script>
 <script src="/static/spring-changes-ui.js?v=spring-main19"></script>
 <link rel="stylesheet" href="/static/montecarlo.css?v=pm1119">
 <script src="/static/montecarlo.js?v=qa1124"></script>
@@ -970,18 +963,21 @@ body.is-home .layout{grid-template-columns:minmax(0,1fr)}
 <script src="/static/decision-ui.js?v=review1119"></script>
 <script src="/static/spring-copilot.js?v=mini-chat1124"></script>
 <link rel="stylesheet" href="/static/sk-color-system.css?v=20261119-clean3">
-<script src="/static/unified-nav.js?v=20261123-1"></script>
-<script src="/static/workspace-sidebar.js?v=sk1123"></script>
+<script src="/static/unified-nav.js?v=remove-favorites1124"></script>
+<script src="/static/workspace-sidebar.js?v=data-quality1124"></script>
 <script src="/static/product-polish.js?v=all1123"></script>
 <script src="/static/sk-typography.js?v=sk1123"></script>
 <link rel="stylesheet" href="/static/corporate-workspace.css?v=footer-width1124">
-<link rel="stylesheet" href="/static/market-alerts.css?v=demo1123">
-<script src="/static/market-alerts.js?v=demo1123"></script>
 <link rel="stylesheet" href="/static/fx-header.css?v=center1124">
 <link rel="stylesheet" href="/static/calculator-input-hints.css?v=assets1124">
 <link rel="stylesheet" href="/static/agent-launcher.css?v=mini-chat1124">
 <script src="/static/agent-launcher.js?v=mini-chat1124"></script>
 <link rel="stylesheet" href="/static/data-center-cost.css?v=logic1124"><link rel="stylesheet" href="/static/bill-import.css?v=missing1124c">
 <script src="/static/data-center-launcher.js?v=logic1124"></script>
+<link rel="stylesheet" href="/static/gpu-explorer.css?v=single-discovery1124">
+<script src="/static/gpu-explorer.js?v=single-discovery1124"></script>
+<link rel="stylesheet" href="/static/collected-workspace.css?v=data-quality1124">
+<script src="/static/collected-data.js?v=data-header1124"></script>
+<script src="/static/collected-workspace.js?v=data-quality1124"></script>
 </body>
 </html>

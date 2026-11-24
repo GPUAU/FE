@@ -1,0 +1,39 @@
+/* One discovery flow, with filters and comparisons inside product details. */
+#gpuExplorer[hidden]{display:none!important}
+html body.gpu-explorer #gpuExplorer{order:-1;min-width:0;font-family:"Pretendard Variable",Pretendard,system-ui,sans-serif}
+.gx-hero{position:relative;isolation:isolate;box-sizing:border-box;margin:0 calc(-1 * var(--cw-gutter,40px)) 32px;padding:36px var(--cw-gutter,40px) 38px;background:#171d23;color:#fff;overflow:hidden}
+.gx-hero:before{content:'';position:absolute;inset:0;z-index:-2;background:url('/static/img/gpu-datacenter-hero.jpg') 76% 48%/cover no-repeat;opacity:.65}
+.gx-hero:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(90deg,#11171ef2 15%,#11171eb3 58%,#11171e25)}
+.gx-hero .gx-eyebrow{display:flex;align-items:center;gap:12px;font-size:14px;margin:0 0 14px;color:#e9ebed;letter-spacing:.045em}
+.gx-eyebrow:before{content:'';width:25px;height:2px;background:#f52c48}
+.gx-hero h1{font-size:clamp(28px,3vw,42px);font-weight:400;line-height:1.35;letter-spacing:-.045em;margin:0 0 13px;color:#fff}
+.gx-hero h1 span{padding:0 .13em;color:#ff5067}
+.gx-hero>p:last-child{font-size:16px;line-height:1.75;font-weight:300;margin:0;color:#e4e6e9}
+html body.gpu-explorer:not(.gpu-explorer-detail) #v-catalog>.cp-page>.cp-hero{display:none!important}
+html body.gpu-explorer #portalNext{display:none!important}
+html body.gpu-explorer-detail .gx-model-detail>.rw-back{display:inline-flex;margin:20px 0;font-size:14px;color:#555d68;min-height:30px;align-items:center}
+.gx-model-meta{display:flex;gap:12px;margin-top:12px;color:#d9dfe7;font-size:14px;line-height:1.6}
+.gx-model-meta span+span{border-left:1px solid #ffffff45;padding-left:12px}
+html body.workspace-sidebar .gx-detail-prices .cp-filterbar{grid-template-columns:minmax(180px,1.7fr) repeat(5,minmax(100px,1fr));gap:12px}
+html body.workspace-sidebar .gx-detail-prices .cp-advanced{margin-top:16px}
+html body.workspace-sidebar .gx-detail-prices .cp-advanced>summary{position:static;min-height:38px;font-size:14px}
+html body.workspace-sidebar .gx-detail-prices .cp-advanced .cp-modebar{padding:0 0 16px;margin:0}
+html body.workspace-sidebar .gx-detail-prices .cp-explorer{margin-bottom:18px;padding-bottom:8px}
+html body.workspace-sidebar .gx-detail-prices .cp-explorer-head{margin-bottom:18px}
+html body.workspace-sidebar .gx-detail-prices .cp-explorer-head .cp-reset{font-size:14px;min-height:40px;padding:8px}
+html body.workspace-sidebar .gx-detail-prices .cp-context{margin-bottom:20px;font-size:14px}
+html body.workspace-sidebar .gx-detail-prices details.rw-comparison-graph{border:1px solid #e0e3e8;padding:0 20px;margin:0 0 28px}
+.gx-detail-prices details.rw-comparison-graph>summary{cursor:pointer;min-height:52px;display:flex;align-items:center;gap:10px;font-size:15px;color:#525b69;list-style:none}
+.gx-detail-prices details.rw-comparison-graph>summary:before{content:'+';font-size:20px;color:#ce1d39}
+.gx-detail-prices details.rw-comparison-graph[open]>summary:before{content:'−'}
+.gx-detail-prices details.rw-comparison-graph>summary::-webkit-details-marker{display:none}
+.gx-detail-prices details.rw-comparison-graph .rw-chart-card{border:0;margin-top:8px;padding:0}
+.gx-detail-prices details.rw-comparison-graph .rw-chart-card h2{font-size:20px}
+.gx-detail-prices .cp-results-head h2{font-size:25px}
+.gpu-explorer-detail .rw-catalog-filters{grid-template-columns:minmax(180px,1.7fr) repeat(5,minmax(100px,1fr))}
+.gpu-explorer a:focus-visible,.gx-detail-prices summary:focus-visible{outline:2px solid #df1b36;outline-offset:3px}
+@media(max-width:1250px){html body.workspace-sidebar .gx-detail-prices .cp-filterbar,.gpu-explorer-detail .rw-catalog-filters{grid-template-columns:repeat(3,minmax(0,1fr))}html body.workspace-sidebar .gx-detail-prices .cp-search{grid-column:auto}}
+@media(max-width:860px){html body.workspace-sidebar .gx-model-detail .rw-catalog-top{grid-template-columns:1fr}.gx-hero{padding-block:28px}}
+@media(max-width:580px){html body.workspace-sidebar .gx-detail-prices .cp-filterbar,.gpu-explorer-detail .rw-catalog-filters{grid-template-columns:repeat(2,minmax(0,1fr))}.gx-model-meta{flex-wrap:wrap}.gx-hero h1{font-size:28px}html body.workspace-sidebar .gx-detail-prices .cp-search{grid-column:1/-1}}
+
+html body.workspace-sidebar .gx-model-detail .rw-catalog-top .cp-hero>p:not(.cp-eyebrow){color:#d7dde4;font-size:15px;line-height:1.8;max-width:440px}

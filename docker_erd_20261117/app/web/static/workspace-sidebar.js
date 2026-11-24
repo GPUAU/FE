@@ -3,15 +3,12 @@
  'use strict';
  const standalone=location.pathname.endsWith('/public-data.html')||location.pathname.replace(/\/$/,'')==='/public-data';
  const groups=[
-  ['시세 분석','bar-chart-line',[['compare','조건별 가격 비교'],['catalog','GPU 카탈로그'],['dashboard','사업자 비교'],['discounts','계약 할인'],['trend','가격 이력'],['favorites','관심 사업자'],['data','전체 수집 데이터']]],
-  ['원가','calculator',[['cost','원가·제안가']]],
-  ['사업성','graph-up-arrow',[['bizcase','사업성 시나리오'],['decision','가격 검토·가동률 비교'],['forecast','몬테카를로 시뮬레이션']]],
+  ['시세 분석','bar-chart-line',[['catalog','GPU 탐색·가격 비교'],['dashboard','사업자 비교'],['discounts','계약 할인'],['trend','가격 이력'],['data','수집 데이터·품질']]],
+  ['원가·가격 시뮬레이션','calculator',[['cost','원가·제안가'],['forecast','몬테카를로 시뮬레이션']]],
   ['AI 질의','chat-square-text',[['agent','Pricing Copilot']]],
-  ['품질','shield-check',[['qa','데이터 품질']]],
-  ['문의','folder2-open',[['inquiries','문의 내역']]]
  ];
  const icon=name=>`<img src="/static/icons/${name}.svg" alt="" width="18" height="18">`;
- const href=id=>id==='data'?'/static/public-data.html':(standalone?'/':'')+'#'+id;
+ const href=id=>(standalone?'/':'')+'#'+id;
  const link=([id,title])=>`<a href="${href(id)}" data-ws-route="${id}">${title}</a>`;
  document.body.classList.add('workspace-sidebar');
  if(standalone)document.body.classList.add('workspace-data');
@@ -26,6 +23,6 @@
  backdrop.onclick=()=>close(true);
  aside.addEventListener('click',e=>{if(e.target.closest('a'))close();});
  document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.body.classList.contains('ws-menu-open'))close(true);});
- function sync(){const route=standalone?'data':location.hash.slice(1).split('/')[0]||'home';aside.querySelectorAll('[data-ws-route]').forEach(a=>{const current=a.dataset.wsRoute===route;if(current){a.setAttribute('aria-current','page');const group=a.closest('details');if(group)group.open=true;}else a.removeAttribute('aria-current');});close();}
+ function sync(){const route=standalone?'data':location.hash.slice(1).split('/')[0]||'home';aside.querySelectorAll('[data-ws-route]').forEach(a=>{const current=a.dataset.wsRoute===(route==='compare'?'catalog':route);if(current){a.setAttribute('aria-current','page');const group=a.closest('details');if(group)group.open=true;}else a.removeAttribute('aria-current');});close();}
  window.addEventListener('hashchange',sync);sync();
 })();
