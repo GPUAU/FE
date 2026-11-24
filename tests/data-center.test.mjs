@@ -38,7 +38,7 @@ test('linked and independent power modes do not apply paid utilization twice',()
 });
 test('report mode and discount-rate mode never mix hidden capital assumptions',()=>{
  const i={...reportDefaults(),serverYears:3,serverResidual:100000};
- assert.equal(dataCenterPayload(i).server.years,5);assert.equal(dataCenterPayload(i).server.residualUsd,'0');
+ assert.throws(()=>dataCenterPayload(i),/사용자 할인율/);
  assert.equal(dataCenterPayload({...i,capitalMethod:'DISCOUNT_RATE'}).server.years,3);
  assert.throws(()=>dataCenterPayload({...reportDefaults(),gpuCount:2.5}),/정수/);
  assert.throws(()=>dataCenterPayload({...reportDefaults(),serverCapex:''}),/빈 입력/);

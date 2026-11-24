@@ -1,4 +1,5 @@
-import {reportDefaults,simulateDataCenter,utilizationScenarios,safeSource} from './data-center-model.mjs?v=dc1124';
+import {transitionForEdit,renderAssumptions,renderAssumptionOverview,renderReasoning} from './data-center-evidence.mjs?v=logic1124';
+import {reportDefaults,simulateDataCenter,utilizationScenarios,safeSource} from './data-center-model.mjs?v=logic1124';
 import {bindMarketScope} from './spring-cost.mjs?v=assets1124';
 const esc=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=2)=>Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d});
@@ -8,16 +9,18 @@ const itemNames={SERVER:'서버·GPU',NETWORK:'네트워크',FACILITY:'시설·�
 
 export async function renderDataCenter({host,api,request,saved,onEdit,isActive,openLegacy}) {
   const s={...reportDefaults(),...saved};
+  const notes={...(s.assumptionNotes||{})};
   const input=(key,label,note='',step='any')=>`<label>${label}<input type="number" data-dc="${key}" step="${step}" value="${esc(s[key])}" aria-label="${label}">${note?`<small>${note}</small>`:''}</label>`;
   const rows=[['server','서버·GPU','GPU·CPU·메모리 등 서버 취득비'],['network','네트워크','데이터센터 네트워크 투자비'],['facility','시설·전력·냉각·기타','건물 및 전력·냉각 인프라를 포함한 통합 투자비']];
   host.innerHTML=`<div class="mv dc-workspace">
   <div class="dc-intro"><div><span class="dc-eyebrow">데이터센터 운영자 관점</span><h2>원가에서 판매가격까지</h2><p>센터 규모와 투자·운영비로 GPU 시간당 원가를 계산하고, 목표 마진과 경쟁사 공개 가격을 비교합니다.</p></div><button type="button" class="mv-btn" data-reset>보고서 1GW 기준으로 초기화</button></div>
   <p class="dc-provenance" data-provenance>출발점: 미래에셋증권 「AI Factory의 경제학」(2026-05-19), 14~16쪽 · 보고서의 분석 가정이며 실측·견적값이 아닙니다.</p>
-  <form data-dc-form novalidate>
+  <div data-assumption-overview></div><form data-dc-form novalidate>
+  <section class="dc-section dc-assumption-section"><h3>원가 산정 가정과 근거</h3><p>보고서의 가정, 보고서에서 계산한 값, 사용자 설정을 구분합니다. 아래에서 출발값과 현재 값을 비교하고 선택 이유를 남길 수 있습니다.</p><label>검토 목적·보고 메모<textarea data-assumption-note="scenario" rows="2" maxlength="2000" placeholder="예: 가동률 70%에서 GPU 판매가격 검토">${esc(notes.scenario||'')}</textarea></label><details><summary>가정별 출처·적용 이유와 담당자 검토 근거</summary><div data-assumption-table></div></details><p data-mode-notice role="status" class="dc-mode-notice">모든 숫자 칸을 직접 수정할 수 있습니다. 내용연수·잔존가치·자본비용률을 바꾸면 사용자 할인율 계산으로, 전력 부하율을 바꾸면 별도 입력으로 전환합니다.</p></section>
   <section class="dc-section"><h3>데이터센터 규모와 가동</h3><div class="dc-fields">
     ${input('gpuCount','전체 GPU 수','센터 전체 보유 수량','1')}${input('gpusPerRack','랙당 GPU 수','보고서: NVL72 기준 72개','1')}${input('rackPowerKw','랙당 IT 전력 (kW)','보고서: 120 kW')}${input('pue','PUE','보고서: 1.14')}${input('utilization','유료 가동률 (%)','실제로 판매되는 GPU 시간 비율')}
   </div><div class="dc-capacity" data-capacity></div><p class="dc-small">GPU 수를 바꿔도 아래 투자비·기타 운영비는 자동으로 비례 변경하지 않습니다. 다른 GPU 모델이나 규모에는 해당 장비·시설의 비용 가정을 입력하세요.</p></section>
-  <section class="dc-section"><h3>초기 투자비 · CAPEX</h3><div class="dc-method"><label>연간 자본회수비용 산정<select data-dc="capitalMethod"><option value="REPORT_FACTORS" ${s.capitalMethod==='REPORT_FACTORS'?'selected':''}>보고서의 연간 비용 배분계수 적용</option><option value="DISCOUNT_RATE" ${s.capitalMethod==='DISCOUNT_RATE'?'selected':''}>내용연수·잔존가치·할인율로 계산</option></select></label>${input('annualDiscountRate','연 자본비용률 (%)','8%는 사용자 계산용 예시 · 보고서 모드에서는 미사용')}</div>
+  <section class="dc-section"><h3>초기 투자비 · CAPEX</h3><div class="dc-method"><label>연간 자본회수비용 산정<select data-dc="capitalMethod"><option value="REPORT_FACTORS" ${s.capitalMethod==='REPORT_FACTORS'?'selected':''}>보고서의 연간 비용 배분계수 적용</option><option value="DISCOUNT_RATE" ${s.capitalMethod==='DISCOUNT_RATE'?'selected':''}>내용연수·잔존가치·할인율로 계산</option></select></label>${input('annualDiscountRate','연 자본비용률 (%)','보고서 모드에서는 미사용 · 직접 수정하면 할인율 계산으로 전환')}</div>
   <div class="mv-tablebox" tabindex="0" role="region" aria-label="데이터센터 초기 투자비"><table class="mv-table dc-capex"><thead><tr><th>투자 항목</th><th>취득비 (USD)</th><th>내용연수 (년)</th><th>종료 잔존가치 (USD)</th></tr></thead><tbody>${rows.map(([key,label,note])=>`<tr><td><b>${label}</b><small>${note}</small></td><td>${input(key+'Capex',label+' 취득비')}</td><td>${input(key+'Years',label+' 내용연수','','1')}</td><td>${input(key+'Residual',label+' 잔존가치')}</td></tr>`).join('')}</tbody></table></div>
   <p class="dc-small" data-capital-note></p></section>
   <section class="dc-section"><h3>연간 운영비 · OPEX</h3><div class="dc-fields">
@@ -39,25 +42,36 @@ export async function renderDataCenter({host,api,request,saved,onEdit,isActive,o
   <details class="dc-section"><summary>출처와 계산 기준</summary><p>사용자 제공 보고서: 미래에셋증권 리서치센터 한종목, 「AI Factory의 경제학」, 2026-05-19, 표 3~5(14~16쪽). 보고서 모드는 초기 투자비 380억 달러, 연 자본회수비용 76억 달러, 연 운영비 9억 달러를 재현합니다. IT 5년·시설 14년은 이 분석의 가정입니다.</p><p>보고서 모드의 자본회수계수는 각 항목의 보고서 연간 비용 ÷ 취득비로 계산합니다. 서버·네트워크 약 24%, 시설 약 11.51%이며 하나의 공통 할인율로 환산한 값이 아닙니다. 잔존가치는 0으로 둡니다. 취득비를 변경하면 같은 계수로 연간화합니다.</p><p>할인율 모드: 자산별 (취득비 − 잔존가치 현재가치) × CRF를 합산합니다. 정액 감가상각비는 별도 참고값이며 자본회수비용에 중복 가산하지 않습니다. 서로 다른 자산의 교체 시점·세금·운전자본을 반영한 IRR 계산은 포함하지 않습니다.</p><button type="button" class="mv-btn" data-legacy>기존 세부 원가 입력 열기</button></details></div>`;
   const form=host.querySelector('[data-dc-form]'),out=host.querySelector('[data-dc-result]');
   const field=k=>form.querySelector(`[data-dc="${k}"]`);
-  const read=()=>Object.fromEntries([...form.querySelectorAll('[data-dc]')].map(el=>[el.dataset.dc,el.type==='number'?(el.value===''?null:Number(el.value)):el.value]));
+  const read=()=>({...Object.fromEntries([...form.querySelectorAll('[data-dc]')].map(el=>[el.dataset.dc,el.type==='number'?(el.value===''?null:Number(el.value)):el.value])),assumptionNotes:{...notes}});
   let revision=0,loading=false;
   const sync=()=>{
     const report=field('capitalMethod').value==='REPORT_FACTORS';
-    field('annualDiscountRate').disabled=report;
-    for(const [key,years] of [['server',5],['network',5],['facility',14]]) {
-      for(const suffix of ['Years','Residual']) field(key+suffix).disabled=report;
-      if(report){field(key+'Years').value=years;field(key+'Residual').value=0;}
-    }
-    const linked=field('powerMode').value==='linked';field('powerLoadFraction').disabled=linked;
+    const linked=field('powerMode').value==='linked';
     if(linked)field('powerLoadFraction').value=field('utilization').value;
     const x=read(),racks=x.gpusPerRack>0?x.gpuCount/x.gpusPerRack:NaN,it=racks*x.rackPowerKw/1000;
     host.querySelector('[data-capacity]').textContent=Number.isFinite(it)&&it>0?`IT 부하 ${num(it)} MW · 설계 수전 부하 ${num(it*x.pue)} MW · 등가 랙 ${num(racks)}개 (정수 설치 시 최소 ${Math.ceil(racks).toLocaleString()}개)`:'GPU 수와 랙 구성을 입력하세요.';
     const power=it*1000*x.pue*x.powerLoadFraction/100*8760*x.electricityUsdPerKwh;
     host.querySelector('[data-opex]').textContent=Number.isFinite(power)?`연 전기료 ${money(power)} + 기타 운영비 ${money(x.otherAnnualOpexUsd)} = 연 운영비 ${money(power+Number(x.otherAnnualOpexUsd))}`:'전력 가정을 확인하세요.';
-    host.querySelector('[data-capital-note]').textContent=report?'보고서의 연간 비용 배분계수를 적용합니다. 내용연수·잔존가치를 바꾸려면 위에서 할인율 계산을 선택하세요.':'입력한 자산별 내용연수·잔존가치와 공통 자본비용률로 연 자본회수비용을 계산합니다.';
+    host.querySelector('[data-capital-note]').textContent=report?'보고서의 연간 비용 배분계수를 적용합니다. 내용연수·잔존가치·자본비용률을 직접 수정하면 사용자 할인율 계산으로 자동 전환합니다.':'입력한 자산별 내용연수·잔존가치와 공통 자본비용률로 연 자본회수비용을 계산합니다.';
   };
-  const edit=()=>{revision++;sync();onEdit(read());out.textContent='가정이 변경되었습니다. 다시 계산하세요.';out.dataset.state='dirty';host.querySelector('[data-provenance]').textContent='보고서에서 출발한 사용자 편집 시나리오 · 변경값은 보고서 원문 수치와 다를 수 있습니다.';};
-  form.addEventListener('input',edit);form.addEventListener('change',edit);sync();
+  const refreshEvidence=()=>{
+    host.querySelector('[data-assumption-overview]').innerHTML=renderAssumptionOverview(read());
+    host.querySelector('[data-assumption-table]').innerHTML=renderAssumptions(read());
+  };
+  const edit=event=>{
+    revision++;
+    const noteKey=event.target.dataset?.assumptionNote;
+    if(noteKey) notes[noteKey]=event.target.value;
+    else {
+      const {patch,message}=transitionForEdit(read(),event.target.dataset?.dc||'');
+      for(const [key,value] of Object.entries(patch))field(key).value=value;
+      if(message)host.querySelector('[data-mode-notice]').textContent=message;
+      sync();refreshEvidence();
+    }
+    onEdit(read());out.textContent='가정 또는 검토 근거가 변경되었습니다. 다시 계산하세요.';out.dataset.state='dirty';
+    host.querySelector('[data-provenance]').textContent='보고서에서 출발한 사용자 편집 시나리오 · 각 값의 출처와 적용 여부는 원가 산정 가정과 근거에서 확인하세요.';
+  };
+  form.addEventListener('input',edit);form.addEventListener('change',edit);sync();refreshEvidence();
   host.querySelector('[data-reset]').onclick=()=>{onEdit(null);renderDataCenter({host,api,request,saved:null,onEdit,isActive,openLegacy});};
   host.querySelector('[data-legacy]').onclick=openLegacy;
   form.onsubmit=async event=>{
@@ -67,6 +81,11 @@ export async function renderDataCenter({host,api,request,saved,onEdit,isActive,o
       const result=await simulateDataCenter(request,values);
       if(!form.isConnected||!isActive()||ticket!==revision)return;
       out.innerHTML=renderResult(result,values,providers);out.dataset.state='valid';
+      out.querySelector('[data-copy-report]').onclick=async()=>{
+        const area=out.querySelector('[data-report-text]'),status=out.querySelector('[data-copy-status]');
+        try{await navigator.clipboard.writeText(area.value);status.textContent=' 요약을 복사했습니다.';}
+        catch{area.closest('details').open=true;area.focus();area.select();status.textContent=' 자동 복사가 제한되어 요약을 선택했습니다. 복사 단축키를 사용하세요.';}
+      };
     } catch(error){if(form.isConnected&&isActive()&&ticket===revision){out.textContent=error.message;out.dataset.state='invalid';}}
     finally{loading=false;button.disabled=false;}
   };
@@ -102,7 +121,7 @@ export function renderResult(r,i,providers=[]) {
  }
  return `<section class="dc-results"><h2>시간당 얼마에 판매해야 하는가</h2><div class="dc-result-cards">${cards.map(([label,value,note])=>`<div><span>${label}</span><strong>${value}</strong><small>${note}</small></div>`).join('')}</div>
  <p>원가 = 연 TCO ${money(r.annualTcoUsd)} ÷ 판매 가능한 ${num(r.billableGpuHours,0)} GPU·시간. 목표 판매가격은 소프트웨어 부가매출을 제외한 GPU 매출 기준입니다.</p>
- <div class="dc-section"><h3>연간 비용 구성</h3><div class="mv-tablebox" tabindex="0"><table class="mv-table"><thead><tr><th>항목</th><th>초기 투자비</th><th>연간 원가에 반영</th><th>연 정액 감가상각 · 참고</th></tr></thead><tbody>
+ ${renderReasoning(r,i)}<div class="dc-section"><h3>연간 비용 구성</h3><div class="mv-tablebox" tabindex="0"><table class="mv-table"><thead><tr><th>항목</th><th>초기 투자비</th><th>연간 원가에 반영</th><th>연 정액 감가상각 · 참고</th></tr></thead><tbody>
  ${r.assets.map(a=>`<tr><td>${itemNames[a.type]} · ${a.years}년</td><td>${money(a.capexUsd)}</td><td>${money(a.annualCapitalUsd)}</td><td>${money(a.annualDepreciationUsd)}</td></tr>`).join('')}
  <tr><td>전기료</td><td>—</td><td>${money(r.annualElectricityUsd)}</td><td>—</td></tr><tr><td>기타 운영비 · 전기료 제외</td><td>—</td><td>${money(i.otherAnnualOpexUsd)}</td><td>—</td></tr>
  <tr><td><b>합계</b></td><td>${money(r.capexUsd)}</td><td><b>${money(r.annualTcoUsd)}</b></td><td>${money(r.annualDepreciationUsd)}</td></tr></tbody></table></div><p class="dc-small">연간 원가에는 자본회수비용과 운영비를 더합니다. 오른쪽 감가상각 참고값을 다시 더하지 않습니다.</p></div>

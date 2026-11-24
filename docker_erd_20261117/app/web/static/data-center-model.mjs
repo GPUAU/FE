@@ -16,6 +16,9 @@ export function dataCenterPayload(input) {
   if(input.utilization<=0||input.utilization>100||input.targetMargin<0||input.targetMargin>=100) throw Error('유료 가동률은 0 초과~100%, 목표 매출 이익률은 0~100% 미만으로 입력하세요.');
   const fraction=k=>String(Number((Number(input[k])/100).toFixed(8)));
   const report=input.capitalMethod==='REPORT_FACTORS';
+  if(report && ['server','network','facility'].some(k=>Number(input[k+'Years'])!==(k==='facility'?14:5)||Number(input[k+'Residual'])!==0)) {
+    throw Error('변경한 내용연수·잔존가치는 사용자 할인율 계산에서 적용하세요.');
+  }
   const asset=(key,years)=>({capexUsd:String(input[key+'Capex']),years:report?years:Number(input[key+'Years']),residualUsd:report?'0':String(input[key+'Residual'])});
   return {
     gpuCount:Number(input.gpuCount),gpusPerRack:Number(input.gpusPerRack),rackPowerKw:String(input.rackPowerKw),pue:String(input.pue),
@@ -30,7 +33,7 @@ export function dataCenterPayload(input) {
 export async function simulateDataCenter(request,input) {
   const response=await request('/api/v1/data-center-simulations',dataCenterPayload(input));
   if(!response?.isSuccess||response.result?.formulaVersion!=='dc-report-1'||response.result.saved!==false) throw Error('데이터센터 계산 응답을 확인할 수 없습니다.');
-  return response.result;
+  return {...response.result,calculatedAt:response.meta?.generatedAt||new Date().toISOString()};
 }
 export function utilizationScenarios(input,result) {
   return [60,75,85].map(util=>{
