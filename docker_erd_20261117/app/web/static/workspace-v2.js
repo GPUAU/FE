@@ -40,8 +40,9 @@ function updateReadableShell(view){
   ctx.className='data-context readable-context'+(old?' aged':'');
   ctx.innerHTML=`<span class="context-label">${['cost','bizcase'].includes(view)?'시장가격 수집 시점':'DB 적재 시점'}</span><b>${esc(fullAt(at))}</b>${old?'<span class="status-chip attention">현재보다 오래된 관측값</span>':''}<span class="context-demo">${['cost','bizcase'].includes(view)?'입력 가정 기반 계산 · 시연 데이터 포함':'공개 피드 기반 가격 · 상품 조건별 참고 비교'}</span>`;
  }
- if(view==='agent'){$('#agentDesc').textContent='';}
- if(view==='dashboard'&&lang==='ko')$('#dashCsv').textContent='비교 결과 저장 ↓';
+ if(view==='agent'&&$('#agentDesc')){$('#agentDesc').textContent='';}
+ // 새 사업자 비교 화면(research-workspace.js)에는 #dashCsv가 없어 null 오류로 화면 렌더가 멈췄다
+ if(view==='dashboard'&&lang==='ko'&&$('#dashCsv'))$('#dashCsv').textContent='비교 결과 저장 ↓';
  if(previousView!==view)document.querySelectorAll('.display-settings[open]').forEach(x=>x.open=false);
 }
 function readableModelPicker(el,value,onSelect){

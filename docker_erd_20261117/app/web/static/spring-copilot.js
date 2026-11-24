@@ -1,4 +1,12 @@
 /* Use the original Copilot panel with the Spring public-price endpoint. */
+/* 출처 식별자(aws_ec2_pricing_api)를 읽을 수 있는 이름(AWS EC2 Pricing API)으로 바꾼다. */
+const COPILOT_UPPER = new Set(['aws', 'api', 'ec2', 'oci', 'gpu', 'fx', 'krw', 'usd', 'url']);
+function copilotSourceName(name) {
+  if (!name) return '출처 원문';
+  if (!/^[a-z0-9_]+$/.test(name)) return name;
+  return name.split('_').filter(Boolean)
+    .map(word => COPILOT_UPPER.has(word) ? word.toUpperCase() : word[0].toUpperCase() + word.slice(1)).join(' ');
+}
 const publicPriceExamples = [
   'B300 온디맨드 GPU당 시간 가격과 출처 알려줘',
   '미국 AWS B300 온디맨드 가격 알려줘',
@@ -57,16 +65,18 @@ async function askSpringPrice(text) {
       const time = new Date(item.collectedAt);
       const collected = item.collectedAt && !Number.isNaN(time.getTime())
         ? new Intl.DateTimeFormat('ko-KR', {
-            timeZone: 'Asia/Seoul', dateStyle: 'short', timeStyle: 'short'
+            timeZone: 'Asia/Seoul', dateStyle: 'medium', timeStyle: 'short'
           }).format(time) + ' KST'
         : '수집 시각 미확인';
       const conditions = [item.providerName, item.regionCode,
         item.gpuCount == null ? null : item.gpuCount + ' GPU'].filter(Boolean).join(' · ');
-      const price = item.priceUsdGpuHour == null ? '가격 미확보' : '$' + item.priceUsdGpuHour + ' / GPU·시간';
+      const amount = Number(item.priceUsdGpuHour);
+      const price = item.priceUsdGpuHour == null || !Number.isFinite(amount) ? '가격 미확보'
+        : '$' + amount.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2}) + ' / GPU·시간';
       const links = GpuSpringAnalysis.sourcesForResult(item, result.sources || []).flatMap(source => {
         const url = GpuSpringAnalysis.sourceLink(source.sourceUrl);
         if (!url) return [];
-        return [`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(source.sourceName || '출처 원문')}</a>`];
+        return [`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(copilotSourceName(source.sourceName))}</a>`];
       });
       return `<li><b>${esc(conditions)}</b> · ${esc(price)}<br>
         <small>${esc(collected)} · 출처 ${links.join(' · ') || '미제공'}</small></li>`;
