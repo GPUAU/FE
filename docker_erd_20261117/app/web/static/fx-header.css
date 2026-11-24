@@ -31,16 +31,18 @@ html body #headerFxPanel #v02Fx.v02-fx {
   display: block !important; width: auto; max-width: none; min-width: 0;
   margin: 0 !important; padding: 16px 18px 18px; border: 0 !important; border-radius: 0; background: #fff; box-shadow: none;
 }
-#headerFxPanel #v02Fx .fx-display-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
-#headerFxPanel #v02Fx .fx-display-title { min-width: 0; flex: 1 1 230px; }
+#headerFxPanel #v02Fx .fx-display-head { display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+#headerFxPanel #v02Fx .fx-display-title { min-width: 0; width: 100%; flex: 0 1 auto; }
 #headerFxPanel #v02Fx h2 { font-size: 21px; margin: 8px 0 6px; }
 #headerFxPanel #v02Fx .fx-display-head button { margin-left: 0; min-height: 34px; font-size: 12px; }
-#headerFxPanel #v02Fx .fx-display-status { margin-top: 12px; }
-#headerFxPanel #v02Fx .fx-display-details { padding-top: 12px; margin-top: 14px; }
-#headerFxPanel #v02Fx .fx-display-details summary { width: auto; font-size: 13px; padding-block: 6px; }
-#headerFxPanel #v02Fx .fx-display-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
-#headerFxPanel #v02Fx form { padding: 14px; }
-#headerFxPanel #v02Fx input { min-height: 40px; font-size: 14px; }
+#headerFxPanel #v02Fx .fx-display-status { margin-top: 12px; text-align: center; }
+#headerFxPanel #v02Fx .fx-display-details { box-sizing: border-box; width: 100%; padding: 12px 14px 14px; margin-top: 14px; text-align: center; }
+#headerFxPanel #v02Fx .fx-display-details summary { width: fit-content; max-width: 100%; margin-inline: auto; font-size: 13px; padding-block: 6px; }
+#headerFxPanel #v02Fx .fx-display-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; min-width: 0; }
+#headerFxPanel #v02Fx .fx-provenance { min-width: 0; text-align: center; }
+#headerFxPanel #v02Fx form { box-sizing: border-box; width: 100%; padding: 14px; text-align: center; }
+#headerFxPanel #v02Fx input { min-height: 40px; font-size: 14px; text-align: center; }
+#headerFxPanel #v02Fx .fx-form-actions { justify-content: center; }
 #headerFxPanel #v02Fx .fx-form-actions button { font-size: 12px; }
 #headerFxButton:focus-visible, #headerFxPanel button:focus-visible { outline: 2px solid #c9002b; outline-offset: 3px; }
 @media (max-width: 1100px) {
