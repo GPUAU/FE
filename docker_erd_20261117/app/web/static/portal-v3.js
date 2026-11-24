@@ -6,9 +6,7 @@ const PORTAL_ROUTES = [
  ['compare','계약 조건별 비교','온디맨드·스팟·약정 가격 비교','sliders','할인 계약'],
  ['trend','가격 추이와 관측 이력','저장된 가격과 변화 시점 확인','graph-up-arrow','과거 차트 시차 생애주기'],
  ['cost','원가·제안가 점검','입력 가정으로 손익과 제안가 계산','calculator','원가 비용 손익 마진'],
- ['bizcase','사업성 시나리오','투자·수익 가정별 시나리오 분석','graph-up-arrow','사업성 매출 손익분기'],
  ['agent','Pricing Copilot','자연어로 수집된 가격에 질문하기','chat-square-text','AI 에이아이 질문 챗봇'],
- ['qa','데이터 품질','수집·환산·답변의 검증 결과','shield-check','정확도 검증 품질'],
  ['discounts','계약기간별 할인','계약별 할인과 비교 가능 조건','sliders','할인 약정 스팟'],
  ['inquiries','워크스페이스 문의','함께 확인하는 문의와 답변','folder2-open','문의 도움 지원']
 ];
@@ -17,7 +15,7 @@ const PORTAL_NEXT = {
  dashboard:['관련 분석', ['trend','cost','agent']],
  compare:['관련 분석', ['dashboard','cost','trend']],
  trend:['관련 분석', ['dashboard','cost','agent']],
- cost:['원가와 시장가격을 함께 확인하세요.', ['dashboard','bizcase','agent']],
+ cost:['원가와 시장가격을 함께 확인하세요.', ['dashboard','trend','agent']],
  bizcase:['시나리오의 가정을 더 구체적으로.', ['cost','dashboard','trend']],
  discounts:['관련 비교', ['compare','dashboard','agent']],
  qa:['검증 결과에서 원본 근거까지.', ['dashboard','trend','agent']]

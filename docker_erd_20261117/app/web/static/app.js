@@ -413,6 +413,7 @@ function render() {
 }
 function route() {
   const full = location.hash.slice(1), h = full.split('/')[0];          // #catalog/gpu/H100 → 보기 'catalog' + 하위 경로
+  if(h==='qa'){location.replace('#data/quality');return;}
   if(h==='compare'){const suffix=full.slice('compare'.length);location.replace(suffix?'#catalog/gpu'+suffix:'#catalog');return;}
   const prev = state.view, prevFull = state.hashFull;
   state.view = VIEWS.includes(h) && (isAdmin() || !ADMIN_VIEWS.includes(h)) ? h : 'home';
