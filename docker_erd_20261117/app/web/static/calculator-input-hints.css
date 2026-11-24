@@ -14,3 +14,11 @@ html body #v02CostForm .cost-calendar-hint {
 html body #v02CostForm .cost-calendar-hint.is-empty:not(:focus-within) input { color: transparent; }
 #v02CostForm .cost-calendar-hint.is-empty:not(:focus-within) input::-webkit-datetime-edit { color: transparent; }
 html body #v-cost .cost-example-note { color: #747d89; font-size: 12px; }
+
+/* Keep the cost-entry table white, including alternating and hovered rows. */
+html body #v02CostForm .mv-table,
+html body #v02CostForm .mv-table tr,
+html body #v02CostForm .mv-table th,
+html body #v02CostForm .mv-table td {
+  background: #fff;
+}
