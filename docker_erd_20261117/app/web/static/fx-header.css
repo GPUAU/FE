@@ -1,0 +1,64 @@
+/* FX stays in the header; its existing controls open above the page. */
+html body.has-header-fx #headerFx { margin-left: auto; flex: 0 0 auto; }
+html body.workspace-sidebar.has-header-fx .gnb-in .portal-search { margin-left: 0; }
+#headerFxButton {
+  display: flex; align-items: center; gap: 8px; min-height: 38px; padding: 8px 11px;
+  border: 1px solid #e4e7ec; border-radius: 6px; background: #fff; color: #38404d;
+  font: inherit; line-height: 1.2; cursor: pointer; white-space: nowrap;
+}
+#headerFxButton:hover, #headerFxButton[aria-expanded=true] { background: #f8f9fb; border-color: #cfd4dd; }
+#headerFxButton .header-fx-pair { font-size: 11px; font-weight: 500; color: #7b8290; }
+#headerFxButton .header-fx-value { max-width: 100px; overflow: hidden; text-overflow: ellipsis; font-size: 14px; font-weight: 600; font-variant-numeric: tabular-nums; }
+#headerFxButton .header-fx-state { font-size: 10px; color: #777f8c; }
+#headerFxButton[data-state=warning] .header-fx-state,
+#headerFxButton[data-state=warning] .header-fx-value { color: #94601c; }
+#headerFxButton[data-state=manual] .header-fx-state { color: #c21836; }
+#headerFxButton .header-fx-chevron { color: #89919f; font-size: 14px; }
+#headerFxPanel {
+  position: fixed; top: var(--fx-panel-top, 78px); right: 24px; z-index: 120;
+  box-sizing: border-box; width: min(440px, calc(100vw - 24px));
+  max-height: calc(100vh - var(--fx-panel-top, 78px) - 12px);
+  max-height: calc(100dvh - var(--fx-panel-top, 78px) - 12px);
+  overflow: auto; overscroll-behavior: contain;
+  border: 1px solid #e1e5eb; border-radius: 12px; background: #fff; color: #303640;
+  box-shadow: 0 14px 42px rgb(32 39 53 / 15%);
+}
+#headerFxPanel[hidden], #headerFxButton [hidden] { display: none !important; }
+#headerFxPanel .header-fx-heading { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 18px; border-bottom: 1px solid #edf0f3; }
+#headerFxPanel .header-fx-heading h2 { margin: 0; font-size: 15px; font-weight: 600; }
+#headerFxPanel .header-fx-heading button { display: grid; place-items: center; width: 32px; height: 32px; padding: 0; border: 0; border-radius: 6px; background: #f6f7f9; color: #626b78; font: inherit; font-size: 22px; cursor: pointer; }
+html body #headerFxPanel #v02Fx.v02-fx {
+  display: block !important; width: auto; max-width: none; min-width: 0;
+  margin: 0 !important; padding: 16px 18px 18px; border: 0 !important; border-radius: 0; background: #fff; box-shadow: none;
+}
+#headerFxPanel #v02Fx .fx-display-head { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+#headerFxPanel #v02Fx .fx-display-title { min-width: 0; flex: 1 1 230px; }
+#headerFxPanel #v02Fx h2 { font-size: 21px; margin: 8px 0 6px; }
+#headerFxPanel #v02Fx .fx-display-head button { margin-left: 0; min-height: 34px; font-size: 12px; }
+#headerFxPanel #v02Fx .fx-display-status { margin-top: 12px; }
+#headerFxPanel #v02Fx .fx-display-details { padding-top: 12px; margin-top: 14px; }
+#headerFxPanel #v02Fx .fx-display-details summary { width: auto; font-size: 13px; padding-block: 6px; }
+#headerFxPanel #v02Fx .fx-display-body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 16px; }
+#headerFxPanel #v02Fx form { padding: 14px; }
+#headerFxPanel #v02Fx input { min-height: 40px; font-size: 14px; }
+#headerFxPanel #v02Fx .fx-form-actions button { font-size: 12px; }
+#headerFxButton:focus-visible, #headerFxPanel button:focus-visible { outline: 2px solid #c9002b; outline-offset: 3px; }
+@media (max-width: 1100px) {
+  html body.workspace-sidebar.has-header-fx .gnb-in { gap: 12px; }
+}
+@media (max-width: 1000px) {
+  #headerFxButton { display: grid; grid-template-columns: auto auto; gap: 3px 5px; padding: 5px 8px; min-height: 44px; }
+  #headerFxButton .header-fx-pair { grid-column: 1; grid-row: 1; font-size: 9px; }
+  #headerFxButton .header-fx-state { grid-column: 2; grid-row: 1; font-size: 9px; }
+  #headerFxButton .header-fx-value { grid-column: 1; grid-row: 2; max-width: 85px; font-size: 13px; }
+  #headerFxButton .header-fx-chevron { grid-column: 2; grid-row: 2; justify-self: end; }
+  #headerFxPanel #v02Fx input { font-size: 16px; }
+  html body.workspace-sidebar.has-header-fx .gnb-in { gap: 8px; }
+}
+@media (max-width: 420px) {
+  html body.workspace-sidebar.has-header-fx .gnb-in { gap: 6px; padding-inline: 10px !important; }
+  html body.workspace-sidebar.has-header-fx .gnb-in .logo-svc { display: none; }
+  html body.workspace-sidebar.has-header-fx .gnb-in .logo img { height: 24px; }
+  html body.workspace-sidebar.has-header-fx .gnb-in .portal-search { width: 30px; padding-inline: 5px; }
+}
+@media print { #headerFxPanel { display: none !important; } }
