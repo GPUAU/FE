@@ -3,6 +3,7 @@
 #   /static/*        → 기존 정적 파일
 #   /app/*           → 새 Vue 앱 (점진 이전)
 #   /api/v1/*        → Spring BE 프록시
+#   /agent/*         → 원가 에이전트(cost-agent) 프록시. ${AGENT_URL}, 리졸버는 NGINX_LOCAL_RESOLVERS
 #   그 밖의 /api/*    → 503 (레거시 호환 서버는 배포하지 않음)
 #   /public-data     → public-data.html
 
@@ -65,6 +66,23 @@ server {
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_connect_timeout 5s;
         proxy_read_timeout 60s;
+        add_header Cache-Control "no-store" always;
+    }
+
+    # 원가 에이전트(cost-agent, GPUAU/AI). 변수로 넘겨 요청 시점에 이름을 찾는다.
+    # 에이전트 Service가 없어도 nginx는 정상 기동하고 이 경로만 502를 돌려준다.
+    location /agent/ {
+        resolver ${NGINX_LOCAL_RESOLVERS} valid=30s ipv6=off;
+        set $agent_upstream ${AGENT_URL};
+        rewrite ^/agent/(.*)$ /$1 break;
+        proxy_pass $agent_upstream;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_connect_timeout 5s;
+        proxy_read_timeout 120s;
+        client_max_body_size 6m;
         add_header Cache-Control "no-store" always;
     }
 
