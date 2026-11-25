@@ -88,3 +88,31 @@ test('API calls go through the /agent proxy and surface errors', async () => {
   const down = async () => ({ ok: false, status: 502, json: async () => { throw new Error('x'); } });
   await assert.rejects(sendAnswer('s1', {}, down), /연결할 수 없습니다/);
 });
+
+import { renderLive, pendingSession, boardAt, WAIT_HINTS } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('pending session starts with analysis running and others waiting', () => {
+  const p = pendingSession('c.xlsx', { model_id: '29' });
+  assert.equal(p.board.length, 7);
+  assert.deepEqual(p.board.map(b => b.status), ['RUNNING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING']);
+  assert.equal(p.draft.file_name, 'c.xlsx');
+});
+
+test('replay board fills steps in order as events arrive', () => {
+  const next = { board: board.map((b, i) => ({ ...b, status: i < 3 ? 'DONE' : i === 3 ? 'WAITING' : 'PENDING', summary: i < 3 ? `s${i}` : '' })) };
+  const start = pendingSession('c.xlsx', {}).board;
+  const b1 = boardAt(start, next, { step: 'MISSING', kind: 'think' });
+  assert.equal(b1[0].status, 'DONE'); assert.equal(b1[1].status, 'RUNNING'); assert.equal(b1[2].status, 'PENDING');
+  const b2 = boardAt(b1, next, { step: 'SIMULATE', kind: 'tool' });
+  assert.deepEqual(b2.slice(0, 4).map(b => b.status), ['DONE', 'DONE', 'DONE', 'RUNNING']);
+  assert.equal(b2[2].summary, 's2');
+});
+
+test('live card shows the activity feed and rotating hint while waiting', () => {
+  const s = { ...pendingSession('c.xlsx', {}), step: 'ANALYZE' };
+  const waiting = renderLive(s, { waiting: true, hint: WAIT_HINTS.ANALYZE[1] });
+  assert.ok(waiting.includes('에이전트 작업 중') && waiting.includes('ca-live-hint') && waiting.includes('AI에 항목 분류'));
+  const feed = renderLive(s, { feed: [{ kind: 'tool', message: '분류 <b>' }, { kind: 'result', message: '완료' }] });
+  assert.ok(feed.includes('&lt;b&gt;') && feed.includes('aria-current="true"'));
+  assert.ok(!feed.includes('ca-live-hint'));
+});
