@@ -1,11 +1,16 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { renderBoard, renderQuestion, renderResult, renderSession, startSession, sendAnswer, reportUrl } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+import { renderStart, renderStepper, renderQuestion, renderResult, renderSummary, renderWorkspace, renderMarket,
+  progressOf, money, startSession, sendAnswer, reportUrl } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
 
 const board = [
-  { key: 'ANALYZE', title: '청구서 분석', status: 'DONE', summary: '총액 대조 일치 · 재분류 1회', details: [] },
-  { key: 'MISSING', title: '누락 확인', status: 'WAITING', summary: "'운영·유지보수' 확인 대기", details: ['<b>x</b>'] },
-  { key: 'ASSUMPTIONS', title: '가정값 확인', status: 'PENDING', summary: '', details: [] }
+  { key: 'ANALYZE', title: '청구서 분석', status: 'DONE', summary: '총액 대조 일치', details: [] },
+  { key: 'MISSING', title: '누락 확인', status: 'WAITING', summary: "'운영·유지보수' 확인 대기", details: [] },
+  { key: 'ASSUMPTIONS', title: '가정값 확인', status: 'PENDING', summary: '', details: [] },
+  { key: 'SIMULATE', title: '원가 계산', status: 'PENDING', summary: '', details: [] },
+  { key: 'MARKET', title: '시장 비교', status: 'PENDING', summary: '', details: [] },
+  { key: 'TERMS', title: '기간별 가격', status: 'PENDING', summary: '', details: [] },
+  { key: 'REPORT', title: '견적 근거서', status: 'PENDING', summary: '', details: [] }
 ];
 const question = {
   id: 'q1', step: 'MISSING', title: "'운영·유지보수' 비용이 청구서에 없어요", text: '다른 계약인지 알려 주세요',
@@ -13,46 +18,73 @@ const question = {
   fields: [{ name: 'amount', label: '금액', type: 'number', required: true, value: null, hint: '', options: [], show_for: ['amount'] }],
   submit_label: '확인'
 };
+const session = {
+  id: 's1', step: 'MISSING', board, question, goal: { model_id: '29', gpu_count: 32, terms_years: [3, 5] }, events: [{ kind: 'think', message: '총액 확인' }],
+  draft: { file_name: 'c.xlsx', mapper: 'llm', currency: 'KRW', period: 'MONTH', reconciliation: { matched: true },
+    cost_items: [{ item_type: 'RENT', status: 'USER_INPUT', amount: 108000000, currency: 'KRW', period: 'YEAR' },
+      { item_type: 'RACK_FACILITY', status: 'INCLUDED_IN_OTHER', included_in: 'RENT' }],
+    llm: { destination: 'OpenAI', masked: true, sent: '#NUM <x>' } },
+  assumptions: {}, final_items: []
+};
 
-test('board shows status icons, current step and escapes details', () => {
-  const html = renderBoard({ step: 'MISSING', board });
-  assert.ok(html.includes('✔') && html.includes('⏳'));
-  assert.ok(html.includes('aria-current="step"'));
-  assert.ok(html.includes('&lt;b&gt;x&lt;/b&gt;'));
+test('progress counts finished steps and finds the current step', () => {
+  const p = progressOf(session);
+  assert.equal(p.done, 1); assert.equal(p.total, 7); assert.equal(p.pct, 14); assert.equal(p.current.key, 'MISSING');
+  assert.equal(progressOf({ ...session, step: 'DONE', board: board.map(b => ({ ...b, status: 'DONE' })) }).pct, 100);
 });
 
-test('question with options and fields uses select-then-submit', () => {
-  const html = renderQuestion(question);
-  assert.ok(html.includes('data-choice="amount"') && html.includes('aria-pressed="true"'));
+test('start screen has a drop zone, optional GPU inputs and disabled start until a file is chosen', () => {
+  const html = renderStart([{ id: '29', name: 'H200' }]);
+  assert.ok(html.includes('data-ca-drop') && html.includes('data-ca-start disabled') && html.includes('H200'));
+  assert.ok(html.includes('항목명만 AI에 보냅니다'));
+});
+
+test('stepper shows 7 steps, progress bar and the current step state', () => {
+  const html = renderStepper(session);
+  assert.equal((html.match(/<li /g) || []).length, 7);
+  assert.ok(html.includes('aria-valuenow="14"') && html.includes('1/7 단계 · 14%'));
+  assert.ok(html.includes('aria-current="step"') && html.includes('확인 필요'));
+});
+
+test('question card: radio options with conditional fields, no form or submit inputs', () => {
+  const html = renderQuestion(question, session);
+  assert.ok(html.includes('STEP 2 · 누락 확인'));
+  assert.ok(html.includes('class="ca-opt" role="radio" data-choice="amount" aria-pressed="true"'));
   assert.ok(html.includes('data-show-for="amount"'));
-  assert.ok(!html.includes('<form') && !html.includes('type="submit"'));   // 계산기 form 안이라 중첩 form·submit 금지
-  assert.ok(html.includes('data-choice="amount" aria-pressed="true"'));      // 선택 후 입력
-  const simple = renderQuestion({ ...question, fields: [] });
-  assert.ok(simple.includes('data-choice="amount" data-submit'));            // 선택만 있으면 누르면 바로 답
+  assert.ok(!html.includes('<form') && !html.includes('type="submit"'));
+  const simple = renderQuestion({ ...question, fields: [] }, session);
+  assert.ok(simple.includes('data-choice="amount" data-submit'));
 });
 
-test('result shows KPIs, terms, summary and report link', () => {
-  const html = renderResult({ id: 's1', report_ready: true, simulation: { hourlyCost: '2.5', candidatePrice: '3.125' },
-    market: { count: 5, position: '시장 중앙값 대비 −10%', min: 3, max: 7 }, terms: [{ years: 3, discount_rate: 0.1, price: 2.8125 }],
-    summary: ['요약 <i>'] });
-  assert.ok(html.includes('$2.500') && html.includes('$3.125') && html.includes('3년 계약가'));
-  assert.ok(html.includes(reportUrl('s1')) && html.includes('요약 &lt;i&gt;'));
+test('summary panel shows confirmed facts and escapes the LLM disclosure', () => {
+  const html = renderSummary(session);
+  assert.ok(html.includes('AI 분류') && html.includes('1.08억 원') && html.includes('임차료·공간에 포함'));
+  assert.ok(html.includes('#NUM &lt;x&gt;'));
 });
 
-test('session view shows question, log and LLM disclosure', () => {
-  const html = renderSession({ id: 's1', step: 'MISSING', board, question, events: [{ kind: 'think', message: '총액 확인' }],
-    draft: { llm: { destination: 'OpenAI', masked: true, sent: '#NUM' } } });
-  assert.ok(html.includes('에이전트 진행 기록 (1)') && html.includes('생각') && html.includes('AI에 보낸 내용 보기'));
+test('result shows KPIs, market position marker, terms and actions', () => {
+  const done = { ...session, step: 'DONE', question: null, report_ready: true, simulation: { hourlyCost: '2.52', candidatePrice: '6.05' },
+    assumptions: { target_rate: 0.58 }, market: { count: 22, providers: 4, min: 3.99, median: 6.05, max: 10, candidate: 6.05, position: '사업자 중앙값 수준' },
+    terms: [{ years: 3, discount_rate: 0.15, price: 5.14 }], summary: ['요약'] };
+  const html = renderResult(done);
+  assert.ok(html.includes('제안가 $6.05') && html.includes('58%') && html.includes('3년 계약가'));
+  assert.ok(html.includes(reportUrl('s1')) && html.includes('data-ca-send'));
+  assert.ok(renderMarket(done.market).includes('class="ca-me"'));
+  assert.ok(renderWorkspace(done).includes('모든 단계를 마쳤습니다'));
+});
+
+test('money formatting for KRW and USD', () => {
+  assert.equal(money(108000000, 'KRW'), '1.08억 원');
+  assert.equal(money(36000000, 'KRW'), '3,600만 원');
+  assert.equal(money(216000, 'USD'), '$216,000');
 });
 
 test('API calls go through the /agent proxy and surface errors', async () => {
   const calls = [];
-  const ok = async (url, init) => { calls.push([url, init.method, init.body instanceof FormData ? [...init.body.keys()] : JSON.parse(init.body)]); return { ok: true, status: 200, json: async () => ({ id: 's1' }) }; };
+  const ok = async (url, init) => { calls.push([url, init.method]); return { ok: true, status: 200, json: async () => ({ id: 's1' }) }; };
   await startSession(new File(['x'], 'c.xlsx'), { modelId: '29', gpuCount: 32 }, ok);
-  await sendAnswer('s1', { question_id: 'q1', choice: 'amount', values: { amount: 1 } }, ok);
-  assert.deepEqual(calls[0].slice(0, 2), ['/agent/v1/agent/sessions', 'POST']);
-  assert.deepEqual(calls[0][2], ['file', 'model_id', 'gpu_count', 'terms']);
-  assert.equal(calls[1][0], '/agent/v1/agent/sessions/s1/answer');
-  const bad = async () => ({ ok: false, status: 422, json: async () => ({ detail: '금액을 숫자로 입력하세요.' }) });
-  await assert.rejects(sendAnswer('s1', {}, bad), /금액을 숫자로/);
+  await sendAnswer('s1', { question_id: 'q1' }, ok);
+  assert.deepEqual(calls, [['/agent/v1/agent/sessions', 'POST'], ['/agent/v1/agent/sessions/s1/answer', 'POST']]);
+  const down = async () => ({ ok: false, status: 502, json: async () => { throw new Error('x'); } });
+  await assert.rejects(sendAnswer('s1', {}, down), /연결할 수 없습니다/);
 });
