@@ -39,7 +39,7 @@
   async function renderAgent() {
     calculatorFrame('원가와 제안가', '청구서 한 장으로 원가부터 시장 비교, 견적 근거서까지 진행합니다.');
     const host = document.getElementById('v-cost');
-    const { mountAgentWorkspace } = await import('/static/cost-agent-ui.mjs?v=clean1125');
+    const { mountAgentWorkspace } = await import('/static/cost-agent-ui.mjs?v=step1125');
     if (state.view !== 'cost' || current() !== 'agent') return;
     let models = [];
     try { models = (await api('/api/v1/catalog'))?.result?.models || []; } catch { /* 모델 목록 없이도 시작 가능 */ }
@@ -56,7 +56,7 @@
     window.__costAgentFill = null;
     const form = document.getElementById('v02CostForm');
     if (!form) return;
-    const { fillCalculator } = await import('/static/cost-agent-ui.mjs?v=clean1125');
+    const { fillCalculator } = await import('/static/cost-agent-ui.mjs?v=step1125');
     const left = fillCalculator(form, session);
     if (typeof toast === 'function') toast(left ? `에이전트 결과를 채웠습니다. 남은 빈칸 ${left}개(빨간색)를 확인하세요.` : '에이전트 결과를 채웠습니다.', 4500);
   }
