@@ -77,12 +77,12 @@ export function renderStart(models = []) {
         <li><b>비교</b><span>원가와 제안가를 같은 GPU의 시장 공개가격과 비교합니다.</span></li>
         <li><b>근거서</b><span>가정값·근거·진행 기록을 엑셀 근거서로 내려받습니다.</span></li>
       </ol>
-      <p class="ca-privacy"><span aria-hidden="true">🔒</span> 금액·숫자·식별자는 가리고 항목명만 AI에 보냅니다. 원가 계산은 내부 원가 서버가 합니다.</p>
+      <p class="ca-privacy"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/></svg><span>금액·숫자·식별자는 가리고 항목명만 AI에 보냅니다. 원가 계산은 내부 원가 서버가 합니다.</span></p>
     </div>
     <div class="ca-card ca-start-card">
       <label class="ca-drop" data-ca-drop>
         <input type="file" accept=".xlsx,.csv" data-ca-file hidden>
-        <span class="ca-drop-icon" aria-hidden="true">⬆</span>
+        <span class="ca-drop-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 15V4m0 0-4 4m4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg></span>
         <strong>청구서를 끌어다 놓거나 클릭해서 선택</strong>
         <small>xlsx · csv · 최대 5MB · 사업자 양식 그대로</small>
         <span class="ca-file" data-ca-filename></span>
@@ -109,18 +109,18 @@ const DOT_ICONS = '<svg class="ca-ic ca-ic-check" viewBox="0 0 16 16" aria-hidde
   + '<span class="ca-ic ca-ic-warn" aria-hidden="true">!</span><span class="ca-ic ca-ic-err" aria-hidden="true">×</span>';
 
 function stepHead(p) {
-  if (p.finished) return '<span class="ca-head-ic" data-status="DONE" aria-hidden="true"></span><strong>모든 단계를 마쳤습니다</strong>';
+  if (p.finished) return '<strong>분석 완료</strong><span class="ca-state" data-status="DONE">완료</span>';
   const st = p.current?.status || 'RUNNING';
-  return `<span class="ca-head-ic" data-status="${esc(st)}" aria-hidden="true"></span><strong>${esc(p.current?.title || '준비 중')}</strong><span class="ca-state" data-status="${esc(st)}">${esc(STATUS_LABEL[st] || '진행 중')}</span>`;
+  return `<strong>${esc(p.current?.title || '준비 중')}</strong><span class="ca-state" data-status="${esc(st)}">${esc(STATUS_LABEL[st] || '진행 중')}</span>`;
 }
 
 export function renderStepper(s) {
   const p = progressOf(s);
   const board = s.board || [];
   return `<div class="ca-progress" aria-label="진행 상황"${p.finished ? ' data-finished' : ''}>
-    <div class="ca-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><i style="width:${p.pct}%"></i></div>
     <div class="ca-progress-top"><div class="ca-head">${stepHead(p)}</div>
-      <div class="ca-meta"><span class="ca-elapsed" data-ca-elapsed></span><span class="ca-pct">${p.done}/${p.total} 단계 · ${p.pct}%</span></div></div>
+      <div class="ca-meta"><span class="ca-elapsed" data-ca-elapsed></span><span class="ca-pct">${p.done}/${p.total} 단계 · ${p.pct}%</span>
+        <div class="ca-bar" role="progressbar" aria-label="진행률" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><i style="width:${p.pct}%"></i></div></div></div>
     <ol class="ca-steps">${board.map((b, i) => `<li data-status="${esc(b.status)}"${b.key === s.step ? ' aria-current="step"' : ''}>
       <span class="ca-line" aria-hidden="true"><i></i></span>
       <span class="ca-dot" aria-hidden="true"><span class="ca-ic ca-num">${i + 1}</span>${DOT_ICONS}</span>
@@ -148,7 +148,7 @@ export function renderQuestion(q, s) {
     ? `<div class="ca-opts" role="radiogroup">${q.options.map((o, i) => `<button type="button" class="ca-opt" role="radio" data-choice="${esc(o.value)}" aria-pressed="${i === 0}" aria-checked="${i === 0}"><b>${esc(o.label)}</b>${o.description ? `<small>${esc(o.description)}</small>` : ''}</button>`).join('')}</div>`
     : q.options.length ? `<div class="ca-actions">${q.options.map((o, i) => `<button type="button" class="ca-btn ${i === 0 ? 'ca-btn-primary' : 'ca-btn-ghost'}" data-choice="${esc(o.value)}" data-submit><span>${esc(o.label)}</span>${o.description ? `<small>${esc(o.description)}</small>` : ''}</button>`).join('')}</div>` : '';
   return `<div class="ca-card ca-question" role="form" aria-label="${esc(q.title)}" data-qid="${esc(q.id)}">
-    <p class="ca-step-label">STEP ${stepNo} · ${esc(stepTitle)} · 담당자 확인</p>
+    <p class="ca-step-label"><span class="ca-tag">확인 필요</span>${stepNo}단계 · ${esc(stepTitle)}</p>
     <h3>${esc(q.title)}</h3>
     <p class="ca-desc">${esc(q.text)}</p>
     ${opts}
@@ -168,16 +168,14 @@ export const WAIT_HINTS = {
   TERMS: ['장기계약 가격을 계산하는 중', '견적 근거서를 만드는 중']
 };
 const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REPORT: '견적 근거서' };
-const KIND_ICON = { think: '◆', tool: '⚙', ask: '?', answer: '✎', result: '✓', warn: '!' };
 
 export function renderLive(s, { feed = [], waiting = false, hint = '' } = {}) {
   const step = s.board?.find(b => b.key === s.step);
-  const lines = feed.map((e, i) => `<li data-kind="${esc(e.kind)}" class="ca-live-in"${i === feed.length - 1 && !waiting ? ' aria-current="true"' : ''}><i aria-hidden="true">${esc(KIND_ICON[e.kind] || '·')}</i><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('');
+  const lines = feed.map((e, i) => `<li data-kind="${esc(e.kind)}" class="ca-live-in"${i === feed.length - 1 && !waiting ? ' aria-current="true"' : ''}><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('');
   return `<div class="ca-card ca-live" aria-live="polite" aria-busy="true">
-    <div class="ca-live-head"><span class="ca-orb" aria-hidden="true"><i></i><i></i><i></i></span>
+    <div class="ca-live-head"><span class="ca-spinner" aria-hidden="true"></span>
       <div><p class="ca-step-label">에이전트 작업 중</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
-    <ol class="ca-live-feed">${lines}${waiting ? `<li class="ca-live-wait"><i aria-hidden="true">…</i><span class="ca-live-hint">${esc(hint)}</span><span class="ca-dots" aria-hidden="true"><b></b><b></b><b></b></span></li>` : ''}</ol>
-    <div class="ca-shimmer" aria-hidden="true"></div>
+    <ol class="ca-live-feed">${lines}${waiting ? `<li class="ca-live-wait"><b>진행</b><span class="ca-live-hint">${esc(hint)}</span><span class="ca-dots" aria-hidden="true"><b></b><b></b><b></b></span></li>` : ''}</ol>
   </div>`;
 }
 
@@ -491,7 +489,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
       const list = host.querySelector('.ca-live-feed');
       if (list) {
         list.querySelector('[aria-current]')?.removeAttribute('aria-current');
-        list.insertAdjacentHTML('beforeend', `<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+        list.insertAdjacentHTML('beforeend', `<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
         list.scrollTop = list.scrollHeight;
       }
       await sleep(EVENT_DELAY[ev.kind] || 500);

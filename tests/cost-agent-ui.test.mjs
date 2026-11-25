@@ -48,7 +48,7 @@ test('stepper shows 7 steps, progress bar and the current step state', () => {
 
 test('question card: radio options with conditional fields, no form or submit inputs', () => {
   const html = renderQuestion(question, session);
-  assert.ok(html.includes('STEP 2 · 누락 확인'));
+  assert.ok(html.includes('2단계 · 누락 확인') && html.includes('확인 필요'));
   assert.ok(html.includes('class="ca-opt" role="radio" data-choice="amount" aria-pressed="true"'));
   assert.ok(html.includes('data-show-for="amount"'));
   assert.ok(!html.includes('<form') && !html.includes('type="submit"'));
@@ -70,7 +70,7 @@ test('result shows KPIs, market position marker, terms and actions', () => {
   assert.ok(html.includes('제안가 $6.05') && html.includes('58%') && html.includes('3년 계약가'));
   assert.ok(html.includes(reportUrl('s1')) && html.includes('data-ca-send'));
   assert.ok(renderMarket(done.market).includes('class="ca-me"'));
-  assert.ok(renderWorkspace(done).includes('모든 단계를 마쳤습니다'));
+  assert.ok(renderWorkspace(done).includes('분석 완료'));
 });
 
 test('money formatting for KRW and USD', () => {
