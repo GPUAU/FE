@@ -274,24 +274,27 @@ function exportContracts(product, rows, comparison) {
     ]));
 }
 
-RENDER.discounts = async () => {
-  const view = $('#v-discounts');
+window.renderContractMarket = async ({root, embedded = false} = {}) => {
+  const view = root || $('#v-discounts');
   const context = $('#dataContext');
   const request = ++contractRequest;
-  const isCurrent = () => request === contractRequest && state.view === 'discounts';
+  const isCurrent = () => request === contractRequest && state.view === 'discounts' && view.isConnected;
   const loading = '<div class="mv-note" role="status">계약 비교를 조회하고 있습니다.</div>';
   const failure = error => `<div class="mv-note" role="alert"><b>계약 비교 조회 실패</b>
     <p>${mh(error.message)}</p><button type="button" class="mv-btn" id="contractRetry">다시 시도</button></div>`;
   const setContext = asOf => {
+    if (embedded) return;
     context.innerHTML = `<span class="mv-dot"></span><div><b>Spring PostgreSQL 계약 비교</b><span>${asOf?mtime(asOf)+' · 조회 기준':'공개 관측가와 가격 근거'}</span></div>`;
     context.hidden = false;
   };
 
+  if (!embedded) {
   document.body.classList.add('market-v4','contract-v4');
   $('#pageTitle').textContent = '계약별 관측가와 약정 할인율';
   $('#pageDesc').textContent = '같은 상품의 온디맨드·스팟·장기 약정 가격을 비교합니다.';
   setContext();
   mountFx();
+  }
   view.innerHTML = `<div class="mv">${loading}</div>`;
 
   try {
@@ -382,9 +385,10 @@ RENDER.discounts = async () => {
   } catch (error) {
     if (!isCurrent()) return;
     view.innerHTML = `<div class="mv">${failure(error)}</div>`;
-    $('#contractRetry').onclick = RENDER.discounts;
+    view.querySelector('#contractRetry').onclick = () => window.renderContractMarket({root:view,embedded});
   }
 };
+RENDER.discounts = () => window.renderContractMarket();
 PAGES.discounts.tools=false;
 
 const erdDisclosure={public:'공개가',quote_required:'견적 문의',login_required:'로그인 필요',not_disclosed:'가격 미공개',unknown:'미확인'};

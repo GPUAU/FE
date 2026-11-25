@@ -12,7 +12,7 @@ export function matchesContractTerms(offer, {type = 'ALL', term = 'ALL'}) {
     (term === 'ALL' || contractTerm(offer) === term);
 }
 
-export async function fetchContractCatalog(request) {
+export async function fetchContractCatalog(request, {includeOnDemandOnly = false} = {}) {
   const {models, providers} = await fetchMarketCatalog(request);
   const items = await fetchMarketOffers(request, {includeStale: true});
   const modelIds = new Set(models.map(model => model.id));
@@ -44,7 +44,7 @@ export async function fetchContractCatalog(request) {
     });
   }
 
-  return {models, providers, products: filterContractProducts([...products.values()], {})};
+  return {models, providers, products: includeOnDemandOnly ? [...products.values()] : filterContractProducts([...products.values()], {})};
 }
 
 export function filterContractProducts(products, filters) {

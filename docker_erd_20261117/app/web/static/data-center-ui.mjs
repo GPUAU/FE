@@ -7,7 +7,7 @@ const money=v=>'$'+num(v);
 const pct=v=>v==null?'산출 불가':num(Number(v)*100)+'%';
 const itemNames={SERVER:'서버·GPU',NETWORK:'네트워크',FACILITY:'시설·전력·냉각·기타'};
 
-export async function renderDataCenter({host,api,request,saved,onEdit,isActive,openLegacy}) {
+export async function renderDataCenter({host,api,request,saved,onEdit,isActive,openLegacy,onResult}) {
   const s={...reportDefaults(),...saved};
   const notes={...(s.assumptionNotes||{})};
   const input=(key,label,note='',step='any')=>`<label>${label}<input type="number" data-dc="${key}" step="${step}" value="${esc(s[key])}" aria-label="${label}">${note?`<small>${note}</small>`:''}</label>`;
@@ -72,7 +72,7 @@ export async function renderDataCenter({host,api,request,saved,onEdit,isActive,o
     host.querySelector('[data-provenance]').textContent='보고서에서 출발한 사용자 편집 시나리오 · 각 값의 출처와 적용 여부는 원가 산정 가정과 근거에서 확인하세요.';
   };
   form.addEventListener('input',edit);form.addEventListener('change',edit);sync();refreshEvidence();
-  host.querySelector('[data-reset]').onclick=()=>{onEdit(null);renderDataCenter({host,api,request,saved:null,onEdit,isActive,openLegacy});};
+  host.querySelector('[data-reset]').onclick=()=>{onEdit(null);renderDataCenter({host,api,request,saved:null,onEdit,isActive,openLegacy,onResult});};
   host.querySelector('[data-legacy]').onclick=openLegacy;
   form.onsubmit=async event=>{
     event.preventDefault();if(loading)return;loading=true;const ticket=++revision;const button=form.querySelector('[type=submit]');button.disabled=true;
@@ -81,6 +81,8 @@ export async function renderDataCenter({host,api,request,saved,onEdit,isActive,o
       const result=await simulateDataCenter(request,values);
       if(!form.isConnected||!isActive()||ticket!==revision)return;
       out.innerHTML=renderResult(result,values,providers);out.dataset.state='valid';
+      onResult?.(result);
+      if(onResult){const quoteButton=document.createElement('button');quoteButton.type='button';quoteButton.className='mv-btn';quoteButton.textContent='이 판매단가로 계약 할인 견적 계산';quoteButton.onclick=()=>window.GpuContractQuote?.openFromCost();out.prepend(quoteButton);}
       out.querySelector('[data-copy-report]').onclick=async()=>{
         const area=out.querySelector('[data-report-text]'),status=out.querySelector('[data-copy-status]');
         try{await navigator.clipboard.writeText(area.value);status.textContent=' 요약을 복사했습니다.';}

@@ -177,7 +177,7 @@ async function renderGpuComparison(options = {}) {
   if($('#cpGroup'))$('#cpGroup').onchange=e=>{CP.group=groups[+e.target.value].id;CP.page=0;draw();};
   $('#cpPrevious').onclick=()=>{CP.page--;draw();};$('#cpNext').onclick=()=>{CP.page++;draw();};
   $('#cpCSV').onclick=()=>downloadCSV('GPU_condition_comparison.csv',['관측ID','상품ID','오퍼ID','사업자','모델','국가','리전','계약','약정개월','선납','실효USD_GPU시간','수집UTC','비교방식','제외사유','출처'],shown.map(r=>[r.observation_id,r.product_id,r.offer_id,r.provider_name,r.model_name,r.country_code,r.region_code,r.contract_product_type,r.commitment_months,r.payment_option,r.display_price,r.collected_at,cpModes[CP.mode],r.comparison_reasons[CP.mode==='region_excluded'?'region_excluded':'strict'].join('; '),r.source_url]));
-  if(window.renderComparisonPriceChart)window.renderComparisonPriceChart(el,shown,CP,{collapsed:embedded});
+  if(!embedded && window.renderComparisonPriceChart)window.renderComparisonPriceChart(el,shown,CP);
   refreshKrw();
   onSelectionChange?.(CP, shown);
   const focusTarget = focusId ? document.getElementById(focusId) : focusMode ? el.querySelector(`[data-cp-mode="${focusMode}"]`) : focusModel ? [...el.querySelectorAll('[data-cp-model]')].find(b=>b.dataset.cpModel===focusModel) : null;
