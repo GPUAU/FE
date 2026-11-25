@@ -116,3 +116,18 @@ test('live card shows the activity feed and rotating hint while waiting', () => 
   assert.ok(feed.includes('&lt;b&gt;') && feed.includes('aria-current="true"'));
   assert.ok(!feed.includes('ca-live-hint'));
 });
+
+import { shortSummary, fmtElapsed } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('step summaries stay on one line: long text keeps only its first phrase, full text in the tooltip', () => {
+  assert.equal(shortSummary('B300 8장 · 마진 20%'), 'B300 8장 · 마진 20%');
+  assert.equal(shortSummary('사업자 중앙값 대비 -38% · 사업자 5곳 중 1곳보다 비쌈'), '사업자 중앙값 대비 -38%');
+  const html = renderStepper({ ...session, board: session.board.map((b, i) => i === 0 ? { ...b, summary: '사업자 중앙값 대비 -38% · 사업자 5곳 중 1곳보다 비쌈' } : b) });
+  assert.ok(html.includes('title="사업자 중앙값 대비 -38% · 사업자 5곳 중 1곳보다 비쌈">사업자 중앙값 대비 -38%</span>'));
+  assert.ok(html.includes('class="ca-ic ca-ic-check"') && html.includes('class="ca-line"'));
+});
+
+test('elapsed agent time is formatted in seconds and minutes', () => {
+  assert.equal(fmtElapsed(12400), '12초');
+  assert.equal(fmtElapsed(65000), '1분 05초');
+});
