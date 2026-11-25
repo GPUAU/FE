@@ -2,7 +2,7 @@ export function mapSeries(series) {
   return series.flatMap(s => (s.points || []).filter(p => p.status === 'OK' && p.effectiveUsdGpuHour != null).map(p => ({
     observation_id:`spring-${p.observationId}-${p.normalizationId || 'none'}`,offer_id:s.offerId,
     provider_name:s.providerName,model_name:s.modelName,original_product_name:s.originalProductName ?? null,configuration_version:s.configurationVersion ?? null,
-    region_code:s.regionCode,gpu_count:s.gpuCount,contract_type:s.contractType,
+    country_code:s.countryCode,region_code:s.regionCode,gpu_count:s.gpuCount,contract_type:s.contractType,
     term:s.contractType==='COMMITMENT'?(s.commitmentMonths===12?'1_YEAR':s.commitmentMonths===36?'3_YEAR':'OTHER'):s.contractType,
     commitment_months:s.commitmentMonths,payment_option:s.paymentOption,contract_product_type:s.contractProductType ?? null,
     series_key:`offer-${s.offerId}`,chart_at:p.collectedAt,collected_at:p.collectedAt,

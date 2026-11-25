@@ -143,6 +143,52 @@ export function renderQuestion(q, s) {
   </div>`;
 }
 
+// 서버가 일하는 동안 보여 줄 단계별 작업 문구 (실제 처리 순서와 같다)
+export const WAIT_HINTS = {
+  ANALYZE: ['청구서의 시트와 표를 읽는 중', '금액·숫자를 가리고 AI에 항목 분류를 요청하는 중', '원가 합계와 청구 총액을 대조하는 중', '빠진 큰 비용이 있는지 확인하는 중'],
+  MISSING: ['답변을 원가 항목에 반영하는 중', '다음에 확인할 값을 준비하는 중'],
+  ASSUMPTIONS: ['가정값을 검증하는 중', '원가 서버에 원가·제안가 계산을 요청하는 중', '같은 GPU의 시장 공개가격을 조회하는 중', '사업자별 대표 가격으로 시장 위치를 계산하는 중'],
+  SIMULATE: ['원가 서버에 계산을 요청하는 중'],
+  MARKET: ['목표 마진을 조정해 다시 계산하는 중', '시장 위치를 다시 확인하는 중'],
+  TERMS: ['장기계약 가격을 계산하는 중', '견적 근거서를 만드는 중']
+};
+const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REPORT: '견적 근거서' };
+const KIND_ICON = { think: '◆', tool: '⚙', ask: '?', answer: '✎', result: '✓', warn: '!' };
+
+export function renderLive(s, { feed = [], waiting = false, hint = '' } = {}) {
+  const step = s.board?.find(b => b.key === s.step);
+  const lines = feed.map((e, i) => `<li data-kind="${esc(e.kind)}" class="ca-live-in"${i === feed.length - 1 && !waiting ? ' aria-current="true"' : ''}><i aria-hidden="true">${esc(KIND_ICON[e.kind] || '·')}</i><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('');
+  return `<div class="ca-card ca-live" aria-live="polite" aria-busy="true">
+    <div class="ca-live-head"><span class="ca-orb" aria-hidden="true"><i></i><i></i><i></i></span>
+      <div><p class="ca-step-label">에이전트 작업 중</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
+    <ol class="ca-live-feed">${lines}${waiting ? `<li class="ca-live-wait"><i aria-hidden="true">…</i><span class="ca-live-hint">${esc(hint)}</span><span class="ca-dots" aria-hidden="true"><b></b><b></b><b></b></span></li>` : ''}</ol>
+    <div class="ca-shimmer" aria-hidden="true"></div>
+  </div>`;
+}
+
+/** 첫 분석 전에 보여 줄 임시 세션 (모든 단계 대기, 분석 진행 중) */
+export function pendingSession(fileName, goal) {
+  return {
+    id: '', step: 'ANALYZE', question: null, events: [], goal: { terms_years: [3, 5], ...goal },
+    board: STEP_ORDER.map(k => ({ key: k, title: STEP_TITLES[k], status: k === 'ANALYZE' ? 'RUNNING' : 'PENDING', summary: '', details: [] })),
+    draft: { file_name: fileName }, assumptions: {}, final_items: []
+  };
+}
+
+/** 응답 재생용: 이벤트 i번째까지 진행된 것처럼 보이는 단계 상태 */
+export function boardAt(prevBoard, next, ev) {
+  const order = next.board.map(b => b.key);
+  const idx = order.indexOf(ev.step);
+  const fin = st => ['DONE', 'WARNING', 'ERROR'].includes(st);
+  return order.map((k, i) => {
+    const before = prevBoard?.find(b => b.key === k) || { key: k, title: STEP_TITLES[k], status: 'PENDING', summary: '' };
+    const after = next.board[i];
+    if (i < idx && fin(after.status)) return { ...after };
+    if (i === idx) return fin(before.status) ? { ...before } : { ...after, status: 'RUNNING', summary: before.summary || '' };
+    return { ...before };
+  });
+}
+
 export function renderBusy(label) {
   return `<div class="ca-card ca-busy" aria-live="polite"><span class="ca-spinner" aria-hidden="true"></span><div><h3>${esc(label)}</h3><p class="ca-desc">AI 분류와 원가 계산을 진행하고 있어요. 보통 10~20초 걸립니다.</p></div></div>`;
 }
@@ -171,10 +217,10 @@ export function renderResult(s) {
     <p class="ca-step-label">완료 · 견적 근거서 준비됨</p>
     <h3>제안가 ${usd(r.candidatePrice)} <small>/ GPU·시간</small></h3>
     <div class="ca-kpis">
-      <div><span>GPU·시간당 원가</span><strong>${usd(r.hourlyCost)}</strong></div>
-      <div class="ca-kpi-main"><span>제안가</span><strong>${usd(r.candidatePrice)}</strong></div>
-      <div><span>목표 마진</span><strong>${a.target_rate != null ? Math.round(a.target_rate * 100) + '%' : '—'}</strong></div>
-      ${(s.terms || []).map(t => `<div><span>${t.years}년 계약가 · 할인 ${Math.round(t.discount_rate * 100)}%</span><strong>${usd(t.price)}</strong></div>`).join('')}
+      <div><span>GPU·시간당 원가</span><strong data-count="${esc(r.hourlyCost)}" data-fmt="usd">${usd(r.hourlyCost)}</strong></div>
+      <div class="ca-kpi-main"><span>제안가</span><strong data-count="${esc(r.candidatePrice)}" data-fmt="usd">${usd(r.candidatePrice)}</strong></div>
+      <div><span>목표 마진</span><strong ${a.target_rate != null ? `data-count="${Math.round(a.target_rate * 100)}" data-fmt="pct"` : ''}>${a.target_rate != null ? Math.round(a.target_rate * 100) + '%' : '—'}</strong></div>
+      ${(s.terms || []).map(t => `<div><span>${t.years}년 계약가 · 할인 ${Math.round(t.discount_rate * 100)}%</span><strong data-count="${esc(t.price)}" data-fmt="usd">${usd(t.price)}</strong></div>`).join('')}
     </div>
     <h4>시장에서의 위치</h4>${renderMarket(s.market)}
     <h4>에이전트 판단 요약</h4><ul class="ca-summary-list">${(s.summary || []).map(l => `<li>${esc(l)}</li>`).join('')}</ul>
@@ -201,7 +247,8 @@ export function renderSummary(s) {
         : `${esc(money(it.amount, it.currency))}<small>/${it.period === 'ONE_TIME' ? '1회' : '년'}</small>`)).join('');
   return `<aside class="ca-card ca-side" aria-label="확인된 내용">
     <h4>확인된 내용</h4>
-    ${d ? `<dl class="ca-group"><p>청구서</p>
+    ${!d?.reconciliation ? '<p class="ca-desc ca-side-empty">분석이 끝나면 청구서 대조 결과, 원가 항목, 가정값이 여기에 차례로 정리됩니다.</p>' : ''}
+    ${d?.reconciliation ? `<dl class="ca-group"><p>청구서</p>
       ${row('분류', esc(MAPPER_LABEL[d.mapper] || d.mapper))}
       ${row('통화 · 기간', `${esc(d.currency || '확인 필요')} · ${d.period === 'YEAR' ? '연간' : '월'}`)}
       ${row('총액 대조', `<span class="${rec?.matched ? 'ca-ok' : 'ca-warn'}">${recText}</span>`)}
@@ -228,7 +275,7 @@ export function renderActivity(s) {
     <ol class="ca-timeline">${ev.map(e => `<li data-kind="${esc(e.kind)}"><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('')}</ol></details>`;
 }
 
-export function renderWorkspace(s, { busyLabel = '', models = [] } = {}) {
+export function renderWorkspace(s, { busyLabel = '', models = [], live = null, enter = false } = {}) {
   const d = s.draft;
   const a = s.assumptions || {};
   const goalModel = models.find(m => String(m.id) === String(s.goal?.model_id))?.name;
@@ -238,7 +285,8 @@ export function renderWorkspace(s, { busyLabel = '', models = [] } = {}) {
     d ? MAPPER_LABEL[d.mapper] || d.mapper : null,
     (s.goal?.terms_years || []).length ? `${s.goal.terms_years.join('·')}년 계약가` : null
   ].filter(Boolean);
-  const main = busyLabel ? renderBusy(busyLabel)
+  const main = live ? renderLive(s, live)
+    : busyLabel ? renderBusy(busyLabel)
     : s.question ? renderQuestion(s.question, s)
       : s.step === 'DONE' && s.simulation ? renderResult(s)
         : `<div class="ca-card"><h3>에이전트가 멈췄습니다</h3><p class="ca-desc">단계 표시줄에서 중단된 이유를 확인하고 새 청구서로 다시 시작하세요.</p><div class="ca-actions"><button type="button" class="ca-btn ca-btn-primary" data-ca-reset>새 청구서로 시작</button></div></div>`;
@@ -247,7 +295,7 @@ export function renderWorkspace(s, { busyLabel = '', models = [] } = {}) {
       <div class="ca-chips">${chips.map(c => `<span>${esc(c)}</span>`).join('')}</div></div>
       <button type="button" class="ca-btn ca-btn-ghost" data-ca-reset>새 청구서</button></header>
     ${renderStepper(s)}
-    <div class="ca-grid"><div class="ca-main">${main}${renderActivity(s)}</div>${renderSummary(s)}</div>
+    <div class="ca-grid"><div class="ca-main${enter ? ' ca-enter' : ''}">${main}${live ? '' : renderActivity(s)}</div>${renderSummary(s)}</div>
   </section>`;
 }
 
@@ -291,15 +339,118 @@ function syncShowFor(card) {
 // ------------------------------------------------------------------ 마운트
 let session = null;   // 탭을 오가도 진행 중인 세션을 유지한다
 
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const EVENT_DELAY = { think: 650, tool: 750, ask: 550, answer: 350, result: 600, warn: 650 };
+// 다른 탭으로 옮겼으면 화면을 덮어쓰지 않는다 (#cost 가 에이전트 탭)
+const onAgentTab = () => location.hash.startsWith('#cost') && !location.hash.split('/')[1];
+
+/** 단계 표시줄을 다시 그리지 않고 상태만 바꿔 전환 애니메이션이 보이게 한다. */
+function updateStepper(root, s) {
+  const prog = root.querySelector('.ca-progress');
+  if (!prog) return;
+  const p = progressOf(s);
+  const bar = prog.querySelector('.ca-bar i');
+  if (bar) bar.style.width = `${p.pct}%`;
+  prog.querySelector('.ca-bar')?.setAttribute('aria-valuenow', String(p.pct));
+  const pct = prog.querySelector('.ca-pct');
+  if (pct) pct.textContent = `${p.done}/${p.total} 단계 · ${p.pct}%`;
+  const head = prog.querySelector('.ca-progress-top > div');
+  if (head) head.innerHTML = `<strong>${esc(p.current?.title || '')}</strong><span class="ca-state" data-status="${esc(p.current?.status || 'RUNNING')}">${esc(STATUS_LABEL[p.current?.status] || '진행 중')}</span>`;
+  prog.querySelectorAll('.ca-steps > li').forEach((li, i) => {
+    const b = s.board[i];
+    if (!b) return;
+    if (li.dataset.status !== b.status && ['DONE', 'WARNING', 'ERROR'].includes(b.status)) {
+      li.classList.remove('ca-pop'); void li.offsetWidth; li.classList.add('ca-pop');
+    }
+    li.dataset.status = b.status;
+    li.toggleAttribute('aria-current', b.key === s.step);
+    if (b.key === s.step) li.setAttribute('aria-current', 'step');
+    li.querySelector('.ca-dot').textContent = b.status === 'DONE' ? '✓' : b.status === 'WARNING' ? '!' : b.status === 'ERROR' ? '×' : String(i + 1);
+    li.querySelector('.ca-step-sum').textContent = b.summary || STATUS_LABEL[b.status] || '';
+  });
+}
+
+function countUp(root) {
+  root.querySelectorAll('[data-count]').forEach(el => {
+    const to = Number(el.dataset.count);
+    if (!Number.isFinite(to)) return;
+    const fmt = el.dataset.fmt === 'pct' ? v => `${Math.round(v)}%` : v => `$${v.toFixed(2)}`;
+    const t0 = performance.now();
+    const tick = now => {
+      const k = Math.min(1, (now - t0) / 800);
+      el.textContent = fmt(to * (1 - Math.pow(1 - k, 3)));
+      if (k < 1) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+}
+
 export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fetchImpl = fetch }) {
   let file = null;
+  let run = 0;          // 진행 중인 애니메이션 식별 (새 청구서·탭 이동 시 중단)
+  let hintTimer = null;
+  const stopHints = () => { if (hintTimer) clearInterval(hintTimer); hintTimer = null; };
   const draw = (opts = {}) => {
+    stopHints();
     host.innerHTML = session ? renderWorkspace(session, { ...opts, models }) : renderStart(models);
     const card = host.querySelector('.ca-question');
     if (card) syncShowFor(card);
     if (!session) wireStart();
+    if (opts.enter && !reducedMotion()) countUp(host);
   };
-  const stepTitle = () => session?.board?.find(b => b.key === session.step)?.title || '다음 단계';
+
+  /** 서버 응답을 기다리는 동안: 현재 단계를 진행 중으로 두고 작업 문구를 순환한다. */
+  function showWaiting(base) {
+    const hints = WAIT_HINTS[base.step] || ['처리하는 중'];
+    const live = { ...base, question: null, board: base.board.map(b => (b.key === base.step ? { ...b, status: 'RUNNING' } : b)) };
+    host.innerHTML = renderWorkspace(live, { models, live: { feed: [], waiting: true, hint: hints[0] } });
+    let i = 0;
+    stopHints();
+    if (reducedMotion()) return;
+    hintTimer = setInterval(() => {
+      const el = host.querySelector('.ca-live-hint');
+      if (!el || !onAgentTab()) return stopHints();
+      i = (i + 1) % hints.length;
+      el.classList.remove('ca-live-in'); void el.offsetWidth; el.classList.add('ca-live-in');
+      el.textContent = hints[i];
+    }, 1800);
+  }
+
+  /** 응답이 오면 에이전트가 한 일을 한 줄씩 재생하며 단계 표시줄을 채운 뒤 최종 화면을 보여 준다. */
+  async function replay(prev, next) {
+    stopHints();
+    const me = ++run;
+    const events = next.events.slice(prev?.events?.length || 0);
+    if (reducedMotion() || !events.length) { session = next; draw({ enter: true }); return; }
+    let board = (prev?.board || pendingSession('', {}).board).map(b => ({ ...b }));
+    const feed = [];
+    const first = { ...next, board: boardAt(board, next, events[0]), step: events[0].step, question: null };
+    host.innerHTML = renderWorkspace(first, { models, live: { feed } });
+    for (const ev of events) {
+      if (me !== run) return;
+      if (!onAgentTab()) { session = next; return; }
+      board = boardAt(board, next, ev);
+      const view = { ...next, board, step: ev.step, question: null };
+      updateStepper(host, view);
+      const head = host.querySelector('.ca-live h3');
+      if (head) head.textContent = board.find(b => b.key === ev.step)?.title || '';
+      feed.push(ev);
+      const list = host.querySelector('.ca-live-feed');
+      if (list) {
+        list.querySelector('[aria-current]')?.removeAttribute('aria-current');
+        list.insertAdjacentHTML('beforeend', `<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+        list.scrollTop = list.scrollHeight;
+      }
+      await sleep(EVENT_DELAY[ev.kind] || 500);
+    }
+    if (me !== run) return;
+    updateStepper(host, next);
+    await sleep(350);
+    if (me !== run) return;
+    session = next;
+    if (onAgentTab()) draw({ enter: true });
+  }
 
   function wireStart() {
     const drop = host.querySelector('[data-ca-drop]');
@@ -318,27 +469,32 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     drop.addEventListener('drop', e => pick(e.dataTransfer?.files?.[0]));
     start.addEventListener('click', async () => {
       if (!file) return;
-      const err = host.querySelector('[data-ca-error]');
-      start.disabled = true;
-      start.textContent = '청구서를 분석하는 중…';
+      const goal = { model_id: host.querySelector('[data-ca-model]').value || null, gpu_count: Number(host.querySelector('[data-ca-gpu]').value) || null };
+      const placeholder = pendingSession(file.name, goal);
+      showWaiting(placeholder);
+      host.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
       try {
-        session = await startSession(file, {
-          modelId: host.querySelector('[data-ca-model]').value,
-          gpuCount: Number(host.querySelector('[data-ca-gpu]').value) || null
-        }, fetchImpl);
+        const next = await startSession(file, { modelId: goal.model_id, gpuCount: goal.gpu_count }, fetchImpl);
+        await replay(placeholder, next);
+      } catch (ex) {
+        stopHints();
+        session = null;
         draw();
-        host.scrollIntoView({ block: 'start', behavior: 'smooth' });
-      } catch (ex) { err.textContent = ex.message; start.disabled = false; start.textContent = '분석 시작'; }
+        const err = host.querySelector('[data-ca-error]');
+        if (err) err.textContent = ex.message;
+      }
     });
   }
 
   async function submit(card, choice) {
     const answer = readAnswer(card, choice);
-    draw({ busyLabel: `${stepTitle()} 반영 중…` });
+    const prev = session;
+    showWaiting(prev);
     try {
-      session = await sendAnswer(session.id, answer, fetchImpl);
-      draw();
+      const next = await sendAnswer(prev.id, answer, fetchImpl);
+      await replay(prev, next);
     } catch (ex) {
+      session = prev;
       draw();
       const box = host.querySelector('.ca-question .ca-error');
       if (box) box.textContent = ex.message;
@@ -348,7 +504,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { run++; session = null; file = null; draw(); return; }
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }
     const card = btn.closest('.ca-question');
     if (!card || !session) return;
