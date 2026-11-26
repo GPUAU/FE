@@ -1,13 +1,13 @@
-/** 임차형 GPUaaS: 현대차증권 본문 28쪽 표18의 입력 가정으로 재계산. */
+/** 임차형 GPUaaS: 현대차증권 본문 28쪽 입력 가정으로 재계산. */
 export const BASE = Object.freeze({gpuCount:500,gpuKw:2,gpuPrice:38000,contractKw:1000,fx:1450,rent:350000,rentMode:'capacity',rentAnnual:4200000000,tariff:183,pue:1.3,powerLoad:100,powerMode:'estimate',powerAnnual:2084004000,ops:1800000000,opsMode:'capacity',years:6,extra:0,residual:0,capitalRate:0,util:80,price:4,margin:20});
 export const FIELDS = {
- gpuCount:['GPU 수','개','표18 · 1,000kW ÷ 2kW에서 산출'], gpuKw:['GPU당 IT 전력','kW/GPU','표18 A · 서버·네트워크 포함, 시설 전력 제외'],
- gpuPrice:['GPU당 장비 구매비','USD/GPU','표18 B · 혼합 세대 구매단가 가정. 서버 견적의 포함 범위 확인'], contractKw:['임차 IT 용량','kW','표18 · 비교 기준 1MW. GPU 전력 합계 이상 확보'],fx:['계산 환율','원/USD','표18 E · 고정 가정. 상단 현재 환율과 자동 연동하지 않음'],
- rent:['상면·설비 이용료','원/kW·월','표18 F · 홀세일 장기 임차, 판매율과 무관한 고정비'],rentAnnual:['연 임차료 총액','원/년','계약서·청구서의 연간 총액 직접 입력'],
- tariff:['전력단가','원/kWh','표18 G · 2025 산업용 평균을 사용한 가정. 실제 계약 요금으로 변경'],pue:['PUE','배','표18 H · 시설 전체 전력 ÷ IT 전력'],powerLoad:['평균 전력 부하율','%','표18 만실 전력비를 재현하는 100% 가정. 판매율과 별도'],powerAnnual:['연 전기료 총액','원/년','실제 별도 청구되는 전기료. PUE를 추가 곱하지 않음'],
- ops:['기타 운영비','원/MW·년','표18 J · 인건비·네트워크·판관비. 임차료·전기료 제외'],
- years:['감가상각 기간','년','표18 I · 6년 가정. 경제적 수명을 보장하지 않음'],extra:['추가 장비·설치비','원','별도 구매한 장비만 추가. 예시 0원은 앱 가정'],residual:['기간 종료 잔존가치','원','전체 장비의 예상 매각금액. 예시 0원은 앱 가정'],capitalRate:['연 자본비용률','%','앱 가정 0%는 정액 회수. 양수는 자본회수계수(CRF) 적용'],
- util:['유료 판매율','%','표18 D · 공급 가능 GPU 시간 중 과금한 시간 비중'],price:['검토 판매단가','USD/GPU·h','표18 C · 장기·중기·온디맨드 혼합 단가 가정'],margin:['목표 마진율','%','사용자 설정 · 예시 20%. 매출 대비, 목표 IRR과 다름']};
+ gpuCount:['GPU 수','개','1,000kW ÷ 2kW에서 산출'], gpuKw:['GPU당 IT 전력','kW/GPU','서버·네트워크 포함, 시설 전력 제외'],
+ gpuPrice:['GPU당 장비 구매비','USD/GPU','혼합 세대 구매단가 가정. 서버 견적의 포함 범위 확인'], contractKw:['임차 IT 용량','kW','비교 기준 1MW. GPU 전력 합계 이상 확보'],fx:['계산 환율','원/USD','고정 가정. 상단 현재 환율과 자동 연동하지 않음'],
+ rent:['상면·설비 이용료','원/kW·월','홀세일 장기 임차, 판매율과 무관한 고정비'],rentAnnual:['연 임차료 총액','원/년','계약서·청구서의 연간 총액 직접 입력'],
+ tariff:['전력단가','원/kWh','2025 산업용 평균을 사용한 가정. 실제 계약 요금으로 변경'],pue:['PUE','배','시설 전체 전력 ÷ IT 전력'],powerLoad:['평균 전력 부하율','%','만실 전력비를 재현하는 100% 가정. 판매율과 별도'],powerAnnual:['연 전기료 총액','원/년','실제 별도 청구되는 전기료. PUE를 추가 곱하지 않음'],
+ ops:['기타 운영비','원/MW·년','인건비·네트워크·판관비. 임차료·전기료 제외'],
+ years:['감가상각 기간','년','6년 가정. 경제적 수명을 보장하지 않음'],extra:['추가 장비·설치비','원','별도 구매한 장비만 추가. 예시 0원은 앱 가정'],residual:['기간 종료 잔존가치','원','전체 장비의 예상 매각금액. 예시 0원은 앱 가정'],capitalRate:['연 자본비용률','%','앱 가정 0%는 정액 회수. 양수는 자본회수계수(CRF) 적용'],
+ util:['유료 판매율','%','공급 가능 GPU 시간 중 과금한 시간 비중'],price:['검토 판매단가','USD/GPU·h','장기·중기·온디맨드 혼합 단가 가정'],margin:['목표 마진율','%','사용자 설정 · 예시 20%. 매출 대비, 목표 IRR과 다름']};
 export function activeFields(x){return ['gpuCount','gpuKw','gpuPrice','contractKw','fx',x.rentMode==='annual'?'rentAnnual':'rent',...(x.powerMode==='estimate'?['tariff','pue','powerLoad']:x.powerMode==='actual'?['powerAnnual']:[]),'ops','years','extra','residual','capitalRate','util','price','margin'];}
 export function calculate(x){
  for(const k of activeFields(x))if(typeof x[k]!=='number'||!Number.isFinite(x[k])||x[k]<0)throw new Error(`${FIELDS[k][0]}: 0 이상의 숫자를 입력하세요.`);

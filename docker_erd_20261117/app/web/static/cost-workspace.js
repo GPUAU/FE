@@ -65,7 +65,7 @@
     const host = document.getElementById('v-cost');
     host.innerHTML = '<p role="status">원가 시뮬레이션을 불러오고 있습니다.</p>';
     try {
-      const { mountLeaseCost } = await import('/static/lease-cost-ui.mjs?v=cost-copy1126');
+      const { mountLeaseCost } = await import('/static/lease-cost-ui.mjs?v=field-notes1126');
       if (ticket !== revision || state.view !== 'cost' || current() !== 'simulation') return;
       const session = window.__costAgentFill; window.__costAgentFill = null;
       mountLeaseCost({host, session,
