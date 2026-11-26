@@ -90,7 +90,7 @@ RENDER.home = async function renderHomeOverview() {
       <img class="hc-hero-image" src="/static/img/gpu-datacenter-hero.jpg" alt="" fetchpriority="high" width="1632" height="960">
       <div class="hc-hero-shade"></div>
       <div class="hc-hero-copy"><p class="hc-eyebrow">GPU 시세 인덱스</p><h1 id="hoTitle">GPU 클라우드의<br><em>가격을 비교합니다.</em></h1><p class="hc-hero-lead">모델별 공개 요금부터 계약 조건까지.<br>GPU 도입에 필요한 정보를 확인하세요.</p><div class="hc-hero-actions"><a href="#compare" class="hc-primary">가격 비교</a><a href="#catalog" class="hc-secondary">GPU 카탈로그</a></div></div>
-      <div class="hc-hero-foot"><button class="hc-scroll" type="button" id="hcExplore">가격 검색 <span class="hc-scroll-line" aria-hidden="true"></span></button><span class="hc-image-credit">AI 생성 이미지</span><button class="hc-motion" type="button" aria-pressed="false" id="hcMotion">모션 정지</button></div>
+      <div class="hc-hero-foot"><button class="hc-scroll" type="button" id="hcExplore">가격 검색 <span class="hc-scroll-line" aria-hidden="true"></span></button></div>
     </section>
     <div class="hc-wrap">
     <section class="hc-finder" id="hoFinder" aria-labelledby="hoFinderTitle"><div class="hc-find-heading"><div><p class="hc-eyebrow">가격 검색</p><h2 id="hoFinderTitle" tabindex="-1">어떤 GPU가 필요하신가요?</h2></div><p>모델과 이용 조건을 선택하면<br>수집된 가격을 비교할 수 있습니다.</p></div>
@@ -111,21 +111,7 @@ RENDER.home = async function renderHomeOverview() {
     <section class="ho-trust"><div><b>가격 단위</b><p>USD / GPU·시간 기준으로<br>구성 전체 요금과 구분합니다.</p></div><div><b>수집 출처</b><p>원본 출처와 수집 시각을<br>상세 비교에서 확인합니다.</p></div><div><b>비교 기준</b><p>미확인·48시간 초과 자료는<br>최신 동일 조건 집계에서 제외합니다.</p></div></section><footer class="ho-footer"><b>SKALA <span>GPU Market Intelligence</span></b><span>공개 수집 자료 기반 · 실시간 견적 및 재고를 보장하지 않습니다.</span><a href="/static/public-data.html">수집 데이터 보기</a></footer>
   </div></div>`;
   animateHomeOverview(root);
-  const hero = root.querySelector('.hc-hero');
-  const motionButton = root.querySelector('#hcMotion');
   const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)');
-  let motionPaused = reduceMotion.matches;
-  const syncMotion = () => {
-    hero.classList.toggle('hc-paused', motionPaused || reduceMotion.matches);
-    motionButton.hidden = reduceMotion.matches;
-    motionButton.setAttribute('aria-pressed', String(motionPaused));
-    motionButton.textContent = motionPaused ? '모션 재생' : '모션 정지';
-  };
-  motionButton.onclick=()=>{motionPaused=!motionPaused;syncMotion();};
-  syncMotion();
-  reduceMotion.addEventListener('change',syncMotion);
-  const previousCleanup=homeMotionCleanup;
-  homeMotionCleanup=()=>{previousCleanup();reduceMotion.removeEventListener('change',syncMotion);};
   root.querySelector('#hcExplore').onclick=()=>{
     root.querySelector('#hoFinderTitle').focus({preventScroll:true});
     root.querySelector('#hoFinder').scrollIntoView({behavior:reduceMotion.matches?'instant':'smooth',block:'start'});

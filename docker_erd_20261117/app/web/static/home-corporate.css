@@ -24,10 +24,6 @@ html body.workspace-sidebar .ho-corporate a.hc-secondary:hover{background:#fff;c
 .hc-hero-foot{position:absolute;bottom:30px;left:clamp(30px,5vw,84px);right:34px;display:flex;gap:20px;align-items:center}
 .hc-hero-foot button{color:#fff;background:none;cursor:pointer;border:0;padding:8px 0;font:inherit;font-size:14px;display:flex;align-items:center;gap:17px}
 .hc-scroll-line{display:block;height:30px;width:1px;background:#ffffff38;position:relative;overflow:hidden}
-.hc-scroll-line:before{content:'';position:absolute;top:0;height:11px;width:1px;background:#fff;animation:hc-scroll 1.8s ease-in-out infinite}
-.hc-image-credit{font-size:12px;color:#c7c9cc;margin-left:auto}
-.hc-hero-foot .hc-motion{font-size:12px;border-left:1px solid #ffffff50;padding-left:20px}
-.hc-hero-foot .hc-motion[hidden]{display:none}
 .hc-finder{padding:70px 0 55px;scroll-margin-top:95px}
 .hc-find-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:25px;margin-bottom:30px}
 html body.workspace-sidebar .ho-corporate .hc-find-heading>p{font-size:16px;line-height:1.8;color:#6a6d73;margin:0 0 5px}
@@ -103,13 +99,13 @@ html body.workspace-sidebar .ho-corporate .ho-trust b{font-weight:500;font-size:
 html body.workspace-sidebar .ho-corporate .ho-trust p{font-weight:300;font-size:14px;color:#6b6e74}
 html body.workspace-sidebar .ho-corporate .ho-footer{padding:30px 0 40px;gap:20px;font-size:12px;color:#6b6e74}
 @media(prefers-reduced-motion:no-preference){
- .hc-hero-image{animation:hc-breathe 22s ease-in-out infinite alternate}
- .hc-paused .hc-hero-image,.hc-paused .hc-scroll-line:before{animation-play-state:paused}
+ .hc-hero-image{animation:hc-intro 4s ease-out}
+ .hc-scroll-line:before{content:'';position:absolute;top:0;height:11px;width:1px;background:#fff;animation:hc-scroll 1.8s ease-in-out 2 forwards}
  html body.workspace-sidebar .ho-corporate .ho-reveal{transition:opacity .8s ease var(--ho-delay,0ms),translate 1s cubic-bezier(.2,.65,.2,1) var(--ho-delay,0ms)}
- @keyframes hc-breathe{from{transform:scale(1.02)}to{transform:scale(1.09)}}
+ @keyframes hc-intro{from{transform:scale(1.045)}to{transform:scale(1.02)}}
  @keyframes hc-scroll{from{transform:translateY(-12px)}to{transform:translateY(32px)}}
 }
-@media(prefers-reduced-motion:reduce){.hc-hero-image,.hc-scroll-line:before{animation:none}.hc-gateway-card img,.hc-ribbon{transition:none}}
+@media(prefers-reduced-motion:reduce){.hc-gateway-card img,.hc-ribbon{transition:none}}
 @media(max-width:1100px){
  html body.workspace-sidebar .ho-corporate .hc-wrap{padding:0 30px}
  html body.workspace-sidebar .ho-corporate .hc-hero h1{font-size:46px}
@@ -131,7 +127,7 @@ html body.workspace-sidebar .ho-corporate .ho-footer{padding:30px 0 40px;gap:20p
  html body.workspace-sidebar .ho-corporate .hc-hero h1{font-size:clamp(34px,7vw,46px);line-height:1.45}
  html body.workspace-sidebar .ho-corporate .hc-hero-lead{font-size:16px;margin:24px 0 28px}
  html body.workspace-sidebar .ho-corporate .hc-hero-actions a{min-width:130px;padding:12px 17px;font-size:14px}
- .hc-hero-foot{left:26px;right:24px;bottom:22px;gap:12px}.hc-hero-foot .hc-motion{padding-left:12px}
+ .hc-hero-foot{left:26px;right:24px;bottom:22px;gap:12px}
  .hc-finder{padding:50px 0 25px}.hc-find-heading{display:block;margin-bottom:24px}
  html body.workspace-sidebar .ho-corporate .hc-find-heading>p{max-width:none;margin-top:16px;font-size:16px}
  .hc-find-heading br{display:none}
@@ -172,4 +168,4 @@ html body.workspace-sidebar .ho-corporate .ho-footer{padding:30px 0 40px;gap:20p
  html body.workspace-sidebar .ho-corporate .ho-trust{grid-template-columns:1fr;gap:26px}
  html body.workspace-sidebar .ho-corporate .ho-footer{align-items:flex-start}
 }
-@media print{.hc-hero{height:450px!important;min-height:450px!important}.hc-motion,.hc-scroll{display:none!important}.hc-hero-image{animation:none}}
+@media print{.hc-hero{height:450px!important;min-height:450px!important}.hc-scroll{display:none!important}.hc-hero-image{animation:none}}
