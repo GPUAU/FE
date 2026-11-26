@@ -19,7 +19,7 @@ export function mountLeaseCost({host,onEdit,onResult,openQuote,session}){
  host.innerHTML=`<div class="lc cp-page">
  <header class="cp-hero"><p class="cp-eyebrow">GPU 시세 인덱스</p><h1>원가 산정 · <em>판매가격 검토</em></h1><p>장비 투자와 운영비를 반영해 GPU 시간당 원가를 계산합니다.</p></header>
  <div class="lc-toolbar"><nav class="lc-local-nav" role="tablist" aria-label="시뮬레이션 검토 항목">${[['review','원가·가격 검토'],['evidence','가정과 근거']].map(([key,label],i)=>`<button type="button" role="tab" id="lc-tab-${key}" aria-controls="lc-panel-${key}" aria-selected="${key===selectedPanel}" tabindex="${key===selectedPanel?0:-1}" data-panel-tab="${key}">${label}</button>`).join('')}</nav><button type="button" class="lc-button lc-reset" data-reset>보고서 예시로 초기화</button></div>
- <div class="lc-basis"><p><b>데이터센터 임차형 GPUaaS</b> · 현대차증권 표18의 1MW / GPU 500개 예시 적용<br><span>토지·건물 건설비는 제외합니다. 장비와 임차 조건은 실제 계약에 맞게 수정하세요.</span></p><button type="button" data-jump="lc-evidence">산정 기준 보기 <span aria-hidden="true">↗</span></button></div>
+ <div class="lc-basis"><p><b>데이터센터 임차형 GPUaaS</b> · 1MW / GPU 500개 예시 적용<br><span>토지·건물 건설비는 제외합니다. 장비와 임차 조건은 실제 계약에 맞게 수정하세요.</span></p><button type="button" data-jump="lc-evidence">산정 기준 보기 <span aria-hidden="true">↗</span></button></div>
  ${importNotes.length?`<aside class="lc-import"><b>청구서 분석 값이 반영되었습니다</b><ul>${importNotes.map(t=>`<li>${esc(t)}</li>`).join('')}</ul><label><input type="checkbox" data-import-confirm ${importConfirmed?'checked':''}> 남아 있는 보고서 예시와 반영하지 않은 항목을 확인했습니다.</label></aside>`:''}
  <div class="lc-layout"><form class="lc-form" id="lc-inputs" novalidate>
  <section class="lc-section"><div class="lc-section-head"><h3>장비 및 임차 조건</h3></div>
