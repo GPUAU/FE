@@ -23,15 +23,15 @@ function discReserved() {
     ${jump(R.models)}
     ${R.models.map(g => `<div class="panel dgroup" id="d-${esc(g.model)}"><div class="ph"><h3>${esc(g.model)} <span class="muted">${g.rows.length}개 · 싼 순</span></h3></div><div class="tw"><table class="t">
       <thead><tr><th>사업자</th><th>약정</th><th class="n">USD/GPU·시간</th><th>자체 온디맨드 대비</th><th class="n">7일 변동</th><th>지역</th><th>출처 · 수집</th></tr></thead><tbody>
-      ${g.rows.map(r => `<tr class="${r.stale ? 'dim' : ''}"><td><span class="pv">${starBtn(r.provider_id, r.provider_name)}<span class="prov">${esc(r.provider_name)}</span></span>${r.via ? `<span class="via" title="gpufinder.dev 집계 데이터">${esc(r.via)} 경유</span>` : ''}<br>${typeTag(r.provider_type)}</td>
+      ${g.rows.map(r => `<tr class=""><td><span class="pv">${starBtn(r.provider_id, r.provider_name)}<span class="prov">${esc(r.provider_name)}</span></span>${r.via ? `<span class="via" title="gpufinder.dev 집계 데이터">${esc(r.via)} 경유</span>` : ''}<br>${typeTag(r.provider_type)}</td>
         <td>${termL(r.term)}<span class="sub2">최소 ${termL(r.term).replace(' 약정', '')}</span></td>
-        <td class="n"><b>${money(r.price)}</b>${r.per_node && r.raw_price != null ? `<span class="sub2">${r.raw_currency === 'KRW' ? '₩' : '$'}${Number(r.raw_price).toLocaleString()}/노드 ÷ ${r.gpu_count}</span>` : ''}${r.stale ? '<span class="sub2">오래된 데이터</span>' : ''}</td>
+        <td class="n"><b>${money(r.price)}</b>${r.per_node && r.raw_price != null ? `<span class="sub2">${r.raw_currency === 'KRW' ? '₩' : '$'}${Number(r.raw_price).toLocaleString()}/노드 ÷ ${r.gpu_count}</span>` : ''}</td>
         <td>${r.discount_pct == null ? '<span class="muted">온디맨드 가격 없음 — 비교 불가</span>' : `<b class="down">−${money(r.discount_usd)} (−${pctu(r.discount_pct, 0)})</b><span class="sub2">자체 온디맨드 ${money(r.od_price)}${r.od_same_region ? '' : ` · 다른 지역(${esc(r.od_region || '—')})과 비교`}</span>`}</td>
         <td class="n">${r.change_7d == null ? '<span class="muted">변동 없음</span>' : `<span class="${r.change_7d > 0 ? 'up' : 'down'}">${pct(r.change_7d, 1)}</span>`}</td>
         <td>${esc(r.region || '—')}</td>
         <td>${r.source_url ? `<a href="${esc(r.source_url)}" target="_blank" rel="noopener">원문</a>` : '—'}<span class="sub2">${ago(r.collected_at)} 수집 · ${ago(r.unchanged_since)}부터 같은 가격</span></td></tr>`).join('')}
       </tbody></table></div></div>`).join('') || '<div class="pb muted">약정 가격이 없습니다.</div>'}
-    <p class="pnote">· 할인 = 1 − (약정 단가 ÷ 같은 사업자·같은 모델의 온디맨드 단가). 같은 지역 온디맨드가 없으면 다른 지역과 짝짓고 표시합니다. 노드 단위 가격은 GPU 수로 나눈 과정을 그대로 보여 줍니다.<br>· 대표 할인(중앙값)은 짝이 있는 사업자가 ${R.min_providers}곳 이상일 때만 냅니다. 한두 곳만 파는 조건은 대표값으로 보기 어렵기 때문입니다. 48시간보다 오래된 값은 흐리게 표시하고 대표값에서 뺍니다.<br>· 공개 가격 기준입니다. 대형 고객이 협상한 실제 거래가는 다를 수 있습니다.</p>`;
+    <p class="pnote">· 할인 = 1 − (약정 단가 ÷ 같은 사업자·같은 모델의 온디맨드 단가). 같은 지역 온디맨드가 없으면 다른 지역과 짝짓고 표시합니다. 노드 단위 가격은 GPU 수로 나눈 과정을 그대로 보여 줍니다.<br>· 대표 할인(중앙값)은 짝이 있는 사업자가 ${R.min_providers}곳 이상일 때만 냅니다. 한두 곳만 파는 조건은 대표값으로 보기 어렵기 때문입니다.<br>· 공개 가격 기준입니다. 대형 고객이 협상한 실제 거래가는 다를 수 있습니다.</p>`;
   wireDisc();
 }
 function discSpot() {
@@ -47,7 +47,7 @@ function discSpot() {
     ${S.models.map(g => `<div class="panel dgroup" id="d-${esc(g.model)}"><div class="ph"><h3>${esc(g.model)} <span class="muted">${g.rows.length}개 · 시장 온디맨드 중앙값 ${money(g.market_od)}</span></h3></div><div class="tw"><table class="t">
       <thead><tr><th>사업자</th><th>가격 방식</th><th class="n">스팟 /GPU·시간</th><th class="n">온디맨드 /GPU·시간</th><th class="n">할인</th><th>회수될 때</th><th>출처 · 수집</th></tr></thead><tbody>
       ${g.rows.map(r => { const mc = MECH[r.mechanism];
-        return `<tr class="${r.stale ? 'dim' : ''}"><td><span class="pv">${starBtn(r.provider_id, r.provider_name)}<span class="prov">${esc(r.provider_name)}</span></span>${r.via ? `<span class="via" title="gpufinder.dev 집계 데이터">${esc(r.via)} 경유</span>` : ''}<span class="sub2">${r.gpu_count || 1}× · ${esc(r.region || '—')}</span></td>
+        return `<tr class=""><td><span class="pv">${starBtn(r.provider_id, r.provider_name)}<span class="prov">${esc(r.provider_name)}</span></span>${r.via ? `<span class="via" title="gpufinder.dev 집계 데이터">${esc(r.via)} 경유</span>` : ''}<span class="sub2">${r.gpu_count || 1}× · ${esc(r.region || '—')}</span></td>
         <td>${mc ? `<span class="pill ${mc[0]}">${mc[1]}</span>` : '<span class="muted">미확인</span>'}</td>
         <td class="n"><b>${money(r.price)}</b><span class="sub2">${r.low_7d != null && r.high_7d != null && Math.abs(r.high_7d - r.low_7d) > 1e-9 ? `7일 ${money(r.low_7d)}~${money(r.high_7d)}${r.range_source === 'GPU Finder' ? ' (GPU Finder)' : ''}` : '7일 변동 없음'}</span></td>
         <td class="n">${r.od_basis === 'provider' ? `${money(r.od_price)}${r.od_same_region ? '' : '<span class="sub2">다른 지역</span>'}` : r.od_basis === 'aggregator' ? `<span class="muted">${money(r.od_price)}</span><span class="sub2">GPU Finder 표시 · 같은 상품 (참고)</span>` : r.od_basis === 'market' ? `<span class="muted">${money(r.market_od)}</span><span class="sub2">자체 온디맨드 없음 · 시장 중앙값(참고)</span>` : '<span class="muted">—</span>'}</td>

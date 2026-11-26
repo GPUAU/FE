@@ -6,12 +6,11 @@
 let springLegacyPending = null;
 
 async function springLegacyLoad() {
-  const [client, catalog] = await Promise.all([import('/static/spring-market-client.mjs'), springMarketCatalog()]);
+  const [client, catalog] = await Promise.all([import('/static/spring-market-client.mjs?v=agepolicy1126'), springMarketCatalog()]);
   const perModel = await Promise.all(catalog.models.map(async model => {
     const raw = await client.fetchMarketOffers(api, {modelId: model.id, includeStale: 'true'});
-    return cpSpringRows(raw, model, client).map((row, index) => {
-      const stale = client.mapMarketOffer(raw[index]).freshness === 'STALE';
-      return {...row, is_stale: stale, comparison_reasons: {strict: row.comparison_reasons.strict, region_excluded: row.comparison_reasons.strict}};
+    return cpSpringRows(raw, model, client).map(row => {
+      return {...row, is_stale: false, comparison_reasons: {strict: row.comparison_reasons.strict, region_excluded: row.comparison_reasons.strict}};
     });
   }));
   return {

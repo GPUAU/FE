@@ -93,7 +93,7 @@ async function loadMeta() {
     const names = catalog.models.map(model => model.name);
     const defaultModel = names.includes('B300') ? 'B300' : names[0];
     state.meta = {
-      springOnly: true, catalog_models: names, models: names, fresh_hours: 48,
+      springOnly: true, catalog_models: names, models: names, 
       terms: Object.keys(TERMS), provider_types: catalog.providerTypes || [],
       regions: [...new Set((catalog.regions || []).map(region => region.regionCode).filter(Boolean))],
     };
@@ -132,17 +132,17 @@ async function renderDash() {
   catch (e) { if (request !== dashboardRequest) return; $('#v-dashboard').removeAttribute('aria-busy'); errBox($('#kpis'), e); $('#dashTbl').innerHTML = ''; $('#dashCount').textContent = ''; $('#selectionSummary').textContent = '선택 조건 조회 실패'; $('#barBox').hidden = true; $('#barNote').textContent = '가격 데이터를 조회하지 못했습니다.'; return; }
   if (request !== dashboardRequest || state.view !== 'dashboard') return;
   const k = d.kpi, rows = d.rows;
-  rows.sort((a, b) => ((a.normalized_price_usd == null) * 2 + !!a.stale) - ((b.normalized_price_usd == null) * 2 + !!b.stale) || (a.normalized_price_usd || 0) - (b.normalized_price_usd || 0));
+  rows.sort((a, b) => ((a.normalized_price_usd == null) * 2) - ((b.normalized_price_usd == null) * 2) || (a.normalized_price_usd || 0) - (b.normalized_price_usd || 0));
   const priced = rows.filter(r => r.normalized_price_usd != null);
-  const unpr = rows.length - priced.length, stale = priced.filter(r => r.stale);
+  const unpr = rows.length - priced.length;
   $('#chartTitle').textContent = `${f.model} · ${termL(f.term)} 환산 단가 (${state.cur === 'KRW' ? '₩' : 'USD'}/GPU·시간)`;
   $('#barBox').style.height = Math.max(120, priced.length * 30 + 40) + 'px';
   const conv = v => state.cur === 'KRW' && state.fx ? Math.round(v * state.fx) : v;
   mkChart('barChart', { type: 'bar', data: { labels: priced.map(r => `${r.provider_name} · ${r.raw_product_name}`),
-    datasets: [{ data: priced.map(r => conv(r.normalized_price_usd)), backgroundColor: priced.map(r => css(TYPE_VAR[r.provider_type] || '--ink-3') + (r.stale ? '55' : 'DD')), borderRadius: 3, barThickness: 18 }] },
-    options: { indexAxis: 'y', maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const r = priced[c.dataIndex]; return [`${money(r.normalized_price_usd)} /GPU·시간`, r.stale ? `오래된 데이터 (${shortAt(r.collected_at)}) — 통계 제외` : `수집 ${shortAt(r.collected_at)}`]; } } } },
+    datasets: [{ data: priced.map(r => conv(r.normalized_price_usd)), backgroundColor: priced.map(r => css(TYPE_VAR[r.provider_type] || '--ink-3') + 'DD'), borderRadius: 3, barThickness: 18 }] },
+    options: { indexAxis: 'y', maintainAspectRatio: false, animation: false, plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => { const r = priced[c.dataIndex]; return [`${money(r.normalized_price_usd)} /GPU·시간`, `수집 ${shortAt(r.collected_at)}`]; } } } },
       scales: { x: { beginAtZero: true, ticks: { callback: v => state.cur === 'KRW' ? '₩' + Number(v).toLocaleString() : '$' + v } }, y: { grid: { display: false }, ticks: { color: css('--ink'), callback(v) { const l = this.getLabelForValue(v); return l.length > 34 ? l.slice(0, 33) + '…' : l; } } } } } });
-  $('#barNote').textContent = [`표시 ${priced.length}개 상품 · 회차 기준 유효 ${priced.length-stale.length}개 · 참고 ${stale.length}개`, unpr ? `미공개·환산 불가 ${unpr}건은 차트 제외` : '', stale.length ? `흐린 막대 ${stale.length}건은 오래된 데이터 (통계 제외)` : ''].filter(Boolean).join(' · ');
+  $('#barNote').textContent = [`표시 ${priced.length}개 상품 · 회차 기준 유효 ${priced.length}개`, unpr ? `미공개·환산 불가 ${unpr}건은 차트 제외` : ''].filter(Boolean).join(' · ');
 
   state.dashRows = rows;
   enhanceDashboard(d);
@@ -522,7 +522,7 @@ const SH = {
     product: 'GPU Price Index', gMarket: 'Market', gCost: 'Cost', gAi: 'AI', gQuality: 'Quality', gAdmin: 'Admin', gSettings: 'Settings',
     pDashboard: 'Price dashboard', pFavorites: 'Favorite providers', pDiscounts: 'Commit & spot discounts', pCatalog: 'GPU & provider catalog', d_catalog: 'Every GPU model and provider as a card. Open one for its price history, at-a-glance stats, offers by provider and an FAQ answered from current data.', d_discounts: 'Compare 1- and 3-year commitments and spot prices against each provider’s own on-demand price, across all GPU models. Headline discounts need 3+ providers.', gBiz: 'Business case', pBizcase: 'Business case', d_bizcase: 'Four modules, one business case: accelerator benchmarks → hourly TCO → rental scenarios → cluster finance (NPV, IRR, three statements) → price-performance, all from the same assumptions.', refresh: 'Refresh', refreshed: r => `Loaded the latest data · run ${r}`, pCompare: 'Price comparison', d_compare: 'Compare on-demand, spot and committed prices for one GPU model against a baseline (our quote, market median, or a provider). Only like-for-like terms are compared.', favFx: 'FX effect', favSolo: 'No peers', hOk: 'OK', hFail: 'Failed', hPart: 'Partial', favDash: 'Favorite providers', d_favorites: 'All model and contract prices from the providers you starred. “vs market” compares with the median of the latest valid prices for the same model and term.', favPickTitle: 'Choose providers', favPickHint: 'Tap ☆ to star or unstar. You can also star from the price dashboard table.', favAdded: n => `${n} added to favorites.`, favRemoved: n => `${n} removed from favorites.`, favEmpty: 'No favorite providers yet.', favEmptySub: 'Tap ☆ above to add one.', favStar: 'Star provider', favUnstar: 'Unstar provider', kFavProv: 'Favorites', kFavItems: 'Products', kFavBelow: 'Below market', kFavChg: 'Price changes (7 days)', kFavIssue: 'Collection issues', colModel: 'Model', colProduct: 'Product', colRegion: 'Region', colTerm: 'Term', colPrice: 'Price', colMarket: 'Market median', colVs: 'vs market', colChange: 'Last change', colCollected: 'Collected', colSrc: 'Source', favHiddenL: 'Unpublished / not convertible', favLastOk: 'Last success', favSite: 'Pricing page', favNoItems: 'No current valid prices.', pTrend: 'Trends & lifecycle', pCost: 'Cost & quote', pAgent: 'Pricing Copilot', pQa: 'Accuracy check', pDb: 'DB console',
     pUsers: 'Users', pInquiries: 'Workspace inquiries', pAdminInq: 'Inquiries', newInquiry: 'Contact us',
-    d_dashboard: 'Latest valid prices per GPU-hour. Values older than 48 hours and from failed providers are shown separately and excluded from stats.',
+    d_dashboard: 'Latest valid prices per GPU-hour. Prices are grouped by comparable product conditions.',
     d_trend: 'Price history by collection run, and how long competitors took to react after cost events.',
     d_cost: 'The cost engine computes break-even and quotes. Edits recalculate without saving until you save a new cost version.',
     d_agent: 'Ask about prices in plain language. Every answer is grounded in stored data with source and collection time.',
@@ -667,10 +667,10 @@ async function renderCompare() {
   // 기준 행: 계약 조건별 기준가
   let base;
   if (c.base === 'OURS') base = { name: 'SK텔레콤 AI 팩토리', sub: `자사 제안가 · 원가 ${esc(d.ours.cost_version)} · BEP ${money(d.ours.bep)}`, terms: d.ours.terms };
-  else if (c.base === 'MEDIAN') base = { name: '시장 중앙값', sub: `최신 ${d.fresh_hours}시간 이내 정상가`, terms: Object.fromEntries(Object.entries(d.market).map(([t, m]) => [t, { price: m.median, n: m.n }])) };
+  else if (c.base === 'MEDIAN') base = { name: '시장 중앙값', sub: `확인된 온디맨드 가격`, terms: Object.fromEntries(Object.entries(d.market).map(([t, m]) => [t, { price: m.median, n: m.n }])) };
   else { const p = P.find(x => x.provider_id === c.base); base = { name: p.provider_name, sub: typeTag(p.provider_type), terms: p.terms, pid: p.provider_id }; }
   const bp = t => (base.terms[t] || {}).price ?? null;
-  const od = d.market.ON_DEMAND, odMin = P.filter(p => p.terms.ON_DEMAND && p.terms.ON_DEMAND.price != null && !p.terms.ON_DEMAND.stale).sort((a, b) => a.terms.ON_DEMAND.price - b.terms.ON_DEMAND.price)[0];
+  const od = d.market.ON_DEMAND, odMin = P.filter(p => p.terms.ON_DEMAND && p.terms.ON_DEMAND.price != null).sort((a, b) => a.terms.ON_DEMAND.price - b.terms.ON_DEMAND.price)[0];
   const long = terms.filter(t => !['ON_DEMAND', 'SPOT'].includes(t)).slice(-1)[0];
   const best = P.flatMap(p => Object.entries(p.terms).filter(([, x]) => x.commit_discount != null).map(([t, x]) => ({ p, t, x }))).sort((a, b) => b.x.commit_discount - a.x.commit_discount)[0];
   const baseLong = long && bp(long), baseOd = bp('ON_DEMAND');
@@ -684,7 +684,7 @@ async function renderCompare() {
   const cell = (x, t, isBase) => {
     if (!x) return '<td class="n"><span class="muted">—</span></td>';
     if (x.price == null) return `<td class="n"><span class="muted" title="${esc(x.reason || '')}">${esc(x.status || '—')}</span></td>`;
-    return `<td class="n ${x.stale ? 'dim' : ''}" title="${esc([x.product, x.region].filter(Boolean).join(' · '))}"><b>${money(x.price)}</b>${x.options > 1 ? `<span class="sub2">최저 · 상품 ${x.options}개</span>` : ''}${x.commit_discount != null ? `<span class="sub2">자체 약정 할인 ${pctu(x.commit_discount, 0)}</span>` : ''}${x.stale ? '<span class="sub2">오래된 데이터</span>' : ''}${isBase ? '' : vsBase(x.price, bp(t))}</td>`;
+    return `<td class="n " title="${esc([x.product, x.region].filter(Boolean).join(' · '))}"><b>${money(x.price)}</b>${x.options > 1 ? `<span class="sub2">최저 · 상품 ${x.options}개</span>` : ''}${x.commit_discount != null ? `<span class="sub2">자체 약정 할인 ${pctu(x.commit_discount, 0)}</span>` : ''}${isBase ? '' : vsBase(x.price, bp(t))}</td>`;
   };
   const head = `<thead><tr><th>사업자</th>${terms.map(t => `<th class="n">${termL(t)}</th>`).join('')}<th class="n">최대 약정 할인</th><th>판매 형태</th></tr></thead>`;
   const baseRow = `<tr class="base-row"><td><span class="prov">${esc(base.name)}</span><span class="base-tag">기준</span><span class="sub2">${base.sub}</span></td>${terms.map(t => base.terms[t] ? `<td class="n"><b>${money(base.terms[t].price)}</b>${base.terms[t].n ? `<span class="sub2">n=${base.terms[t].n}</span>` : ''}${c.base !== 'MEDIAN' && t !== 'ON_DEMAND' && t !== 'SPOT' && baseOd && base.terms[t].price ? `<span class="sub2">온디맨드 대비 ${pctu(1 - base.terms[t].price / baseOd, 0)} 할인</span>` : ''}</td>` : '<td class="n"><span class="muted">—</span></td>').join('')}<td class="n"></td><td></td></tr>`;
@@ -694,7 +694,7 @@ async function renderCompare() {
   $('#cNote').innerHTML = `· <b>비교 방법</b>: 각 칸의 ‘○배 비쌈 / ○% 저렴’은 <b>같은 계약 조건</b>의 기준가와 비교한 값입니다. 기준에 그 조건 가격이 없으면 비교하지 않습니다. 스팟은 언제든 회수될 수 있어 온디맨드와 비교하지 않습니다.<br>
     · <b>자체 약정 할인</b> = 1 − (약정 환산 단가 ÷ 그 사업자의 온디맨드 단가). 약정 단가는 선납금을 약정 시간으로 나눠 시간당으로 환산한 값입니다.<br>
     · 한 사업자가 같은 조건에 상품을 여러 개 내면 가장 싼 것을 표시합니다 (칸에 마우스를 올리면 상품명). 판매 형태 ‘약정만’은 온디맨드 가격이 공개되지 않은 사업자입니다.<br>
-    · ${d.fresh_hours}시간보다 오래된 값은 흐리게 표시하고 시장 중앙값·최저가에서 뺍니다. 기준 시점: 최신 회차 ${shortAt(d.as_of)}.`;
+    · 기준 시점: 수집 회차 ${shortAt(d.as_of)}.`;
   // 약정 할인율 차트
   const commitTerms = terms.filter(t => !['ON_DEMAND', 'SPOT'].includes(t));
   const chartRows = [...(d.ours && d.ours.terms.ON_DEMAND ? [{ name: '자사 제안가', t: d.ours.terms, ours: true }] : []), ...P.filter(p => p.max_commit_discount != null).map(p => ({ name: p.provider_name, t: p.terms }))];

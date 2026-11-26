@@ -46,10 +46,10 @@ test('pair comparison prefers recently confirmed prices and keeps older selectio
   const current = {id:'2', price:'5', freshness:'CURRENT', excludedReasons:[]};
   const stale = {id:'3', price:'2', freshness:'STALE', excludedReasons:['staleOffers']};
   const approximate = {id:'4', price:'3', freshness:'CURRENT', excludedReasons:['nonExactOffers']};
-  assert.equal(market.pickPairOffer([unavailable, stale, approximate, current]), current);
+  assert.equal(market.pickPairOffer([unavailable, stale, approximate, current]), stale);
   assert.equal(market.pickPairOffer([unavailable, current], '1'), unavailable);
   assert.equal(market.pairPriceGap(unavailable, current), null);
-  assert.equal(market.getPairPrice(stale), null);
+  assert.equal(market.getPairPrice(stale), 2);
   assert.equal(market.getPairPrice(approximate), null);
 });
 

@@ -25,7 +25,7 @@ test('uses each offer’s linked baseline rather than another product-wide on-de
 });
 test('stale or incomparable discounts stay unavailable even when amounts exist; invalid prices never become zero',()=>{
   const rows=quoteMarketRows(product,{items:[base('a','5'),commitment(36,'4',{status:'UNAVAILABLE',baseOfferId:'a',discountRate:0.2,reason:'COMMITMENT_PRICE_STALE'}),commitment(60,'',{status:'OK',baseOfferId:'a',discountRate:0.2})]});
-  assert.equal(rows[0].amount,4);assert.equal(rows[0].rate,null);assert.match(rows[0].reason,/48시간/);
+  assert.equal(rows[0].amount,4);assert.equal(rows[0].rate,null);assert.match(rows[0].reason,/조건 확인/);
   assert.equal(rows[1].amount,null);assert.equal(rows[1].rate,null);
 });
 test('keeps separate payment options and ignores one-year and spot offers',()=>{
