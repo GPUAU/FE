@@ -779,7 +779,8 @@ function wireShell() {
     else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement.click(); }
   };
   $('#gSearch').onsubmit = e => { e.preventDefault(); const q = $('#gSearchIn').value.trim(); $('#gSearchIn').value = ''; askFromAnywhere(q); };
-  $('#btnHelp').onclick = openInquiry; $('#snbHelp').onclick = openInquiry; $('#inqNew').onclick = openInquiry;
+  $('#btnHelp')?.addEventListener('click', openInquiry);
+  $('#snbHelp').onclick = openInquiry; $('#inqNew').onclick = openInquiry;
   $('#inqClose').onclick = $('#inqCancel').onclick = closeInquiry;
   $('#inqModal').onclick = e => { if (e.target === $('#inqModal')) closeInquiry(); };
   $('#inqForm').onsubmit = submitInquiry;
