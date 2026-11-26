@@ -1,0 +1,147 @@
+/* Cost workspace. Scoped so catalog, home and forecast retain their own design. */
+html body.workspace-sidebar.cost-workbench:not(.is-home){--cw-gutter:40px;background:#fff}
+html body.workspace-sidebar.cost-workbench:not(.is-home) #band{background:#fff;margin-bottom:0;border-bottom:0}
+html body.workspace-sidebar.cost-workbench:not(.is-home) #band:before{display:none}
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title{min-height:0;padding:26px var(--cw-gutter) 28px!important}
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title .page-eyebrow{display:none}
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title #pageTitle{font-size:32px;font-weight:700;line-height:1.3;letter-spacing:-.045em;color:#252724;margin:0 0 10px}
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title #pageDesc{font-size:14px;font-weight:400;color:#71736f;line-height:1.65;margin:0}
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title .page-data,
+html body.workspace-sidebar.cost-workbench:not(.is-home) .band-title .portal-guide-button{display:none}
+html body.cost-workbench #portalNext{display:none!important}
+html body.cost-workbench #costTabs{margin:0 0 34px;padding:0;border-bottom:1px solid #dedfdb}
+html body.cost-workbench .cost-tabs-in{display:flex;gap:30px;overflow-x:auto}
+html body.cost-workbench .cost-tabs a{flex:none;display:block;padding:15px 0 17px;border:0;border-bottom:2px solid transparent;border-radius:0;background:transparent;box-shadow:none;transform:none;color:#7b7d78}
+html body.cost-workbench .cost-tabs a:hover{color:#262a25;background:transparent;box-shadow:none}
+html body.cost-workbench .cost-tabs a[aria-selected="true"]{border-color:#d75121;background:transparent;box-shadow:none}
+html body.cost-workbench .cost-tabs .ct-title{font-size:14px;font-weight:500;color:inherit;letter-spacing:-.02em}
+html body.cost-workbench .cost-tabs a[aria-selected="true"] .ct-title{color:#262a25;font-weight:700}
+/* Invoice analysis shares the simulation's corporate hero and square controls. */
+html body.workspace-sidebar.invoice-analysis #band,
+html body.workspace-sidebar.invoice-analysis .crumbs{display:none!important}
+html body.workspace-sidebar .invoice-page.cp-page .cp-hero{margin-bottom:0}
+html body.workspace-sidebar .invoice-page.cp-page .cp-hero em{font-style:normal}
+html body.workspace-sidebar.invoice-analysis #costTabs{margin:0 0 36px;border-color:#dfe2e6}
+html body.workspace-sidebar.invoice-analysis .cost-tabs-in{gap:32px}
+html body.workspace-sidebar.invoice-analysis .cost-tabs a{padding:16px 0 18px;color:#686c73}
+html body.workspace-sidebar.invoice-analysis .cost-tabs a[aria-selected=true]{border-color:#df1b36}
+html body.workspace-sidebar.invoice-analysis .cost-tabs .ct-title{font-size:15px;font-weight:400}
+html body.workspace-sidebar.invoice-analysis .cost-tabs a[aria-selected=true] .ct-title{font-weight:500;color:#202124}
+#costAgentHost{scroll-margin-top:95px;min-width:0}
+html body.cost-workbench .ca{--ca-accent:#df1b36;--ca-ink:#202124;--ca-ink2:#555d68;--ca-muted:#747980;--ca-line:#dde0e4;--ca-soft:#f5f6f7;--ca-ok:#505965;--ca-warn:#a66213;--ca-bad:#bd1933;margin:0 0 44px;font-family:var(--sk-type);font-weight:400;line-height:1.8}
+html body.cost-workbench .ca *{box-sizing:border-box}
+html body.cost-workbench .ca :is(button,input,select,textarea,a,summary):focus-visible{outline:2px solid #df1b36;outline-offset:3px}
+html body.cost-workbench .ca :is(h2,h3,h4){color:#202124;letter-spacing:-.045em;font-weight:400}
+html body.cost-workbench .ca h2{font-size:25px;line-height:1.5;margin:0 0 10px}
+html body.cost-workbench .ca h3{font-size:21px;line-height:1.5;margin:0 0 12px}
+html body.cost-workbench .ca h4{font-size:17px;line-height:1.6;margin:24px 0 15px}
+html body.cost-workbench .ca :is(b,strong){font-weight:500}
+html body.cost-workbench .ca .ca-desc{color:#686c73;font-size:14px;line-height:1.85}
+html body.cost-workbench .ca-start{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:40px;align-items:start}
+html body.cost-workbench .ca-start-card{display:block;min-width:0;padding:25px 0 0;border:0;border-top:1px solid #2b3036;border-radius:0;box-shadow:none;background:#fff}
+html body.cost-workbench .ca-section-head{display:block;margin-bottom:26px}
+html body.cost-workbench .ca-start .ca-eyebrow,
+html body.cost-workbench .ca-stage-label{display:none}
+html body.cost-workbench .ca-drop{min-height:232px;padding:27px 20px 25px;gap:9px;border:1px dashed #c7ccd3;border-radius:0;background:#f5f6f7;text-align:center;transition:border-color .15s,background .15s}
+html body.cost-workbench .ca-drop:hover,
+html body.cost-workbench .ca-drop.is-over{background:#faf5f6;border-color:#df1b36}
+html body.cost-workbench .ca-drop.has-file{border:1px solid #df1b36;background:#faf5f6}
+html body.cost-workbench .ca-drop strong{font-size:16px;font-weight:400;line-height:1.6;color:#40464f}
+html body.cost-workbench .ca-drop small{font-size:12px;color:#747980;margin-top:4px;letter-spacing:0}
+html body.cost-workbench .ca-document{display:block;width:38px;height:44px;margin:0 0 8px;transform:none}
+html body.cost-workbench .ca-document svg{width:100%;height:100%;stroke:#7b828c;stroke-width:1.3;stroke-linecap:round;stroke-linejoin:round;fill:#fff}
+html body.cost-workbench .ca-upload-sub{font-size:13px;color:#747980}
+html body.cost-workbench .ca-file-action{color:#bd233a;text-decoration:underline;text-underline-offset:4px;font-weight:400}
+html body.cost-workbench .ca-file{font-size:13px;font-weight:400;color:#bd233a;overflow-wrap:anywhere;max-width:100%;margin-top:4px}
+html body.cost-workbench .ca-file:empty{display:none}
+html body.cost-workbench .ca-context-head{display:flex;align-items:baseline;gap:12px;margin:28px 0 20px}
+html body.cost-workbench .ca-context-head h3{font-size:19px;margin:0}
+html body.cost-workbench .ca-context-head>span{font-size:12px;color:#747980}
+html body.cost-workbench .ca-row{grid-template-columns:1.45fr 1fr;gap:24px}
+html body.cost-workbench .ca :is(.ca-row label,.ca-field){gap:8px;font-size:14px;font-weight:400;color:#4f555e;min-width:0}
+html body.cost-workbench .ca :is(.ca-row,.ca-field) :is(select,input){height:48px;border:1px solid #d8dce1;border-radius:0;background:#fff;box-shadow:none;font-size:15px;font-weight:400;color:#40464f;padding:0 12px;min-width:0;width:100%}
+html body.cost-workbench .ca :is(.ca-row,.ca-field) :is(input,select):focus{border-color:#505761;box-shadow:none}
+html body.cost-workbench .ca-number-wrap{display:block;position:relative}
+html body.cost-workbench .ca-number-wrap input{padding-right:37px;font-size:18px;appearance:textfield;-moz-appearance:textfield}
+html body.cost-workbench .ca-number-wrap input::-webkit-inner-spin-button{appearance:none}
+html body.cost-workbench .ca-number-wrap>span{position:absolute;right:13px;top:13px;color:#767c84;font-size:12px;pointer-events:none}
+html body.cost-workbench .ca-hint{font-size:12px;font-weight:400;line-height:1.75;color:#747980;margin:12px 0 0}
+html body.cost-workbench .ca-start-footer{display:flex;justify-content:space-between;gap:20px;align-items:center;border-top:1px solid #e3e5e8;margin-top:26px;padding-top:22px}
+html body.cost-workbench .ca-start-footer>span{font-size:12px;color:#747980;line-height:1.8;max-width:230px}
+html body.cost-workbench .ca-btn{border-radius:0;min-height:43px;padding:11px 17px;font-size:14px;font-weight:400;line-height:1.6;box-shadow:none}
+html body.cost-workbench .ca-btn-primary{background:#df1b36;border-color:#df1b36;color:#fff}
+html body.cost-workbench .ca-btn-primary:hover{background:#c7112c;border-color:#c7112c;filter:none}
+html body.cost-workbench .ca-btn-primary:disabled{background:#e9ebee;color:#838a94;border-color:#e2e5e9;opacity:1;cursor:not-allowed}
+html body.cost-workbench .ca-btn-ghost{color:#40464f;border-color:#d7dbe1;background:#fff}
+html body.cost-workbench .ca-btn-ghost:hover{background:#f6f6f7;border-color:#878e98}
+html body.cost-workbench .ca-start-footer .ca-btn{flex:none;display:flex;flex-direction:row;gap:22px}
+html body.cost-workbench .ca-start-aside{min-width:0;padding:24px;border:0;border-top:2px solid #df1b36;background:#f5f6f7}
+html body.cost-workbench .ca-aside-heading{display:block;margin-bottom:7px}
+html body.cost-workbench .ca-aside-heading p{margin:0;font-size:20px;font-weight:400;color:#202124;letter-spacing:-.04em}
+html body.cost-workbench .ca-aside-rule{display:none}
+html body.cost-workbench .ca-deliverables{margin:0}
+html body.cost-workbench .ca-deliverables>div{padding:20px 0;border-bottom:1px solid #dce0e4}
+html body.cost-workbench .ca-deliverables dt{display:flex;gap:12px;font-size:15px;font-weight:400;color:#40464f}
+html body.cost-workbench .ca-deliverables dt span{font-size:12px;font-weight:400;color:#a24756;padding-top:2px;font-variant-numeric:tabular-nums}
+html body.cost-workbench .ca-deliverables dd{margin:8px 0 0 27px;color:#686c73;font-size:13px;line-height:1.8;word-break:keep-all}
+html body.cost-workbench .ca-report-note{display:flex;gap:12px;align-items:flex-start;margin:23px 0;padding:0;background:none;border-radius:0}
+html body.cost-workbench .ca-report-note svg{width:22px;height:25px;flex:none;stroke:#7b828c;stroke-width:1.2}
+html body.cost-workbench .ca-report-note strong{font-size:14px;font-weight:400;color:#40464f}
+html body.cost-workbench .ca-report-note p{font-size:12px;color:#747980;line-height:1.8;margin:6px 0 0}
+html body.cost-workbench .ca-report-note>span{font-size:10px;color:#747980;margin-left:auto;margin-top:4px}
+html body.cost-workbench .ca-data-note{font-size:12px;color:#686c73;line-height:1.8}
+html body.cost-workbench .ca-data-note summary{cursor:pointer;list-style-position:outside;margin-left:12px}
+html body.cost-workbench .ca-data-note p{margin:12px 0 0;padding:12px 0;border-top:1px solid #dce0e4;color:#686c73}
+html body.cost-workbench .ca-manual-link{display:flex;justify-content:space-between;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #dce0e4;font-size:13px;font-weight:400;color:#555d68;text-decoration:none}
+html body.cost-workbench .ca-manual-link:hover{color:#c51e37;text-decoration:underline;text-underline-offset:4px}
+/* Review, progress and result states. Status labels remain explicit without green. */
+html body.cost-workbench .ca :is(.ca-card,.ca-progress,.ca-activity){border-radius:0;box-shadow:none;border-color:#dde0e4;background:#fff}
+html body.cost-workbench .ca-question{border-top:2px solid #df1b36}
+html body.cost-workbench .ca-opt{border-radius:0;font-size:14px}
+html body.cost-workbench .ca-opt[aria-pressed=true]{background:#faf5f6;border-color:#df1b36;box-shadow:none}
+html body.cost-workbench .ca-opt small{font-weight:400;font-size:12px}
+html body.cost-workbench .ca .ca-live{background:#f5f6f7}
+html body.cost-workbench .ca-bar i{background:#df1b36}
+html body.cost-workbench .ca-progress[data-finished] .ca-bar i{background:#505965}
+html body.cost-workbench .ca-state{background:#f9eff1;color:#bd233a;border-radius:0;font-weight:400}
+html body.cost-workbench .ca-state[data-status=WAITING]{background:#fff5e8;color:#9e5e12}
+html body.cost-workbench .ca-state[data-status=ERROR]{background:#fdecee;color:#bd1933}
+html body.cost-workbench .ca :is(.ca-head strong,.ca-pct,.ca-elapsed,.ca-step-title,.ca-step-label){font-weight:400}
+html body.cost-workbench .ca-head strong{font-size:16px}
+html body.cost-workbench .ca-step-title{font-size:12px}
+html body.cost-workbench .ca-steps li[aria-current=step] .ca-step-title{font-weight:500}
+html body.cost-workbench .ca-steps li[data-status=PENDING] .ca-step-title{font-weight:400;color:#858b94}
+html body.cost-workbench .ca-steps li[data-status=WAITING] .ca-dot{animation:none;box-shadow:none}
+html body.cost-workbench .ca-steps li.ca-pop .ca-dot{animation:none}
+html body.cost-workbench .ca-steps li.ca-pop[data-status=DONE] .ca-dot:after{display:none}
+html body.cost-workbench .ca-head-ic[data-status=WAITING]{animation:none;box-shadow:none}
+html body.cost-workbench .ca-chips span{background:#f5f6f7;border-radius:0;font-weight:400}
+html body.cost-workbench .ca-orb{width:26px;height:26px;border:2px solid #dde0e4;border-top-color:#df1b36;border-radius:50%;animation:ca-spin 1s linear infinite}
+html body.cost-workbench .ca-orb i,html body.cost-workbench .ca-orb:after,html body.cost-workbench .ca-shimmer{display:none}
+html body.cost-workbench .ca-live-feed li[aria-current=true]{background:#eef0f3}
+html body.cost-workbench .ca-live-feed li[aria-current=true] span:after{display:none}
+html body.cost-workbench .ca-live-feed li[data-kind=think] :is(i,b),html body.cost-workbench .ca-live-feed li[data-kind=tool] :is(i,b){color:#555d68}
+html body.cost-workbench .ca-timeline li[data-kind=think] b,html body.cost-workbench .ca-timeline li[data-kind=tool] b{color:#555d68}
+html body.cost-workbench .ca-timeline li[data-kind=think]:before,html body.cost-workbench .ca-timeline li[data-kind=tool]:before{background:#747980}
+html body.cost-workbench .ca-kpis{gap:0;border-top:1px solid #dde0e4;border-bottom:1px solid #dde0e4;margin:22px 0 26px}
+html body.cost-workbench .ca-kpis div{background:#fff;border-radius:0;border-right:1px solid #e3e5e8;padding:22px 18px}
+html body.cost-workbench .ca-kpis div:last-child{border-right:0}
+html body.cost-workbench .ca-kpis .ca-kpi-main{background:#f5f6f7}
+html body.cost-workbench .ca-kpis strong{font-size:34px;font-weight:300;letter-spacing:-.045em}
+html body.cost-workbench .ca-kpis span{font-weight:400}
+html body.cost-workbench .ca-side{border:0;border-top:2px solid #df1b36;border-radius:0;box-shadow:none;background:#f5f6f7;max-height:calc(100dvh - 112px);overflow:auto;scrollbar-width:thin}
+html body.cost-workbench .ca-side h4{font-size:19px;font-weight:400;margin:0 0 15px}
+html body.cost-workbench .ca-group>p{font-size:12px;font-weight:400;letter-spacing:0}
+html body.cost-workbench .ca-kv dd{font-weight:400}
+html body.cost-workbench .ca :is(.ca-llm summary,.ca-activity summary,.ca-error,.ca-ok,.ca-warn){font-weight:400}
+html body.cost-workbench .ca-llm pre{border-radius:0;background:#eceef1}
+html body.cost-workbench .ca .ca-eyebrow{font-size:13px;font-weight:400;color:#bd233a;letter-spacing:0;margin:0 0 8px}
+html body.cost-workbench .ca-run .ca-grid{grid-template-columns:minmax(0,1fr) 300px;gap:32px}
+html body.cost-workbench .ca-me b{border-radius:0;font-weight:400}
+html body.cost-workbench .ca-enter .ca-kpis>div{animation:none}
+@media(min-width:1550px){html body.cost-workbench .ca-start{grid-template-columns:minmax(0,1fr) 340px;gap:48px}html body.cost-workbench .ca-start-aside{padding:28px}html body.cost-workbench .ca-drop{min-height:250px}}
+@media(max-width:1150px){html body.cost-workbench .ca-start{grid-template-columns:minmax(0,1fr) 270px;gap:26px}html body.cost-workbench .ca-start-aside{padding:21px}html body.cost-workbench .ca-start-footer{align-items:flex-end}html body.cost-workbench .ca-start-footer>span{max-width:170px}html body.cost-workbench .ca-start-footer .ca-btn{gap:12px}}
+@media(max-width:1050px){html body.workspace-sidebar.cost-workbench:not(.is-home){--cw-gutter:24px}html body.cost-workbench .ca-run .ca-grid{grid-template-columns:1fr}html body.cost-workbench .ca-side{position:static;max-height:none}}
+@media(max-width:900px){html body.cost-workbench .ca-start{grid-template-columns:1fr;gap:32px}html body.cost-workbench .ca-start-aside{padding:24px}html body.cost-workbench .ca-deliverables{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px}html body.cost-workbench .ca-deliverables dd{margin-left:0}html body.cost-workbench .ca-report-note{max-width:380px}html body.cost-workbench .ca-start-footer>span{max-width:none}}
+@media(max-width:520px){html body.workspace-sidebar.cost-workbench:not(.is-home){--cw-gutter:20px}html body.workspace-sidebar.invoice-analysis .cost-tabs-in{gap:25px}html body.workspace-sidebar.invoice-analysis .cost-tabs .ct-title{font-size:14px}html body.cost-workbench .ca h2{font-size:23px}html body.cost-workbench .ca-row{grid-template-columns:1fr;gap:22px}html body.cost-workbench .ca-start-footer{display:grid;gap:14px}html body.cost-workbench .ca-start-footer .ca-btn{justify-content:space-between;width:100%}html body.cost-workbench .ca-deliverables{grid-template-columns:1fr;gap:0}html body.cost-workbench .ca-deliverables dd{margin-left:27px}html body.cost-workbench .ca-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}html body.cost-workbench .ca-head{flex-wrap:wrap}html body.cost-workbench .ca-card{padding:20px}html body.cost-workbench .ca-kpis strong{font-size:29px}}
+@media(prefers-reduced-motion:reduce){html body.cost-workbench .ca-orb{animation:none}}

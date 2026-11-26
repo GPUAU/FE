@@ -68,33 +68,36 @@ export function progressOf(s) {
 // ------------------------------------------------------------------ 시작 화면
 export function renderStart(models = []) {
   return `<section class="ca ca-start" aria-label="원가 에이전트 시작">
-    <div class="ca-start-copy">
-      <p class="ca-eyebrow">AI 원가 에이전트</p>
-      <h2>청구서 한 장으로<br>제안가까지</h2>
-      <ol class="ca-how">
-        <li><b>분류</b><span>사업자마다 다른 청구서 항목명을 표준 원가 항목으로 정리합니다.</span></li>
-        <li><b>점검</b><span>총액을 대조하고, 빠진 큰 비용이 있으면 먼저 물어봅니다.</span></li>
-        <li><b>비교</b><span>원가와 제안가를 같은 GPU의 시장 공개가격과 비교합니다.</span></li>
-        <li><b>근거서</b><span>가정값·근거·진행 기록을 엑셀 근거서로 내려받습니다.</span></li>
-      </ol>
-      <p class="ca-privacy"><span aria-hidden="true">🔒</span> 금액·숫자·식별자는 가리고 항목명만 AI에 보냅니다. 원가 계산은 내부 원가 서버가 합니다.</p>
-    </div>
-    <div class="ca-card ca-start-card">
-      <label class="ca-drop" data-ca-drop>
+    <div class="ca-start-card">
+      <header class="ca-section-head"><div><p class="ca-eyebrow">청구서 기반 산정</p><h2>청구서 등록</h2><p class="ca-desc">임차료·전력비 등 청구 내역을 바탕으로 원가와 제안가를 계산합니다.</p></div><span class="ca-stage-label">새 분석</span></header>
+      <label class="ca-drop" data-ca-drop tabindex="0" role="button" aria-label="청구서 파일 선택">
         <input type="file" accept=".xlsx,.csv" data-ca-file hidden>
-        <span class="ca-drop-icon" aria-hidden="true">⬆</span>
-        <strong>청구서를 끌어다 놓거나 클릭해서 선택</strong>
-        <small>xlsx · csv · 최대 5MB · 사업자 양식 그대로</small>
-        <span class="ca-file" data-ca-filename></span>
+        <span class="ca-document" aria-hidden="true"><svg viewBox="0 0 48 56" fill="none"><path d="M8 2h22l12 12v38a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M30 2v12h12M15 25h18M15 32h18M15 39h10"/></svg></span>
+        <strong>청구서 파일을 여기에 놓으세요</strong>
+        <span class="ca-upload-sub">또는 <span class="ca-file-action">파일 선택</span></span>
+        <small>XLSX, CSV · 최대 5MB</small>
+        <span class="ca-file" data-ca-filename aria-live="polite"></span>
       </label>
+      <div class="ca-context-head"><h3>GPU 정보</h3><span>선택 입력</span></div>
       <div class="ca-row">
-        <label>GPU 모델<select data-ca-model><option value="">진행 중에 선택</option>${models.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</select></label>
-        <label>GPU 수<input type="number" min="1" inputmode="numeric" data-ca-gpu placeholder="예: 32"></label>
+        <label>GPU 모델<select data-ca-model><option value="">분석 중에 확인</option>${models.map(m => `<option value="${esc(m.id)}">${esc(m.name)}</option>`).join('')}</select></label>
+        <label>GPU 수<span class="ca-number-wrap"><input type="number" min="1" inputmode="numeric" data-ca-gpu placeholder="수량 입력"><span aria-hidden="true">장</span></span></label>
       </div>
-      <p class="ca-hint">비워 두면 진행 중에 근거와 함께 물어봅니다. 계약 기간은 3년·5년 가격을 함께 계산합니다.</p>
-      <button type="button" class="ca-btn ca-btn-primary ca-btn-block" data-ca-start disabled>분석 시작</button>
+      <p class="ca-hint">아직 정해지지 않았다면 비워 두세요. 분석 과정에서 확인할 수 있습니다.</p>
+      <div class="ca-start-footer"><span>파일 등록 후 분석을 시작할 수 있습니다.</span><button type="button" class="ca-btn ca-btn-primary" data-ca-start disabled>청구서 분석 시작 <span aria-hidden="true">→</span></button></div>
       <div class="ca-error" data-ca-error role="alert"></div>
     </div>
+    <aside class="ca-start-aside" aria-label="산정 안내">
+      <div class="ca-aside-heading"><span class="ca-aside-rule"></span><p>분석 후 확인할 내용</p></div>
+      <dl class="ca-deliverables">
+        <div><dt><span>01</span>항목별 원가</dt><dd>청구 항목 분류, 총액 대조와 누락 비용 확인</dd></div>
+        <div><dt><span>02</span>제안가와 시장 비교</dt><dd>운영 조건과 목표 마진을 반영한 가격 검토</dd></div>
+        <div><dt><span>03</span>계약 기간별 가격</dt><dd>3년·5년 계약 조건에 따른 제안가 비교</dd></div>
+      </dl>
+      <div class="ca-report-note"><svg viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M5 3h10l4 4v14H5zM14 3v5h5M8 12h8M8 16h8"/></svg><div><strong>견적 근거서</strong><p>계산 가정과 검토 기록을<br>엑셀 파일로 내려받습니다.</p></div><span>XLSX</span></div>
+      <details class="ca-data-note"><summary>청구서 데이터는 어떻게 처리되나요?</summary><p>금액·숫자·식별자는 가리고 항목명만 AI에 보냅니다. 원가 계산은 내부 원가 서버가 합니다.</p></details>
+      <a class="ca-manual-link" href="#cost/simulation">운영 조건 직접 입력하기 <span aria-hidden="true">↗</span></a>
+    </aside>
   </section>`;
 }
 
@@ -515,7 +518,12 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
       host.querySelector('[data-ca-filename]').textContent = `선택됨 · ${f.name}`;
       drop.classList.add('has-file');
       start.disabled = false;
+      host.querySelector('.ca-start-footer > span').textContent = '등록한 청구서를 분석할 준비가 되었습니다.';
     };
+    drop.addEventListener('keydown', e => {
+      if (e.target !== drop || !['Enter', ' '].includes(e.key)) return;
+      e.preventDefault(); e.stopPropagation(); input.click();
+    });
     input.addEventListener('change', e => pick(e.target.files?.[0]));
     ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('is-over'); }));
     ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('is-over'); }));
