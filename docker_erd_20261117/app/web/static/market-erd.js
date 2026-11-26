@@ -223,7 +223,7 @@ function drawMarketPair(pool, client) {
 let marketDetailTicket = 0;
 
 function marketEvidenceList(evidence) {
-  return evidence.map(source => `<div class="mv-evidence-match"><b>${mv(source.sourceName)}</b><p>${mlink(source.sourceUrl, '원문 URL')} · ${mv(source.role)}</p><small>근거 확보 ${mtime(source.capturedAt)} · 공식 검증 ${source.primaryVerified === true ? '확인됨' : source.primaryVerified === false ? '미확인' : '기록 없음'}</small></div>`).join('') || '<p>연결된 출처가 없습니다.</p>';
+  return evidence.map(source => `<div class="mv-evidence-match"><b>${mv(source.sourceName)}</b><p>${mlink(source.sourceUrl, '원문 URL')} · ${mv(source.role)}</p><small>근거 확보 ${mtime(source.capturedAt)}${source.primaryVerified === true ? ' · 공식 검증 확인됨' : source.primaryVerified === false ? ' · 공식 검증 미확인' : ''}</small></div>`).join('') || '<p>연결된 출처가 없습니다.</p>';
 }
 
 async function showMarketOffer(offerId, trigger) {
