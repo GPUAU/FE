@@ -149,7 +149,7 @@ async function renderGpuComparison(options = {}) {
     <div><span>조사 대상 GPU</span><strong>${modelNames.length}<small>개 모델</small></strong><p>사업자 ${catalog.providers.length}곳 · 리전 ${catalog.regions.length}곳</p></div>
     <div><span>${mh(CP.model)} 가격 사업자</span><strong>${modelProviders.length}<small>개 사업자</small></strong><p>${mh(modelProviders.join(' · '))||'확보된 사업자 없음'}</p></div>
     <div><span>${mh(CP.model)} 가격 오퍼</span><strong>${modelOffers.toLocaleString('ko-KR')}<small>개</small></strong><p>온디맨드 · 스팟 · 장기약정</p></div>
-    <div class="cp-freshness"><span>최근 가격 수집 · KST</span><strong>${recent?mh(new Date(recent).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'})):'미확보'}</strong><p>자동 갱신되지 않는 수집 자료</p></div>
+    <div class="cp-freshness"><span>최근 가격 수집 · KST</span><strong>${recent?mh(new Date(recent).toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'})):'미확보'}</strong></div>
    </section>`:''}
    <section class="cp-explorer" aria-labelledby="cpExplorerTitle">
     ${embedded?'<div class="cp-explorer-head"><h2 id="cpExplorerTitle">상품 조건</h2><button type="button" class="cp-reset" id="cpReset">필터 초기화</button></div>':`<div class="cp-explorer-head"><h2 id="cpExplorerTitle">GPU 모델</h2><a href="#catalog/gpu/${encodeURIComponent(CP.model)}">${mh(CP.model)} 모델 상세</a></div>
