@@ -1,4 +1,4 @@
-import { BASE, FIELDS, activeFields, calculate, importSession } from './lease-cost-model.mjs';
+import { BASE, FIELDS, activeFields, calculate, importSession } from './lease-cost-model.mjs?v=field-notes1126';
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const num=(v,d=1)=>Number(v).toLocaleString('ko-KR',{maximumFractionDigits:d});
 const money=v=>Math.abs(v)>=1e8?`${num(v/1e8,2)}억원`:`${num(v,0)}원`;
@@ -8,7 +8,7 @@ let disposeTabs=()=>{};
 const APP_FIELDS=['extra','residual','capitalRate','margin'];
 let draft={...BASE},reasons={},origins={},memo='',model='혼합 세대 · 보고서 예시',importNotes=[],importConfirmed=true;
 const source=k=>origins[k]||(draft[k]!==BASE[k]?'사용자 변경':APP_FIELDS.includes(k)?'앱 예시':'보고서 기준');
-const reportSource='현대차증권 「인터넷/SW — SW/서비스의 겨울, AI인프라/네오클라우드의 봄」 본문 28쪽 표18 (표지 2026.09.02)';
+const reportSource='현대차증권 「인터넷/SW — SW/서비스의 겨울, AI인프라/네오클라우드의 봄」 본문 28쪽 (표지 2026.09.02)';
 export function mountLeaseCost({host,onEdit,onResult,openQuote,session}){
  disposeTabs();
  if(session)selectedPanel='review';
@@ -37,7 +37,7 @@ export function mountLeaseCost({host,onEdit,onResult,openQuote,session}){
  <section class="lc-section lc-logic" id="lc-logic"><div class="lc-section-head"><h3>원가 산정 내역</h3><span>입력값과 산식을 함께 확인</span></div><div data-logic></div></section>
  <section class="lc-section lc-evidence" id="lc-evidence"><div class="lc-section-head"><h3>입력 가정과 근거</h3><span data-change-count></span></div><p class="lc-section-desc">보고서 가정·앱 예시·사용자 변경을 구분합니다. 변경 이유나 견적서 번호를 남기면 검토서에 함께 기록됩니다.</p><div class="lc-table-scroll"><table><thead><tr><th>항목</th><th>출발값</th><th>현재값 / 구분</th><th>근거와 선택 이유</th></tr></thead><tbody data-evidence></tbody></table></div>
  <label class="lc-memo">검토 목적·보고 메모<textarea name="reviewMemo" maxlength="3000" rows="2" placeholder="예: B300 도입 검토 · 장기 계약으로 판매율 80% 확보를 가정">${esc(memo)}</textarea></label>
- <details class="lc-reference"><summary>보고서별 역할과 원문 수치 확인</summary><div><p><b>원가 기준 · 현대차증권</b><br>${reportSource}. GPU 전력 2kW, 구매비 $38,000, 판매율 80%, 감가상각 6년 등은 분석 가정입니다. 특정 GPU의 현재 실견적이 아닙니다.</p><p><b>표18 재계산 안내</b><br>35만원 × 1,000kW × 12개월 = 연 임차료 42억원입니다(원문 43억원). 원문에 제시된 매출·비용을 빼도 EBITDA 114.4억원과 일치하지 않습니다. 이 화면은 원문의 결과값을 복사하지 않고 입력값으로 재계산합니다.</p><p><b>사업 범위 · 하나증권</b><br>데이터센터 리포트 본문 1~32쪽, 특히 28쪽 도표34의 DC 사업자/임차인 구분을 참고했습니다. 건설 비용은 임차형 사업의 직접 투자에서 제외합니다.</p><p><b>민감도 · 미래에셋증권</b><br>「AI Factory의 경제학」(2026.05.19) 13~17쪽의 가동률·판매단가·내용연수 관점을 참고했습니다. 1GW 건설형 TCO나 자본회수계수 24%를 이 모델에 그대로 적용하지 않습니다.</p></div></details></section>
+ <details class="lc-reference"><summary>보고서별 역할과 원문 수치 확인</summary><div><p><b>원가 기준 · 현대차증권</b><br>${reportSource}. GPU 전력 2kW, 구매비 $38,000, 판매율 80%, 감가상각 6년 등은 분석 가정입니다. 특정 GPU의 현재 실견적이 아닙니다.</p><p><b>예시 재계산 안내</b><br>35만원 × 1,000kW × 12개월 = 연 임차료 42억원입니다(원문 43억원). 원문에 제시된 매출·비용을 빼도 EBITDA 114.4억원과 일치하지 않습니다. 이 화면은 원문의 결과값을 복사하지 않고 입력값으로 재계산합니다.</p><p><b>사업 범위 · 하나증권</b><br>데이터센터 리포트 본문 1~32쪽, 특히 28쪽 도표34의 DC 사업자/임차인 구분을 참고했습니다. 건설 비용은 임차형 사업의 직접 투자에서 제외합니다.</p><p><b>민감도 · 미래에셋증권</b><br>「AI Factory의 경제학」(2026.05.19) 13~17쪽의 가동률·판매단가·내용연수 관점을 참고했습니다. 1GW 건설형 TCO나 자본회수계수 24%를 이 모델에 그대로 적용하지 않습니다.</p></div></details></section>
  <section class="lc-section" id="lc-sensitivity"><div class="lc-section-head"><h3>판매율·감가상각 기간별 비교</h3><span>미래 예측이 아닌 조건별 계산</span></div><div data-sensitivity></div></section>
  <div class="lc-bottom"><p>입력값은 현재 브라우저 탭에서 유지됩니다. 새로고침하면 초기화되므로 필요한 검토서는 저장하세요.</p><button type="button" class="lc-button lc-primary" data-export>검토서 저장</button></div>
  </div>`;
