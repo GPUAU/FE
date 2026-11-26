@@ -161,3 +161,5 @@ html body.workspace-sidebar .lc.cp-page .lc-panel-heading h2{font-size:29px;font
 .lc-chapter .lc-form>.lc-section:first-child{border-top:0;padding-top:0}
 .lc-panel-footer>.lc-button{flex:none}
 @media(max-width:700px){.lc-review-contents{gap:12px 20px;padding-bottom:20px;margin-bottom:24px}.lc-review-contents a{font-size:12px;gap:6px}.lc-chapter+.lc-chapter{margin-top:40px;padding-top:28px}.lc-chapter-number{font-size:30px}.lc-chapter>.lc-panel-heading{padding-bottom:18px}.lc-panel-footer>.lc-button{width:100%}.lc-toolbar .lc-local-nav button{flex-direction:row;min-height:44px;font-size:14px}}
+
+.lc-model input::placeholder{color:#858b94;opacity:1}
