@@ -48,7 +48,7 @@
  function build(c){
   const s=c.simulation,i=c.investment,u=c.uncertain;
   root.innerHTML=`<div class="mc">
-   <div class="mc-intro"><div><div class="mc-kicker">GPU PRICING / SIMULATION LAB</div><h2>가격의 가능성을 계산하다.</h2><p class="mc-subtle">시장가격의 범위를 살펴보고, 선택한 가정에서 필요한 판매가를 비교하세요.</p></div><span class="mc-chip">PM 프로토타입 · 가상 샘플</span></div>
+   <div class="mc-intro"><div><div class="mc-kicker">GPU PRICING / SIMULATION LAB</div><h2>수집된 시장가를 바탕으로 가격변동 범위를 예측합니다.</h2><p class="mc-subtle">시장가격의 범위를 살펴보고, 선택한 가정에서 필요한 판매가를 비교하세요.</p></div><span class="mc-chip">PM 프로토타입 · 가상 샘플</span></div>
    <div class="mc-note warn"><b>동작 확인용 데이터입니다.</b>가격 이력은 ZIP의 B300 가상 자료 18개월입니다. 투자·운영비는 PM 기본값 또는 가격 검토에서 연결한 사용자 가정을 사용합니다. 실제 수집 DB와 연결하지 않았으며, 백테스트로 정확도를 검증하지 않았습니다.</div>
    <div id="mcReviewBridge"></div><div class="mc-steps"><strong>시장가격 범위 계산</strong><span>시장가 가정 선택</span><span>목표 IRR 기준 판매가 검토</span></div>
    <form id="mcConfigForm" novalidate><fieldset id="mcConfigFields"><div class="mc-grid">
