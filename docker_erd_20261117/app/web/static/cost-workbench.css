@@ -75,7 +75,7 @@ html body.cost-workbench .ca-btn-primary:disabled{background:#e9ebee;color:#838a
 html body.cost-workbench .ca-btn-ghost{color:#40464f;border-color:#d7dbe1;background:#fff}
 html body.cost-workbench .ca-btn-ghost:hover{background:#f6f6f7;border-color:#878e98}
 html body.cost-workbench .ca-start-footer .ca-btn{flex:none;display:flex;flex-direction:row;gap:22px}
-html body.cost-workbench .ca-start-aside{min-width:0;padding:24px;border:0;border-top:2px solid #df1b36;background:#f5f6f7}
+html body.cost-workbench .ca-start-aside{min-width:0;padding:24px;border:0;border-top:1px solid #2b3036;background:#f5f6f7}
 html body.cost-workbench .ca-aside-heading{display:block;margin-bottom:7px}
 html body.cost-workbench .ca-aside-heading p{margin:0;font-size:20px;font-weight:400;color:#202124;letter-spacing:-.04em}
 html body.cost-workbench .ca-aside-rule{display:none}
@@ -95,17 +95,36 @@ html body.cost-workbench .ca-data-note p{margin:12px 0 0;padding:12px 0;border-t
 html body.cost-workbench .ca-manual-link{display:flex;justify-content:space-between;gap:10px;margin-top:22px;padding-top:18px;border-top:1px solid #dce0e4;font-size:13px;font-weight:400;color:#555d68;text-decoration:none}
 html body.cost-workbench .ca-manual-link:hover{color:#c51e37;text-decoration:underline;text-underline-offset:4px}
 /* Review, progress and result states. Status labels remain explicit without green. */
-html body.cost-workbench .ca :is(.ca-card,.ca-progress,.ca-activity){border-radius:0;box-shadow:none;border-color:#dde0e4;background:#fff}
-html body.cost-workbench .ca-question{border-top:2px solid #df1b36}
-html body.cost-workbench .ca-opt{border-radius:0;font-size:14px}
-html body.cost-workbench .ca-opt[aria-pressed=true]{background:#faf5f6;border-color:#df1b36;box-shadow:none}
-html body.cost-workbench .ca-opt small{font-weight:400;font-size:12px}
+/* Run screen reads like a document: no boxed cards, one dark rule above each section (same as the upload form). */
+html body.cost-workbench .ca :is(.ca-card,.ca-progress,.ca-activity){border:0;border-top:1px solid #2b3036;border-radius:0;box-shadow:none;background:#fff}
+html body.cost-workbench .ca :is(.ca-progress,.ca-question,.ca-activity){padding-left:0;padding-right:0}
+html body.cost-workbench .ca-progress{padding-top:22px;padding-bottom:24px;margin-bottom:28px;border-bottom:1px solid #e3e5e8}
+html body.cost-workbench .ca-bar{height:2px;background:transparent}
+html body.cost-workbench .ca-main{gap:28px}
+html body.cost-workbench .ca-question{padding-top:26px}
+html body.cost-workbench .ca-opts{gap:0;margin-top:22px}
+html body.cost-workbench .ca-opt{position:relative;margin:0 0 -1px -1px;padding:16px 18px;border:1px solid #d8dce1;border-radius:0;font-size:14px;transition:border-color .15s,background-color .15s}
+html body.cost-workbench .ca-opt:hover{background:#f7f8f9;border-color:#d8dce1}
+html body.cost-workbench .ca-opt[aria-pressed=true]{z-index:1;background:#fff;border-color:#202124;box-shadow:inset 0 0 0 1px #202124}
+html body.cost-workbench .ca-opt b{display:flex;align-items:center;gap:10px;font-weight:500}
+html body.cost-workbench .ca-opt b::before,html body.cost-workbench .ca-opt[aria-pressed=true] b::before{content:"";flex:none;width:14px;height:14px;border:1px solid #9aa0a8;border-radius:50%;background:#fff;transition:box-shadow .15s,border-color .15s}
+html body.cost-workbench .ca-opt[aria-pressed=true] b::before{border-color:#202124;box-shadow:inset 0 0 0 4px #202124}
+html body.cost-workbench .ca-opt small{font-weight:400;font-size:12px;padding-left:24px}
 html body.cost-workbench .ca .ca-live{background:#f5f6f7}
 html body.cost-workbench .ca-bar i{background:#df1b36}
 html body.cost-workbench .ca-progress[data-finished] .ca-bar i{background:#505965}
-html body.cost-workbench .ca-state{background:#f9eff1;color:#bd233a;border-radius:0;font-weight:400}
-html body.cost-workbench .ca-state[data-status=WAITING]{background:#fff5e8;color:#9e5e12}
-html body.cost-workbench .ca-state[data-status=ERROR]{background:#fdecee;color:#bd1933}
+/* Status is plain text next to the step name, not a chip; waiting uses the brand red instead of amber. */
+html body.cost-workbench .ca-state{padding:0 0 0 12px;border-left:1px solid #d8dce1;background:none;color:#bd233a;border-radius:0;font-size:13px;font-weight:400}
+html body.cost-workbench .ca-state[data-status=WAITING]{background:none;color:#bd233a}
+html body.cost-workbench .ca-state[data-status=ERROR]{background:none;color:#bd1933}
+html body.cost-workbench .ca-head-ic[data-status=WAITING]{display:none}
+html body.cost-workbench .ca-steps li[data-status=WAITING] .ca-dot{border-color:#df1b36;color:#df1b36;background:#fff}
+html body.cost-workbench .ca-steps li[data-status=WAITING] .ca-step-sum{color:#bd233a;font-weight:400}
+html body.cost-workbench .ca-steps li[data-status=WARNING] .ca-step-sum{color:#686c73}
+/* A step finished with notes is still finished: same filled check as DONE; the note stays in the summary text. */
+html body.cost-workbench .ca-steps li[data-status=WARNING] .ca-dot{background:var(--ca-ok);border-color:var(--ca-ok);color:#fff}
+html body.cost-workbench .ca-steps li[data-status=WARNING] .ca-ic-warn{opacity:0}
+html body.cost-workbench .ca-steps li[data-status=WARNING] .ca-ic-check{opacity:1;transform:none;stroke-dashoffset:0}
 html body.cost-workbench .ca :is(.ca-head strong,.ca-pct,.ca-elapsed,.ca-step-title,.ca-step-label){font-weight:400}
 html body.cost-workbench .ca-head strong{font-size:16px}
 html body.cost-workbench .ca-step-title{font-size:12px}
@@ -129,7 +148,7 @@ html body.cost-workbench .ca-kpis div:last-child{border-right:0}
 html body.cost-workbench .ca-kpis .ca-kpi-main{background:#f5f6f7}
 html body.cost-workbench .ca-kpis strong{font-size:34px;font-weight:300;letter-spacing:-.045em}
 html body.cost-workbench .ca-kpis span{font-weight:400}
-html body.cost-workbench .ca-side{border:0;border-top:2px solid #df1b36;border-radius:0;box-shadow:none;background:#f5f6f7;max-height:calc(100dvh - 112px);overflow:auto;scrollbar-width:thin}
+html body.cost-workbench .ca-side{border:0;border-top:1px solid #2b3036;border-radius:0;box-shadow:none;background:#f5f6f7;max-height:calc(100dvh - 112px);overflow:auto;scrollbar-width:thin}
 html body.cost-workbench .ca-side h4{font-size:19px;font-weight:400;margin:0 0 15px}
 html body.cost-workbench .ca-group>p{font-size:12px;font-weight:400;letter-spacing:0}
 html body.cost-workbench .ca-kv dd{font-weight:400}
@@ -139,6 +158,11 @@ html body.cost-workbench .ca .ca-eyebrow{font-size:13px;font-weight:400;color:#b
 html body.cost-workbench .ca-run .ca-grid{grid-template-columns:minmax(0,1fr) 300px;gap:32px}
 html body.cost-workbench .ca-me b{border-radius:0;font-weight:400}
 html body.cost-workbench .ca-enter .ca-kpis>div{animation:none}
+/* One motion: when a step changes, the next section rises in briefly while the step line fills. */
+html body.cost-workbench .ca-enter>.ca-card{animation:cw-rise .28s cubic-bezier(.2,.7,.2,1) both}
+@keyframes cw-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+html body.cost-workbench .ca-main{grid-template-columns:minmax(0,1fr)}
+@media(max-width:640px){html body.cost-workbench .ca-opts{grid-template-columns:1fr}html body.cost-workbench .ca-opt{margin:0 0 -1px}}
 @media(min-width:1550px){html body.cost-workbench .ca-start{grid-template-columns:minmax(0,1fr) 340px;gap:48px}html body.cost-workbench .ca-start-aside{padding:28px}html body.cost-workbench .ca-drop{min-height:250px}}
 @media(max-width:1150px){html body.cost-workbench .ca-start{grid-template-columns:minmax(0,1fr) 270px;gap:26px}html body.cost-workbench .ca-start-aside{padding:21px}html body.cost-workbench .ca-start-footer{align-items:flex-end}html body.cost-workbench .ca-start-footer>span{max-width:170px}html body.cost-workbench .ca-start-footer .ca-btn{gap:12px}}
 @media(max-width:1050px){html body.workspace-sidebar.cost-workbench:not(.is-home){--cw-gutter:24px}html body.cost-workbench .ca-run .ca-grid{grid-template-columns:1fr}html body.cost-workbench .ca-side{position:static;max-height:none}}
