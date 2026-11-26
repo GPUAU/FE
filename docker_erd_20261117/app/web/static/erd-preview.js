@@ -29,8 +29,44 @@ async function showSpringObservation(id) {
     if (!dialog.open || ticket !== marketDetailTicket) return;
     if(!envelope.isSuccess)throw new Error(envelope.message||'조회 실패');
     const d=envelope.result;
-    const evidence=d.evidence.map(e=>`<div class="mv-evidence-match"><b>${mh(e.sourceName)}</b><p>${mlink(e.sourceUrl,'원본 URL')} · ${mh(e.role)}</p><p>근거 확보 ${mutc(e.capturedAt)} · 공식 원천 검증 ${e.primaryVerified===true?'확인됨':e.primaryVerified===false?'미확인':'기록 없음'}</p></div>`).join('');
-    $('#evidenceBody').innerHTML=`<div class="mv"><h2 id="evidenceTitle">Spring 가격 관측 ${mh(d.observationId)}</h2><section class="mv-detail-section"><h3>가격 원문과 수집 시각</h3><p>${mh(d.rawPriceText||'미확인')}</p><p>수집 ${mutc(d.collectedAt)} · 적용 시작 ${mutc(d.effectiveFrom)}</p><p>가격 구분 ${mh(d.priceCertainty)} · 실효 단가 ${d.effective?.amount==null?'환산 불가':mp(d.effective.amount)+' / GPU·시간'} · 규칙 ${mh(d.effective?.ruleVersion||'미확인')}</p></section><section class="mv-detail-section"><h3>출처와 검증 근거</h3>${evidence||'<p>출처 미확보</p>'}</section><section class="mv-detail-section"><h3>직접 입력 환율 재계산</h3><p>이 관측의 실효 USD 단가를 입력한 환율로 환산합니다. 결과는 저장되지 않습니다.</p><form id="springFxForm"><label>사용자 환율 (KRW / USD)<input id="springFxInput" type="number" min="0.000001" step="0.000001" required></label><button class="mv-btn" type="submit" ${normalizationId==='none'?'disabled':''}>재계산</button></form><p id="springFxResult" role="status">${normalizationId==='none'?'환산 결과 ID가 없어 재계산할 수 없습니다.':'양수 환율을 입력하세요.'}</p></section></div>`;
+    const client = await import('/static/spring-market-client.mjs?v=agepolicy1126');
+    const detail = await client.fetchMarketOffer(api, d.offerId).catch(() => null);
+    if (!dialog.open || ticket !== marketDetailTicket) return;
+    const offer = detail?.offer;
+    const title = offer ? [offer.providerName, offer.modelName, offer.product?.originalProductName].filter(Boolean).join(' · ') : '수집 가격 상세';
+    const section = (title, fields) => `<section class="mv-detail-section"><h3>${title}</h3><dl>${fields.map(([label, value])=>`<div><dt>${label}</dt><dd>${value}</dd></div>`).join('')}</dl></section>`;
+    const sourceNames = {aws_ec2_pricing_api:'AWS EC2 공식 요금 API',aws_ec2_spot_api:'AWS EC2 스팟 요금 API',azure_retail_prices_api:'Azure 공식 소매 요금 API'};
+    const roles = {PRIMARY:'사업자 원문',SPEC:'상품 사양',AGGREGATOR:'가격 집계 자료',ARCHIVE:'과거 저장 자료'};
+    const evidence=(d.evidence || []).map(e=>`<div class="mv-evidence-match"><b>${mh(sourceNames[e.sourceName] || e.sourceName)}</b><p>${mlink(e.sourceUrl,'출처 원문 보기')}${roles[e.role]?' · '+roles[e.role]:''}</p><small>자료 확보 ${mtime(e.capturedAt)}${e.primaryVerified===true?' · 공식 출처 확인됨':e.primaryVerified===false?' · 공식 출처 확인 필요':''}</small></div>`).join('');
+    const componentNames = {HOURLY_RATE:'시간당 이용 요금',UPFRONT_FEE:'선납금',COMMITMENT_TOTAL:'약정 총액',LIST_PRICE:'표시 가격',DISCOUNT_RATE:'할인율',RANGE_MIN:'가격 범위 최솟값',RANGE_MAX:'가격 범위 최댓값'};
+    const timeUnits = {HOUR:'시간',HRS:'시간',MONTH:'월',YEAR:'년',TERM:'약정기간'};
+    const priceScopes = {GPU:'GPU 1개',PER_GPU:'GPU 1개',INSTANCE:'인스턴스 1대',PER_INSTANCE:'인스턴스 1대',NODE:'노드 1대',PER_NODE:'노드 1대'};
+    const componentFields=(d.components || []).map(c=>{
+      const amount=c.amount==null||!Number.isFinite(Number(c.amount))?null:Number(c.amount).toLocaleString('ko-KR',{maximumFractionDigits:10});
+      const discount=c.discountRate==null||!Number.isFinite(Number(c.discountRate))?null:Number(c.discountRate)*100;
+      const value=amount==null?(discount==null?'금액 미확인':mh(discount)+'%'):[mh(amount),' '+mh(c.currency || ''),timeUnits[c.timeUnit]?' / '+timeUnits[c.timeUnit]:'',priceScopes[c.appliesTo]?' · '+priceScopes[c.appliesTo]+' 기준':''].join('');
+      return [componentNames[c.type] || '원본 요금',value];
+    });
+    const hourly=(d.components || []).filter(c=>c.type==='HOURLY_RATE' && c.currency==='USD' && c.timeUnit==='HOUR');
+    const gpuCount=Number(offer?.product?.gpuCount);
+    const simpleHourly=hourly.length===1 && d.components.length===1 && Number.isFinite(Number(hourly[0].amount)) && gpuCount>0 && ['INSTANCE','PER_INSTANCE','NODE','PER_NODE'].includes(hourly[0].appliesTo);
+    const formula=simpleHourly
+      ? `1대의 시간당 요금 ${Number(hourly[0].amount).toLocaleString('ko-KR',{maximumFractionDigits:10})} USD를 GPU ${gpuCount}개로 나눈 금액입니다.`
+      : d.normalizationExplanation?.formulaDescription || detail?.normalizationExplanation?.formulaDescription || 'GPU 1개를 1시간 사용하는 요금으로 환산합니다.';
+    body.innerHTML=`<div class="mv"><p class="mv-eyebrow">계약 요금·가격 출처</p><h2 id="evidenceTitle">${mh(title)}</h2>
+      <div class="mv-detailhero"><strong>${d.effective?.amount==null?'환산 가격 미확보':fxPrice(d.effective.amount)}</strong><p class="mv-detail-unit">GPU 1개·1시간 기준</p></div>
+      ${section('사업자가 공개한 요금',componentFields.length?componentFields:[['가격 확인','출처 원문에서 요금을 확인해 주세요.']])}
+      ${section('수집 시점과 환산 기준',[
+        ['가격 구분',mh(contractPriceKind[d.priceCertainty] || '미확인')],
+        ['자료 수집일 · 한국시간',mtime(d.collectedAt)],
+        ['요금 적용 시작일 · 한국시간',mtime(d.effectiveFrom)],
+        ['GPU 수',offer?.product?.gpuCount==null?'미확인':mh(offer.product.gpuCount)+'개'],
+        ['가격 환산 방법',mv(formula)],
+        ['금액 저장·표시 기준',mv(d.normalizationExplanation?.precisionPolicy || detail?.normalizationExplanation?.precisionPolicy)]
+      ])}
+      <details class="mv-note"><summary>사업자 요금 원문 보기</summary><p>${mh(d.rawPriceText || '원문 미확보')}</p></details>
+      <section class="mv-detail-section"><h3>가격 출처</h3>${evidence||'<p>출처 미확보</p>'}</section>
+      <section class="mv-detail-section"><h3>원화 요금 계산</h3><p>원/달러 환율을 입력하면 GPU 1개·1시간 요금을 원화로 계산합니다.</p><form id="springFxForm"><label>1달러당 원화 금액<input id="springFxInput" type="number" min="0.000001" step="0.000001" required></label><button class="mv-btn" type="submit" ${normalizationId==='none'?'disabled':''}>원화로 계산</button></form><p id="springFxResult" role="status">${normalizationId==='none'?'환산 기준이 확보되지 않아 계산할 수 없습니다.':'적용할 환율을 입력해 주세요.'}</p></section></div>`;
     $('#springFxForm').onsubmit=async event=>{
       event.preventDefault(); const out=$('#springFxResult'); const button=event.currentTarget.querySelector('button');
       if (button.disabled) return;
