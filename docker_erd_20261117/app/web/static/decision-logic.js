@@ -31,7 +31,6 @@
   if(!finite(p)||p<=0)reasons.push('유효한 USD/GPU·시간 단가 없음');
   if(!Number.isFinite(t))reasons.push('수집 시각 미확인');
   else if(t>now)reasons.push('미래 수집 시각 · 확인 필요');
-  else if(now-t>48*3600000)reasons.push('수집 후 48시간 초과');
   if(record?.processing_status&&record.processing_status!=='success')reasons.push('최근 수집 상태 확인 필요');
   const valid=finite(candidate)&&candidate>=0&&finite(p)&&p>0;
   return {delta:valid?candidate-p:null,percent:valid?(candidate-p)/p*100:null,reasons,referenceOnly:true};

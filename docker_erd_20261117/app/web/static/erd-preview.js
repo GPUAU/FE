@@ -140,11 +140,11 @@ const contractPayment = {
 };
 const contractTypeName = {ON_DEMAND:'온디맨드', SPOT:'스팟', COMMITMENT:'약정'};
 const contractPriceKind = {EXACT:'확정가', SCENARIO:'시나리오', FROM:'시작가', RANGE:'가격 범위', UNKNOWN:'가격 구분 미확인'};
-const contractFreshness = {CURRENT:'48시간 이내 확인', STALE:'48시간 초과 관측', UNKNOWN:'확인 시각 미확인'};
+const contractFreshness = {CURRENT:'관측 시각 확인', STALE:'관측 시각 확인', UNKNOWN:'확인 시각 미확인'};
 const contractReasons = {
-  BASE_PRICE_MISSING:'최근 48시간 내 확인한 양수 온디맨드 확정가가 없습니다.',
+  BASE_PRICE_MISSING:'확인한 양수 온디맨드 확정가가 없습니다.',
   AMBIGUOUS_BASE_PRICE:'조건을 충족하는 온디맨드 기준가가 하나로 정해지지 않았습니다.',
-  COMMITMENT_PRICE_STALE:'마지막 약정 가격 확인 후 48시간이 지났습니다.',
+  COMMITMENT_PRICE_STALE:'약정 가격 조건을 확인해 주세요.',
   COMMITMENT_PRICE_NOT_AVAILABLE:'최근 점검에서 약정 가격을 확보하지 못했습니다.',
   COMMITMENT_PRICE_NOT_EXACT:'약정 요금의 확정가 근거가 없습니다.',
   COMMITMENT_PRICE_MISSING:'비교할 약정 환산 단가가 없습니다.',
@@ -243,7 +243,7 @@ function contractResults(product, rows, comparison) {
   const calculated = rows.filter(offer => contractRate(offer) != null).length;
   return `${contractCards(rows,baseline)}<div class="mv-note">
     <b>스팟·약정 ${offerCount}개 · 약정 할인율 산출 ${calculated}건</b>
-    <p>약정 할인율은 같은 상품 ID의 단일 온디맨드 기준가를 사용합니다. 최근 48시간 내 확인한 확정가, 환산 규칙, 최소 물량, 기간 및 지불 조건을 확인합니다.</p>
+    <p>약정 할인율은 같은 상품 ID의 단일 온디맨드 기준가를 사용합니다. 확인한 확정가, 환산 규칙, 최소 물량, 기간 및 지불 조건을 확인합니다.</p>
     <p>공개 할인율을 적용한 추정 단가는 시나리오로 표시합니다. 스팟은 중단될 수 있으며 약정 할인율과 별개로 관측가를 표시합니다. ${mh(comparison.disclaimer)}</p></div>
     <div class="mv-tablebox" tabindex="0" role="region" aria-label="계약별 가격 표"><table class="mv-table"><thead><tr>
     <th>사업자 / 모델 / 상품</th><th>리전 / GPU 수</th><th>요금제 / 약정 / 지불</th><th>원본 가격 구성</th>

@@ -78,7 +78,7 @@ export function mapMarketOffer(offer) {
 }
 
 export function getPairPrice(row) {
-  if (row?.price == null || String(row.price).trim() === '' || row.freshness !== 'CURRENT'
+  if (row?.price == null || String(row.price).trim() === ''
     || row.excludedReasons?.some(reason => [
       'notFoundOffers', 'nonExactOffers', 'missingPriceOffers', 'unavailableNormalizationOffers',
     ].includes(reason))) return null;

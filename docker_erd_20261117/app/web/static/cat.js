@@ -142,13 +142,13 @@ function offerCards(offers, f) {
     const hb = p.health && p.health.status !== 'SUCCESS' ? `<span class="pill p-bad">수집 실패</span>` : '';
     const via = p.via ? '<span class="pill p-info">GPU Finder 경유 · 참고</span>' : '';
     const url = (cs.find(c => c.url) || {}).url;
-    return `<div class="panel offer ${p.via || p.all_stale ? 'dim' : ''}">
+    return `<div class="panel offer ${p.via ? 'dim' : ''}">
       <div class="of-l">
         <div class="of-h"><span class="pv">${starBtn(p.provider_id, p.provider_name)}<a class="prov" href="#catalog/provider/${encodeURIComponent(p.provider_id)}">${esc(p.provider_name)}</a></span>${typeTag(p.provider_type)}${via}${hb}</div>
-        <div class="muted">${cs.length}가지 구성 · ${gpuRange(cs)}${p.checked_at ? ` · ${catAgo(p.checked_at)} 확인` : ''}${p.all_stale ? ' · <span class="up">48시간 넘은 가격 — 통계 제외</span>' : ''}</div>
+        <div class="muted">${cs.length}가지 구성 · ${gpuRange(cs)}${p.checked_at ? ` · ${catAgo(p.checked_at)} 확인` : ''}</div>
         <div class="of-terms">${p.groups.filter(g => f === 'all' || g === f).map(g => { const b = p.best[g]; return `<div><span>${CG[g]}${b.term && g === 'RES' ? ` (${termL(b.term)})` : ''}</span><b>${b.price != null ? money(b.price) + ' 부터' : esc(b.status || '—')}</b></div>`; }).join('')}</div>
         <details class="of-more"><summary>${cs.length}가지 설정 표시</summary><div class="tw"><table class="t"><thead><tr><th>계약</th><th>상품</th><th class="n">GPU</th><th>지역</th><th class="n">원본가</th><th class="n">USD/GPU·시간</th><th>수집</th></tr></thead><tbody>
-          ${cs.map(c => `<tr class="${c.stale ? 'dim' : ''}"><td>${termL(c.term)}</td><td>${esc(c.product || '')}</td><td class="n">${c.gpu_count || 1}</td><td>${esc(c.region || '—')}</td><td class="n">${c.raw_price != null ? `${c.raw_price.toLocaleString()} ${esc(c.raw_currency || '')}` : '—'}</td><td class="n"><b>${c.price != null ? money(c.price) : esc(c.status || '—')}</b></td><td class="muted">${c.collected_at ? shortAt(String(c.collected_at)) : '—'}${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">원문</a>` : ''}</td></tr>`).join('')}
+          ${cs.map(c => `<tr class=""><td>${termL(c.term)}</td><td>${esc(c.product || '')}</td><td class="n">${c.gpu_count || 1}</td><td>${esc(c.region || '—')}</td><td class="n">${c.raw_price != null ? `${c.raw_price.toLocaleString()} ${esc(c.raw_currency || '')}` : '—'}</td><td class="n"><b>${c.price != null ? money(c.price) : esc(c.status || '—')}</b></td><td class="muted">${c.collected_at ? shortAt(String(c.collected_at)) : '—'}${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">원문</a>` : ''}</td></tr>`).join('')}
         </tbody></table></div></details>
       </div>
       <div class="of-r"><span class="lbl">가격</span><b class="of-p">${pick && pick.price != null ? money(pick.price) : '요청 시'}</b><span class="muted">${pick && pick.price != null ? `/GPU·시간 · ${termL(pick.term || '')}` : pick ? esc(pick.status || '') : ''}</span>
@@ -157,10 +157,10 @@ function offerCards(offers, f) {
 }
 function configTable(offers, f) {
   const rows = offers.flatMap(p => p.configs.filter(c => f === 'all' || c.group === f).map(c => ({ ...c, p })))
-    .sort((a, b) => (a.price == null) - (b.price == null) || (a.p.via != null) - (b.p.via != null) || a.stale - b.stale || (a.price || 0) - (b.price || 0));
+    .sort((a, b) => (a.price == null) - (b.price == null) || (a.p.via != null) - (b.p.via != null) || (a.price || 0) - (b.price || 0));
   if (!rows.length) return '<div class="panel"><div class="empty"><b>조건에 맞는 구성이 없습니다</b></div></div>';
   return `<div class="panel"><div class="tw"><table class="t"><thead><tr><th>사업자</th><th>계약</th><th>상품</th><th class="n">GPU</th><th>지역</th><th class="n">USD/GPU·시간</th><th>수집</th></tr></thead><tbody>
-    ${rows.map(c => `<tr class="${c.stale || c.p.via ? 'dim' : ''}"><td><a href="#catalog/provider/${encodeURIComponent(c.p.provider_id)}">${esc(c.p.provider_name)}</a>${c.p.via ? '<span class="sub2">GPU Finder 경유 · 참고</span>' : ''}</td><td>${termL(c.term)}</td><td>${esc(c.product || '')}</td><td class="n">${c.gpu_count || 1}</td><td>${esc(c.region || '—')}</td><td class="n"><b>${c.price != null ? money(c.price) : esc(c.status || '—')}</b>${c.stale ? '<span class="sub2">오래된 데이터</span>' : ''}</td><td class="muted">${c.collected_at ? shortAt(String(c.collected_at)) : '—'}${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">원문</a>` : ''}</td></tr>`).join('')}
+    ${rows.map(c => `<tr class="${c.p.via ? 'dim' : ''}"><td><a href="#catalog/provider/${encodeURIComponent(c.p.provider_id)}">${esc(c.p.provider_name)}</a>${c.p.via ? '<span class="sub2">GPU Finder 경유 · 참고</span>' : ''}</td><td>${termL(c.term)}</td><td>${esc(c.product || '')}</td><td class="n">${c.gpu_count || 1}</td><td>${esc(c.region || '—')}</td><td class="n"><b>${c.price != null ? money(c.price) : esc(c.status || '—')}</b></td><td class="muted">${c.collected_at ? shortAt(String(c.collected_at)) : '—'}${c.url ? ` · <a href="${esc(c.url)}" target="_blank" rel="noopener">원문</a>` : ''}</td></tr>`).join('')}
   </tbody></table></div></div>`;
 }
 
@@ -198,7 +198,7 @@ async function catProvider(pid) {
       <div class="cat-content">
         <section id="c-vs"><div class="cs-h"><h2>시장 대비</h2><span class="muted">같은 모델·같은 계약의 직접 수집 최신 정상가</span></div>
           <div class="panel"><div class="tw"><table class="t"><thead><tr><th>모델</th><th>계약</th><th>상품</th><th class="n">${esc(d.provider_name)}</th><th class="n">시장 중앙값</th><th class="n">차이</th><th class="n">순위</th></tr></thead><tbody>
-            ${d.vs_market.map(v => `<tr class="${v.stale ? 'dim' : ''}"><td><a href="#catalog/gpu/${encodeURIComponent(v.model)}">${esc(v.model)}</a></td><td>${termL(v.term)}</td><td>${esc(v.product)}</td><td class="n"><b>${money(v.price)}</b>${v.stale ? '<span class="sub2">오래된 데이터</span>' : ''}</td><td class="n">${v.market_median != null ? money(v.market_median) : '—'}${v.market_providers < 3 ? '<span class="sub2">표본 부족</span>' : ''}</td><td class="n">${v.vs == null || v.stale ? '<span class="muted">—</span>' : `<span class="${v.vs > 0.005 ? 'up' : v.vs < -0.005 ? 'down' : ''}">${pct(v.vs, 0)}</span>`}</td><td class="n">${v.rank && !v.stale ? `${v.rank}/${v.market_providers}` : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">직접 수집한 가격이 없습니다.</td></tr>'}
+            ${d.vs_market.map(v => `<tr class=""><td><a href="#catalog/gpu/${encodeURIComponent(v.model)}">${esc(v.model)}</a></td><td>${termL(v.term)}</td><td>${esc(v.product)}</td><td class="n"><b>${money(v.price)}</b></td><td class="n">${v.market_median != null ? money(v.market_median) : '—'}${v.market_providers < 3 ? '<span class="sub2">표본 부족</span>' : ''}</td><td class="n">${v.vs == null ? '<span class="muted">—</span>' : `<span class="${v.vs > 0.005 ? 'up' : v.vs < -0.005 ? 'down' : ''}">${pct(v.vs, 0)}</span>`}</td><td class="n">${v.rank ? `${v.rank}/${v.market_providers}` : '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">직접 수집한 가격이 없습니다.</td></tr>'}
           </tbody></table></div></div></section>
         <section id="c-items"><div class="cs-h"><h2>상품</h2><span class="muted">${d.configs.length}개 · GPU Finder 경유는 참고</span></div>${configTable([{ provider_id: d.provider_id, provider_name: d.provider_name, via: null, configs: d.configs.filter(c => !c.via) }, { provider_id: d.provider_id, provider_name: d.provider_name, via: 'GPU Finder', configs: d.configs.filter(c => c.via) }], 'all')}</section>
         <section id="c-faq"><div class="cs-h"><h2>자주 묻는 질문</h2><span class="muted">질문은 고정 · 답은 최신 수집 상태로 자동 작성</span></div>${faqHTML(d.faq)}</section>

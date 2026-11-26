@@ -211,7 +211,7 @@ function bcSensHTML(d) {
       <div class="tw" style="margin-top:8px"><table class="t"><thead><tr><th>가정</th><th>바꾼 값 (불리 / 유리)</th><th class="n">불리할 때 NPV</th><th class="n">유리할 때 NPV</th><th class="n">폭</th></tr></thead><tbody>
         ${S.rows.map(r => `<tr><td class="prov">${esc(r.label)}</td><td class="muted">${esc(r.values)}</td><td class="n ${r.npv_unfavorable < 0 ? 'up' : ''}">${big(r.npv_unfavorable)}</td><td class="n ${r.npv_favorable < 0 ? 'up' : 'down'}">${big(r.npv_favorable)}</td><td class="n"><b>${big(r.spread)}</b></td></tr>`).join('')}
       </tbody></table></div>
-      <p class="cmp-note" style="margin:8px 0 0;border:0">· 위에 있을수록 결과를 크게 좌우하는 가정입니다. 중앙값 하나보다 미래 가격 경로·가동률 같은 가정을 먼저 검증하세요.<br>· 임대료 범위는 대시보드와 같은 48시간 이내 온디맨드 정상가 기준입니다. ‘외부 표본 포함’은 GPU Finder가 같은 상품에 표시한 온디맨드가를 더하되, 같은 사업자·지역·GPU 수가 직접 수집에 있으면 중복으로 보고 뺍니다.</p>
+      <p class="cmp-note" style="margin:8px 0 0;border:0">· 위에 있을수록 결과를 크게 좌우하는 가정입니다. 중앙값 하나보다 미래 가격 경로·가동률 같은 가정을 먼저 검증하세요.<br>· 임대료 범위는 대시보드와 같은 온디맨드 정상가 기준입니다. ‘외부 표본 포함’은 GPU Finder가 같은 상품에 표시한 온디맨드가를 더하되, 같은 사업자·지역·GPU 수가 직접 수집에 있으면 중복으로 보고 뺍니다.</p>
     </div></div>`;
 }
 function bcSensChart(d) {

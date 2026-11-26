@@ -1,5 +1,5 @@
 /* Four-provider research workspace. Read-only snapshot, transparent provenance. */
-const MV={data:null,promise:null,model:'B300',group:'general',term:'ON_DEMAND',region:['ALL','ALL'],pick:['',''],provider:'ALL',q:'',page:0,includeStale:true,contractProvider:'aws',contractKey:'',seq:0};
+const MV={data:null,promise:null,model:'B300',group:'general',term:'ON_DEMAND',region:['ALL','ALL'],pick:['',''],provider:'ALL',q:'',page:0,contractProvider:'aws',contractKey:'',seq:0};
 const MG={
  general:{label:'GPU 인스턴스 클라우드',ids:['aws','azure'],caption:'CPU·메모리 포함',description:'GPU와 CPU·메모리를 함께 제공하는 인스턴스 상품을 비교합니다.'},
  specialist:{label:'GPU 전문 클라우드',ids:['nebius','verda'],caption:'GPU 중심 서비스 · Neo Cloud',description:'GPU 연산 중심의 클라우드 상품과 계약 조건을 비교합니다.'}
@@ -25,7 +25,7 @@ async function marketHome(){await marketData();mframe('GPU 가격 리서치','�
 let springCatalogPending;
 async function springMarketCatalog() {
   if (!springCatalogPending) {
-    const pending = import('/static/spring-market-client.mjs')
+    const pending = import('/static/spring-market-client.mjs?v=agepolicy1126')
       .then(client => client.fetchMarketCatalog(api))
       .catch(error => {
         if (springCatalogPending === pending) springCatalogPending = null;
@@ -38,11 +38,11 @@ async function springMarketCatalog() {
 
 const marketProviderTypes = {general: 'GENERAL_CLOUD', specialist: 'GPU_SPECIALIST'};
 const marketProviderNames = {aws:'AWS', azure:'Azure', nebius:'Nebius', verda:'Verda'};
-const marketFreshness = {CURRENT:'48시간 이내 확인', STALE:'48시간 초과 · 과거 참고', UNKNOWN:'확인 시각 미확인'};
+const marketFreshness = {CURRENT:'관측 시각 확인', STALE:'관측 시각 확인', UNKNOWN:'확인 시각 미확인'};
 const marketCertainty = {EXACT:'확정가', FROM:'시작가', RANGE:'범위가', SCENARIO:'시나리오', UNKNOWN:'가격 구분 미확인'};
 const marketDisclosure = {PUBLIC:'공개가', NOT_DISCLOSED:'가격 미공개', LOGIN_REQUIRED:'로그인 필요', CONTACT_SALES:'영업 문의', QUOTE_REQUIRED:'견적 문의', UNKNOWN:'공개 여부 미확인'};
 const marketPayment = {ALL_UPFRONT:'전액 선납', PARTIAL_UPFRONT:'일부 선납', NO_UPFRONT:'선납 없음', NOT_APPLICABLE:'해당 없음', UNKNOWN:'미확인'};
-const marketExclusions = {staleOffers:'48시간 초과', notFoundOffers:'최근 확인에서 공개가 미확보', nonExactOffers:'확정 단가 아님', incomparableOffers:'동일 조건 판단에 필요한 정보 누락', missingPriceOffers:'관측 가격 미확보', unavailableNormalizationOffers:'실효 단가 환산 불가'};
+const marketExclusions = {notFoundOffers:'최근 확인에서 공개가 미확보', nonExactOffers:'확정 단가 아님', incomparableOffers:'동일 조건 판단에 필요한 정보 누락', missingPriceOffers:'관측 가격 미확보', unavailableNormalizationOffers:'실효 단가 환산 불가'};
 
 function marketGroupConditions(key) {
   const labels = {
@@ -120,25 +120,24 @@ async function marketDashboard() {
   el.innerHTML = '<div class="mv-note" role="status">가격 자료를 불러오는 중입니다.</div>';
 
   try {
-    const [client, catalog] = await Promise.all([import('/static/spring-market-client.mjs'), springMarketCatalog()]);
+    const [client, catalog] = await Promise.all([import('/static/spring-market-client.mjs?v=agepolicy1126'), springMarketCatalog()]);
     if (ticket !== MV.seq || state.view !== 'dashboard') return;
     const filters = {
       modelId: catalog.models.find(model => model.name === MV.model)?.id,
       providerType: marketProviderTypes[MV.group], ...client.marketTerm(MV.term),
     };
     const [offers, summary] = filters.modelId ? await Promise.all([
-      client.fetchMarketOffers(api, {...filters, includeStale: String(MV.includeStale)}),
+      client.fetchMarketOffers(api, {...filters, includeStale: 'true'}),
       client.fetchMarketSummary(api, filters).catch(() => null),
     ]) : [[], null];
     if (ticket !== MV.seq || state.view !== 'dashboard') return;
     const modelNames = catalog.models.map(model => model.name);
     el.innerHTML = `<div class="mv"><nav class="mv-tabs" aria-label="비교 시장 선택">${Object.entries(MG).map(([key, item]) => `<a class="${MV.group===key?'active':''}" href="#dashboard/${key}" ${MV.group===key?'aria-current="page"':''}><small>${item.caption}</small>${item.label}${MV.group===key?'<i class="sk-market-accent" data-sk-market-accent aria-hidden="true"></i>':''}</a>`).join('')}</nav>
-      <section class="mv-controls">${mmodels(modelNames)}<div class="mv-filterline"><label>과금 방식<select id="mvTerm">${Object.entries(MT).map(([key,label]) => `<option value="${key}" ${MV.term===key?'selected':''}>${label}</option>`).join('')}</select></label><label class="mv-check"><input id="mvSupplement" type="checkbox" ${MV.includeStale?'checked':''}> 48시간 지난 가격 포함</label><a class="mv-btn" href="#discounts">1년·3년 할인 비교 ↗</a></div></section>
+      <section class="mv-controls">${mmodels(modelNames)}<div class="mv-filterline"><label>과금 방식<select id="mvTerm">${Object.entries(MT).map(([key,label]) => `<option value="${key}" ${MV.term===key?'selected':''}>${label}</option>`).join('')}</select></label><a class="mv-btn" href="#discounts">1년·3년 할인 비교 ↗</a></div></section>
       <div class="mv-section-head"><div><p class="mv-eyebrow">${MG[MV.group].label} · 비교 사업자 ${MG[MV.group].ids.length}곳</p><h2>${mh(MV.model)} <span>· ${MT[MV.term]}</span></h2></div><button class="mv-btn" id="mvExport">선택 비교 저장 ↓</button></div>
       <div id="mvPair"></div><section class="mv-note cp-summary" id="mvMarketSummary"></section>${springMarketFooter()}</div>`;
     mbind(el, marketDashboard);
     $('#mvTerm').onchange = event => { MV.term = event.target.value; MV.pick = ['','']; marketDashboard(); };
-    $('#mvSupplement').onchange = event => { MV.includeStale = event.target.checked; MV.pick = ['','']; marketDashboard(); };
     drawMarketPair(offers.map(client.mapMarketOffer), client);
     const groups = summary?.groups || [];
     const drawSummary = () => {
@@ -176,7 +175,7 @@ function marketHourly(component) {
 
 function pairUnavailableLabel(row) {
   if (row?.excludedReasons?.includes('notFoundOffers')) return '최근 점검에서 공개가 미확보';
-  if (row?.freshness === 'STALE') return '48시간 초과 · 과거 참고';
+  if (row?.freshness === 'STALE') return '관측 시각 확인';
   if (row?.excludedReasons?.includes('nonExactOffers')) return '확정가 미확보';
   if (row?.price != null && row.freshness !== 'CURRENT') return '최신 관측 확인 불가';
   return '실효 단가 미확보';
@@ -207,7 +206,7 @@ function drawMarketPair(pool, client) {
     missingLabel:pairUnavailableLabel(picked[i]), source:picked[i]?.sourceName || '', observedAt:picked[i]?.collected || ''}));
   const gap = client.pairPriceGap(...picked);
   $('#mvPair').innerHTML = `<section class="sk-comparison-chart" aria-label="선택 상품의 GPU당 시간 요금 차트"><div class="sk-chart-heading"><div><h3>선택 상품의 시간당 가격</h3><p>${mh(MV.model)} · ${MT[MV.term]} · ${group.label}</p></div><span>USD / GPU·시간</span></div><div data-sk-price-chart data-rows="${mh(JSON.stringify(chartRows))}"></div><p class="sk-comparison-note">참고 단가에는 서로 다른 리전·CPU·메모리·GPU 수·연결망 조건이 포함될 수 있습니다.</p></section>
-    <div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(pid => marketProviderNames[pid]).join(' → ')} · GPU당 차이</small><strong>${gap ? `${gap.amount>=0?'+':'−'}${mp(Math.abs(gap.amount))}` : '비교 가능한 양쪽 가격이 필요합니다.'}</strong>${gap ? `<span>${gap.percent == null ? '기준가 0 · 비교율 산출 불가' : `왼쪽 기준 ${gap.percent>0?'+':''}${gap.percent.toFixed(1)}%`}</span>` : ''}</div><p>48시간 이내 확인한 확정가의 참고 비교입니다.</p></div>`;
+    <div class="mv-pairgrid">${cards.join('')}</div><div class="mv-gap"><div><small>선택한 ${group.ids.map(pid => marketProviderNames[pid]).join(' → ')} · GPU당 차이</small><strong>${gap ? `${gap.amount>=0?'+':'−'}${mp(Math.abs(gap.amount))}` : '비교 가능한 양쪽 가격이 필요합니다.'}</strong>${gap ? `<span>${gap.percent == null ? '기준가 0 · 비교율 산출 불가' : `왼쪽 기준 ${gap.percent>0?'+':''}${gap.percent.toFixed(1)}%`}</span>` : ''}</div><p>확인한 확정가의 참고 비교입니다.</p></div>`;
   $('#mvPair').onchange = event => {
     const {region, pick} = event.target.dataset;
     if (region !== undefined) { MV.region[Number(region)] = event.target.value; MV.pick[Number(region)] = ''; }
@@ -236,7 +235,7 @@ async function showMarketOffer(offerId, trigger) {
   if (!dialog.open) dialog.showModal();
   dialog.scrollTop = 0;
   try {
-    const client = await import('/static/spring-market-client.mjs');
+    const client = await import('/static/spring-market-client.mjs?v=agepolicy1126');
     const detail = await client.fetchMarketOffer(api, offerId);
     if (!dialog.open || ticket !== marketDetailTicket) return;
     const offer = detail.offer, product = offer.product, contract = offer.contract;
@@ -283,7 +282,7 @@ async function marketCatalog() {
 
   try {
     const id = decodeURIComponent(parts.join('/'));
-    const [catalog, client] = await Promise.all([springMarketCatalog(), import('/static/spring-market-client.mjs')]);
+    const [catalog, client] = await Promise.all([springMarketCatalog(), import('/static/spring-market-client.mjs?v=agepolicy1126')]);
     if (ticket !== marketCatalogTicket || state.view !== 'catalog') return;
     const model = modelRoute ? catalog.models.find(item => item.name === id) : null;
     const provider = providerRoute ? catalog.providers.find(item => item.id === id || item.name.toLowerCase() === id.toLowerCase()) : null;
@@ -357,7 +356,7 @@ async function marketEvidence(id){const r=await api('/api/market/offer/'+encodeU
  ${sec('04','계약 조건',[['계약 유형',MT[r.term]],['약정 기간',r.term_months?r.term_months+'개월':r.listed_price==null?'미확인':'기간 약정 해당 없음'],['계약 원문',mv(r.term_original)],['선납금 / 지불 방식',upfront],['최소 물량',r.minimum_gpus==null?'미확인 · 상품 GPU 수와 다름':r.minimum_gpus+' GPU'],['약정 계약 총액','미확인 · 시간 단가로 임의의 실견적을 만들지 않음']])}
  ${sec('05','상품 구성',[['vCPU',mv(r.vcpu)],['시스템 RAM',r.ram_gb==null?'미확인':mh(r.ram_gb)+' GB'],['스토리지',mv(r.storage)],['InfiniBand / NVLink 보장',r.interconnect?mh(r.interconnect):'미확인 · 모델명으로 보장 여부를 추정하지 않음'],['사양 적용 범위',r.gpu_count==null?'원문 요금 표기 기준 · 전체 VM 사양인지 추가 확인 필요':'수집 출처의 상품 구성 표기']])}
  ${sec('06','지역',[['리전 코드',mh(mr(r.region))],['국가',mv(r.country)],['미기재 해석','지역 미명시는 전 지역 동일 요금이라는 뜻이 아님']])}
- ${sec('07','가격 상태와 확인',[['가격 공개 상태',r.status],['로그인 필요 여부','수집에 사용한 출처는 공개 접근 · 실제 주문 과정은 미확인'],['가용성 / 재고',r.availability?mh(r.availability):'출처 미제공'],['마지막 출처 관측',mutc(r.observed_at)],['마지막 공식 확인',mutc(r.official_checked_at)],['수집 근거 상태',mh(r.verification)],['마지막 수집 처리 결과',mv(r.processing_status)],['현재 최신성',!r.observed_at?'관측 시각 미확인':Date.now()-new Date(r.observed_at)>48*3600000?'48시간 초과 관측 · 수집 시점 참고값':'관측 후 48시간 이내 · 실시간 견적 아님']])}
+ ${sec('07','가격 상태와 확인',[['가격 공개 상태',r.status],['로그인 필요 여부','수집에 사용한 출처는 공개 접근 · 실제 주문 과정은 미확인'],['가용성 / 재고',r.availability?mh(r.availability):'출처 미제공'],['마지막 출처 관측',mutc(r.observed_at)],['마지막 공식 확인',mutc(r.official_checked_at)],['수집 근거 상태',mh(r.verification)],['마지막 수집 처리 결과',mv(r.processing_status)],['현재 최신성',!r.observed_at?'관측 시각 미확인':'관측 시각 확인']])}
  ${sec('08','환산과 파생 단가',[['GPU당 시간 환산 단가',mp(r.normalized_price)],['명목 단가 (공개 시간요금)',r.nominal_price==null?'별도 명목 단가 미확인':mp(r.nominal_price)+' / GPU·시간'],['실효 단가 (정규화 결과)',r.effective_price==null?'별도 실효 단가 미산정':mp(r.effective_price)+' / GPU·시간 · 저장된 환산값'],['환산식',mh(r.formula)],['적용 환율','해당 없음 (USD → USD)'],['환율 기준일','해당 없음 · 외화 환산하지 않음'],['추가 비용','세금·스토리지·네트워크·지원의 포함 범위 미확인']])}
  <details class="mv-raw"><summary>ERD 저장 레코드 보기</summary><pre>${mh(JSON.stringify(r.raw_record,null,2))}</pre></details><div class="mv-actions"><button class="mv-btn" id="mvDetailExport">상품 정보 저장 ↓</button></div></div>`;
  $('#evidenceDialog').classList.add('mv-dialog');$('#evidenceDialog').showModal();$('#evidenceDialog').scrollTop=0;$('#mvDetailExport').onclick=()=>marketCSV([r],'상품상세');

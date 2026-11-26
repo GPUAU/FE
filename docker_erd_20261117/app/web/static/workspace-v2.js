@@ -33,11 +33,11 @@ function updateReadableShell(view){
  const activeKey=GRP_KEY[PAGES[view]?.grp];
  document.querySelectorAll('.nav-section').forEach(el=>{el.open=el.dataset.navGroup===activeKey;el.classList.toggle('active-group',el.open);});
  if(view==='home')return;
- const at=state.meta?.run?.started_at,old=at&&(Date.now()-Date.parse(at))/3600000>(state.meta.fresh_hours||48);
+ const at=state.meta?.run?.started_at;
  const ctx=$('#dataContext');ctx.hidden=['inquiries','users','db','admin-inquiries'].includes(view);
  if(!ctx.hidden){
-  ctx.className='data-context readable-context'+(old?' aged':'');
-  ctx.innerHTML=`<span class="context-label">${['cost','bizcase'].includes(view)?'시장가격 수집 시점':'DB 적재 시점'}</span><b>${esc(fullAt(at))}</b>${old?'<span class="status-chip attention">현재보다 오래된 관측값</span>':''}<span class="context-demo">${['cost','bizcase'].includes(view)?'입력 가정 기반 계산 · 시연 데이터 포함':'공개 피드 기반 가격 · 상품 조건별 참고 비교'}</span>`;
+  ctx.className='data-context readable-context';
+  ctx.innerHTML=`<span class="context-label">${['cost','bizcase'].includes(view)?'시장가격 수집 시점':'DB 적재 시점'}</span><b>${esc(fullAt(at))}</b><span class="context-demo">${['cost','bizcase'].includes(view)?'입력 가정 기반 계산 · 시연 데이터 포함':'공개 피드 기반 가격 · 상품 조건별 참고 비교'}</span>`;
  }
  if(view==='agent'&&$('#agentDesc')){$('#agentDesc').textContent='';}
  // 새 사업자 비교 화면(research-workspace.js)에는 #dashCsv가 없어 null 오류로 화면 렌더가 멈췄다
@@ -57,11 +57,9 @@ function setDashboardPending(f){
  $('#dashTbl').innerHTML='';$('#dashCount').textContent='';$('#comparisonChart').hidden=true;$('#singleOfferNote').hidden=true;
 }
 function priceObservationStatus(r){
- const hours=r.collected_at?(Date.now()-Date.parse(r.collected_at))/3600000:null;
- const old=hours!=null&&hours>(state.meta.fresh_hours||48);
  const failed=r.status==='FAILED';
- const collected=failed?'수집 실패 · 직전 값':r.status==='PRIVATE'?'가격 미공개':r.normalized_price_usd==null?'환산값 없음':r.status==='STALE'?'회차 기준 오래됨':'수집 성공';
- return `<span class="status-chip ${failed?'danger':r.normalized_price_usd==null?'attention':'neutral'}">${esc(collected)}</span>${old?'<span class="observation-age">과거 관측값</span>':''}<small class="observed-at">${r.collected_at?esc(shortAt(r.collected_at))+' KST':'수집 시각 미확인'}</small>`;
+ const collected=failed?'수집 실패 · 직전 값':r.status==='PRIVATE'?'가격 미공개':r.normalized_price_usd==null?'환산값 없음':'수집 성공';
+ return `<span class="status-chip ${failed?'danger':r.normalized_price_usd==null?'attention':'neutral'}">${esc(collected)}</span><small class="observed-at">${r.collected_at?esc(shortAt(r.collected_at))+' KST':'수집 시각 미확인'}</small>`;
 }
 function readableRawPrice(r){
  if(r.raw_price==null)return '<span class="missing-value">미제공</span>';
@@ -71,7 +69,7 @@ function readableRawPrice(r){
  return `<b>${currency}${Number(r.raw_price).toLocaleString('en-US',{maximumFractionDigits:4})}</b><small>${[basis,period].filter(Boolean).join(' · ')||'원본 단위 미제공'}</small>`;
 }
 function renderReadableDashboard(d){
- const rows=d.rows,k=d.kpi,valid=rows.filter(r=>r.normalized_price_usd!=null&&!r.stale),providers=new Set(valid.map(r=>r.provider_id));
+ const rows=d.rows,k=d.kpi,valid=rows.filter(r=>r.normalized_price_usd!=null),providers=new Set(valid.map(r=>r.provider_id));
  $('#v-dashboard').removeAttribute('aria-busy');$('#dashCsv').disabled=!rows.length;$('#providerFilterLabel').textContent=state.f.ptype==='ALL'?'전체':typeL(state.f.ptype);
  $('#selectionSummary').innerHTML=`<div class="result-heading"><span class="step-label">02 / 비교 결과</span><h2>${esc(state.f.model)} <span>· ${esc(termL(state.f.term))}</span></h2></div><div class="result-count"><b>${rows.length}개 상품</b><span>회차 기준 유효 ${valid.length}개 · ${providers.size}개 사업자</span></div>`;
  if(k?.count){
@@ -81,7 +79,7 @@ function renderReadableDashboard(d){
   $('#kpis').innerHTML=`<div class="no-observations"><span class="no-observation-icon">∅</span><div><h3>선택한 조건의 유효 가격이 없습니다.</h3><p>${unknown?`${unknown}개 상품에 가격 미공개·환산 불가 상태가 있습니다. 아래에서 이유를 확인하세요.`:rows.length?'이전 관측값은 아래에서 확인할 수 있습니다. 회차 기준 통계에는 포함되지 않습니다.':'모델·계약·지역 조건을 바꿔 다시 확인해 보세요.'} 가격이 없다는 것은 0원을 의미하지 않습니다.</p><button type="button" class="text-action" data-focus-filter>비교 조건 다시 선택하기 ↑</button></div></div>`;
  }
  $('#dashCount').textContent=`${rows.length}개 상품 · ${state.cur==='KRW'?'표시용 환율을 적용한 KRW':'USD'} / GPU·시간`;
- $('#dashTbl').innerHTML=`<caption class="sr">선택 조건의 상품별 가격, 수집 상태와 출처 근거</caption><thead><tr><th scope="col">사업자 · 상품 구성</th><th scope="col">이용 조건</th><th scope="col">원본 가격</th><th scope="col" class="n">환산 단가</th><th scope="col">관측 상태</th><th scope="col"><span class="sr">가격 근거</span></th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.stale||r.normalized_price_usd==null?'reference-offer':''}"><td><div class="offer-provider">${starBtn(r.provider_id,r.provider_name)}<b>${esc(r.provider_name)}</b>${!r.stale&&r.normalized_price_usd===k?.min?'<span class="lowest-label">관측 최저</span>':''}</div><span class="offer-product">${esc(r.raw_product_name)}</span><span class="offer-spec">${r.gpu_count?esc(r.gpu_count)+' GPU':'GPU 수 미확인'} · ${esc(typeL(r.provider_type))}</span></td><td><b>${esc(r.region||'지역 미확인')}</b><small>${esc(termL(r.contract_term||state.f.term))}</small></td><td class="original-price">${readableRawPrice(r)}</td><td class="n offer-price"><b>${r.normalized_price_usd==null?'—':money(r.normalized_price_usd)}</b><small>${r.normalized_price_usd==null?esc(r.reason||'환산값 없음'):'/ GPU·시간'}</small></td><td>${priceObservationStatus(r)}</td><td><button type="button" class="evidence-action" data-evidence="${i}" aria-label="${esc(r.provider_name)} ${esc(r.raw_product_name)} 가격 근거 보기">근거 보기 <span>↗</span></button></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty-offers">조건에 맞는 상품이 아직 수집되지 않았습니다.</div></td></tr>'}</tbody>`;
+ $('#dashTbl').innerHTML=`<caption class="sr">선택 조건의 상품별 가격, 수집 상태와 출처 근거</caption><thead><tr><th scope="col">사업자 · 상품 구성</th><th scope="col">이용 조건</th><th scope="col">원본 가격</th><th scope="col" class="n">환산 단가</th><th scope="col">관측 상태</th><th scope="col"><span class="sr">가격 근거</span></th></tr></thead><tbody>${rows.map((r,i)=>`<tr class="${r.normalized_price_usd==null?'reference-offer':''}"><td><div class="offer-provider">${starBtn(r.provider_id,r.provider_name)}<b>${esc(r.provider_name)}</b>${r.normalized_price_usd===k?.min?'<span class="lowest-label">관측 최저</span>':''}</div><span class="offer-product">${esc(r.raw_product_name)}</span><span class="offer-spec">${r.gpu_count?esc(r.gpu_count)+' GPU':'GPU 수 미확인'} · ${esc(typeL(r.provider_type))}</span></td><td><b>${esc(r.region||'지역 미확인')}</b><small>${esc(termL(r.contract_term||state.f.term))}</small></td><td class="original-price">${readableRawPrice(r)}</td><td class="n offer-price"><b>${r.normalized_price_usd==null?'—':money(r.normalized_price_usd)}</b><small>${r.normalized_price_usd==null?esc(r.reason||'환산값 없음'):'/ GPU·시간'}</small></td><td>${priceObservationStatus(r)}</td><td><button type="button" class="evidence-action" data-evidence="${i}" aria-label="${esc(r.provider_name)} ${esc(r.raw_product_name)} 가격 근거 보기">근거 보기 <span>↗</span></button></td></tr>`).join('')||'<tr><td colspan="6"><div class="empty-offers">조건에 맞는 상품이 아직 수집되지 않았습니다.</div></td></tr>'}</tbody>`;
  $('#dashTbl').onclick=e=>{const b=e.target.closest('[data-evidence]');if(b)showEvidence(state.dashRows[+b.dataset.evidence],state.f.model);else onStarClick(e);};
  $('#comparisonChart').hidden=rows.filter(r=>r.normalized_price_usd!=null).length<2;
  $('#singleOfferNote').hidden=valid.length!==1;

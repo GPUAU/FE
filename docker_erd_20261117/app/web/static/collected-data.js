@@ -11,7 +11,7 @@ function render(){
  shown=rows.filter(r=>(!$('#model').value||r.model_name===$('#model').value)&&(!$('#provider').value||r.provider_name===$('#provider').value)&&(!$('#term').value||r.contract_type===$('#term').value)&&[r.model_name,r.provider_name,r.original_product_name,r.region_code].join(' ').toLowerCase().includes(q));
  const pages=Math.max(1,Math.ceil(shown.length/30));page=Math.min(page,pages-1);
  $('#status').textContent=`검색 결과 ${shown.length.toLocaleString()}개 오퍼 / 전체 ${rows.length.toLocaleString()}개`;
- $('#rows').innerHTML=shown.slice(page*30,(page+1)*30).map((r,i)=>`<tr><td><b>${esc(r.model_name)}</b><small>${esc(r.original_product_name)}</small><small>${esc(r.gpu_count)} GPU</small></td><td><b>${esc(r.provider_name)}</b><small>${esc(r.region_code)}</small></td><td>${esc(terms[r.contract_type]||r.contract_type)}<small>${esc(r.contract_product_type)}</small><small>${r.commitment_months?esc(r.commitment_months)+'개월':'기간 약정 없음'}</small></td><td class="price">${price(r)}</td><td>${esc(time(r.collected_at))}<small>${r.is_stale?'48시간 초과 · 참고 자료':'저장된 관측'}</small></td><td>${source(r.source_url)?`<a href="${esc(source(r.source_url))}" target="_blank" rel="noopener">공식 원문 ↗</a><br>`:''}<button data-row="${page*30+i}">상세</button></td></tr>`).join('')||'<tr><td colspan="6">선택한 조건의 자료가 없습니다.</td></tr>';
+ $('#rows').innerHTML=shown.slice(page*30,(page+1)*30).map((r,i)=>`<tr><td><b>${esc(r.model_name)}</b><small>${esc(r.original_product_name)}</small><small>${esc(r.gpu_count)} GPU</small></td><td><b>${esc(r.provider_name)}</b><small>${esc(r.region_code)}</small></td><td>${esc(terms[r.contract_type]||r.contract_type)}<small>${esc(r.contract_product_type)}</small><small>${r.commitment_months?esc(r.commitment_months)+'개월':'기간 약정 없음'}</small></td><td class="price">${price(r)}</td><td>${esc(time(r.collected_at))}<small>${'저장된 관측'}</small></td><td>${source(r.source_url)?`<a href="${esc(source(r.source_url))}" target="_blank" rel="noopener">공식 원문 ↗</a><br>`:''}<button data-row="${page*30+i}">상세</button></td></tr>`).join('')||'<tr><td colspan="6">선택한 조건의 자료가 없습니다.</td></tr>';
  $('#prev').disabled=page===0;$('#next').disabled=page+1>=pages;$('#page').textContent=`${page+1} / ${pages}`;$('#csv').disabled=!shown.length;
 }
 for(const id of ['query','model','provider','term'])$('#'+id).addEventListener(id==='query'?'input':'change',()=>{page=0;render();});
@@ -27,7 +27,7 @@ $('#csv').onclick=()=>{
 async function request(path){const r=await fetch(path,{headers:{Accept:'application/json'}});const body=await r.json().catch(()=>null);if(!r.ok)throw Error('조회 실패: '+r.status);return body;}
 function toRow(o){const c=o.contractInfo||{};return {model_name:o.model,provider_name:o.provider,original_product_name:o.product,gpu_count:o.gpus,region_code:o.region,country_code:o.country,contract_type:c.type?String(c.type).toLowerCase():null,contract_product_type:o.contract,commitment_months:c.months??null,payment_option:c.paymentOption??null,display_price:o.price,collected_at:o.collected,is_stale:o.freshness==='STALE',observation_id:o.observationId??null,offer_id:o.id,source_url:o.source};}
 async function load(){
- const client=await import('/static/spring-market-client.mjs');
+ const client=await import('/static/spring-market-client.mjs?v=agepolicy1126');
  const catalog=await client.fetchMarketCatalog(request);
  const lists=await Promise.all(catalog.models.map(m=>client.fetchMarketOffers(request,{modelId:m.id,includeStale:'true'}).then(raws=>raws.map(raw=>toRow(client.mapMarketOffer(raw))))));
  return lists.flat();

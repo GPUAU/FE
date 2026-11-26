@@ -30,10 +30,10 @@ test('contract references preserve payment conditions and display basis without 
  assert.equal(r.id,'contract-10');assert.equal(r.term,'1_YEAR');assert.equal(r.normalized_price,10.5);assert.match(r.term_original,/all_upfront/);assert.equal(r.price_basis,'선납 반영 요율');
  assert.equal(D.contractRecords([{contract_type:'spot',display_price:null}])[0].normalized_price,null);
 });
-test('reference comparison marks 48h expiry, future and unknown timestamps',()=>{
+test('reference comparison accepts older observations and marks future and unknown timestamps',()=>{
  const now=Date.parse('2026-11-19T10:00:00Z');const c=t=>D.comparison(5,{normalized_price:8,observed_at:t},now);
  assert.ok(!c('2026-11-17T10:00:00Z').reasons.includes('수집 후 48시간 초과'));
- assert.ok(c('2026-11-17T09:59:59Z').reasons.includes('수집 후 48시간 초과'));
+ assert.ok(!c('2026-11-17T09:59:59Z').reasons.includes('수집 후 48시간 초과'));
  assert.ok(c('2026-11-20T00:00:00Z').reasons.some(x=>x.includes('미래')));
  assert.ok(c(null).reasons.some(x=>x.includes('미확인')));
 });

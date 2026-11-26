@@ -1,9 +1,9 @@
 import {fetchContractCatalog, fetchContractComparison} from './spring-contracts.mjs';
 const esc = value => String(value ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const pay = {ALL_UPFRONT:'전액 선납',PARTIAL_UPFRONT:'일부 선납',NO_UPFRONT:'선납 없음',NOT_APPLICABLE:'해당 없음'};
-const reasons = {BASE_PRICE_MISSING:'최근 48시간 내 유효한 온디맨드 기준가 없음',AMBIGUOUS_BASE_PRICE:'온디맨드 기준가 미확정',COMMITMENT_PRICE_STALE:'약정 관측 48시간 초과',COMMITMENT_PRICE_NOT_AVAILABLE:'최근 약정 가격 미확보',COMMITMENT_PRICE_NOT_EXACT:'확정가 조건 미충족',COMMITMENT_PRICE_MISSING:'약정 환산 단가 없음',CONDITIONS_NOT_COMPARABLE:'비교 조건 미충족',PRICE_NOT_OBSERVED:'관측 가격 없음',LATEST_PRICE_NOT_AVAILABLE:'최근 가격 미확보'};
+const reasons = {BASE_PRICE_MISSING:'유효한 온디맨드 기준가 없음',AMBIGUOUS_BASE_PRICE:'온디맨드 기준가 미확정',COMMITMENT_PRICE_STALE:'약정 가격 조건 확인 필요',COMMITMENT_PRICE_NOT_AVAILABLE:'최근 약정 가격 미확보',COMMITMENT_PRICE_NOT_EXACT:'확정가 조건 미충족',COMMITMENT_PRICE_MISSING:'약정 환산 단가 없음',CONDITIONS_NOT_COMPARABLE:'비교 조건 미충족',PRICE_NOT_OBSERVED:'관측 가격 없음',LATEST_PRICE_NOT_AVAILABLE:'최근 가격 미확보'};
 const kind = {EXACT:'확정가',SCENARIO:'시나리오 단가',FROM:'시작가',RANGE:'범위 가격',UNKNOWN:'가격 구분 미확인'};
-const freshness = {CURRENT:'48시간 이내 확인',STALE:'48시간 초과 관측',UNKNOWN:'확인 시각 미확인'};
+const freshness = {CURRENT:'관측 시각 확인',STALE:'관측 시각 확인',UNKNOWN:'확인 시각 미확인'};
 const amount = offer => {
   const value=offer?.effective?.amount;
   return offer?.effective?.status==='OK' && value!=null && String(value).trim()!=='' && Number.isFinite(Number(value)) && Number(value)>=0 ? Number(value) : null;
