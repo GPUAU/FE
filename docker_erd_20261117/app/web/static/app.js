@@ -483,7 +483,7 @@ function wire() {
 }
 
 /* ========== 셸: 다국어 · 팝오버 · 알림 · 문의 · 홈 · 목록 ========== */
-const LANG_KEY = 'gpuindex.lang', SEEN_KEY = 'gpuindex.notiSeen';
+const SEEN_KEY = 'gpuindex.notiSeen';
 const ls = { get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
 const SH = {
   ko: {
@@ -581,28 +581,26 @@ const SH = {
     roleADMIN: '管理员', roleUSER: '用户', rolePENDING: '待批准',
   },
 };
-let lang = ['ko', 'en', 'zh'].includes(ls.get(LANG_KEY)) ? ls.get(LANG_KEY) : 'ko';
+const lang = 'ko';
 function tr(k, ...a) { const v = (SH[lang] && SH[lang][k]) ?? SH.ko[k]; return typeof v === 'function' ? v(...a) : (v ?? k); }
 function applyShellLang() {
-  document.documentElement.lang = lang === 'zh' ? 'zh-CN' : lang;
+  document.documentElement.lang = 'ko';
   document.title = tr('product');
   document.querySelectorAll('[data-i18n]').forEach(el => { el.textContent = tr(el.dataset.i18n); });
   document.querySelectorAll('[data-i18n-html]').forEach(el => { el.innerHTML = tr(el.dataset.i18nHtml); });
   document.querySelectorAll('[data-tip-key]').forEach(el => { el.dataset.tip = tr(el.dataset.tipKey); el.setAttribute('aria-label', tr(el.dataset.tipKey)); });
   $('#gSearchIn').placeholder = tr('searchPh');
   $('#inqTitle').placeholder = tr('titlePh'); $('#inqBodyIn').placeholder = tr('bodyPh');
-  document.querySelectorAll('#popLang li').forEach(li => li.setAttribute('aria-checked', li.dataset.lang === lang));
 }
 
 /* 팝오버 */
-const POPS = [['#btnNoti', '#popNoti', openNoti], ['#btnLang', '#popLang', null]];
+const POPS = [['#btnNoti', '#popNoti', openNoti]];
 function closePops() { POPS.forEach(([b, p]) => { $(p).hidden = true; $(b).setAttribute('aria-expanded', 'false'); }); }
 function togglePop(b, p, onOpen) {
   const open = $(p).hidden; closePops();
   if (!open) return;
   $(p).hidden = false; $(b).setAttribute('aria-expanded', 'true');
   if (onOpen) onOpen();
-  if (p === '#popLang') ($(p).querySelector('[aria-checked="true"]') || $(p).firstElementChild).focus();
 }
 const LV = { FAIL: ['p-bad', '수집 실패'], ANOMALY: ['p-warn', '가격 급변'], FX: ['p-info', '환율 착시'], NEW: ['p-new', '신규 상품'], REMOVED: ['p-bad', '상품 사라짐'], INFO: ['p-info', '배치'], LAUNCH: ['p-new', '첫 공개'] };
 const emptyNotiHTML = () => `<li style="display:block;border:0"><div class="empty"><div class="e-ic"><svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M6 16V11a6 6 0 1 1 12 0v5l1.5 2h-15z"/><path d="M10 20a2 2 0 0 0 4 0"/></svg></div><b>${tr('emptyNoti')}</b><span>${tr('emptyNotiSub')}</span></div></li>`;
@@ -771,13 +769,6 @@ function wireShell() {
   POPS.forEach(([b, p, fn]) => { $(b).onclick = e => { e.stopPropagation(); togglePop(b, p, fn); }; });
   document.addEventListener('click', e => { if (!e.target.closest('.pop-wrap')) closePops(); });
   document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#inqModal').hidden) closeInquiry(); else closePops(); } });
-  $('#popLang').onclick = e => { const li = e.target.closest('li[data-lang]'); if (!li) return; lang = li.dataset.lang; ls.set(LANG_KEY, lang); applyShellLang(); closePops(); render(); $('#btnLang').focus(); };
-  $('#popLang').onkeydown = e => {
-    const items = [...$('#popLang').querySelectorAll('li')], i = items.indexOf(document.activeElement);
-    if (e.key === 'ArrowDown') { e.preventDefault(); items[(i + 1) % items.length].focus(); }
-    else if (e.key === 'ArrowUp') { e.preventDefault(); items[(i - 1 + items.length) % items.length].focus(); }
-    else if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); document.activeElement.click(); }
-  };
   $('#gSearch').onsubmit = e => { e.preventDefault(); const q = $('#gSearchIn').value.trim(); $('#gSearchIn').value = ''; askFromAnywhere(q); };
   $('#btnHelp')?.addEventListener('click', openInquiry);
   $('#snbHelp').onclick = openInquiry; $('#inqNew').onclick = openInquiry;
