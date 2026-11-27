@@ -1,4 +1,23 @@
-# PM 몬테카를로 프로토타입 로컬 연동
+# 몬테카를로 가격 전망 시연
+
+현재 `/#forecast` 화면은 **발표용 목데이터를 사용한 12개월 시장가격 범위**를 보여준다.
+투자비·제안가·IRR 계산은 이 화면에서 제거했다. 프론트엔드의 Web Worker에서 계산하므로
+아래의 구형 Python 계산 서버를 실행할 필요가 없다.
+
+- GPU별 목데이터: `docker_erd_20261117/app/web/static/montecarlo-demo-catalog.json` (B300·GB300·VR200·B200·H100·GB200·H200)
+- B300 단일 자료는 `montecarlo-demo-data.json`에도 호환용으로 유지한다.
+- 재생성: `python3 scripts/generate_mc_demo.py` (고정 시드, 6개 사업자·56개 리전 조합의 상품별 18개월 가상 가격)
+- 계산: `montecarlo-core.mjs` / `montecarlo-worker.mjs`
+- 회귀 검증: `node --test tests/montecarlo-core.test.mjs`
+- 상세 시연 및 실제 데이터 전환 안내: `docs/MONTECARLO_PRESENTATION.md`
+
+## 이전 Python 프로토타입 (기존 연동 참고용)
+
+아래는 이전 PM 프로토타입의 API 설명이다. 현재 시연 화면은 이 API를 호출하지 않는다.
+JavaScript 난수 생성기와 계산 기간이 달라 이전 프로토타입의 시드별 수치와 동일하지 않다.
+기본값은 추가 인하 이벤트 미적용이며, UI에서 명시적으로 설정한 경우만 적용한다.
+
+### PM 몬테카를로 프로토타입 로컬 연동
 
 화면: http://127.0.0.1:18091/#forecast
 

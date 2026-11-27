@@ -131,3 +131,13 @@ test('elapsed agent time is formatted in seconds and minutes', () => {
   assert.equal(fmtElapsed(12400), '12초');
   assert.equal(fmtElapsed(65000), '1분 05초');
 });
+
+test('completed workspace shows questions and results with activity below and no reading checkpoint', () => {
+  const question = renderWorkspace(session);
+  assert.ok(question.includes('data-qid="q1"') && question.includes('ca-activity'));
+  const result = renderWorkspace({...session, step:'DONE', question:null, simulation:{hourlyCost:2,candidatePrice:3}, terms:[], summary:[]});
+  assert.ok(result.includes('class="ca-kpis"') && result.includes('ca-activity'));
+  for (const html of [question,result]) {
+    assert.ok(!html.includes('data-ca-countdown') && !html.includes('data-ca-continue') && !html.includes('data-ca-review'));
+  }
+});

@@ -18,7 +18,9 @@ from pricing_range import (generate_paths, history_evidence, market_ranges, draw
 DEFAULT = json.loads((ROOT / 'engine/config_sample.json').read_text())
 MONTHS, PRICES = load_history(str(ROOT / 'engine/sample_price_history.csv'))
 RETURNS = log_returns(PRICES)
-ALLOWED_ORIGINS = {'http://127.0.0.1:18091', 'http://localhost:18091'}
+ALLOWED_ORIGINS = {f'http://{host}:{port}'
+                   for host in ('127.0.0.1', 'localhost')
+                   for port in (18091, 18115)}
 LOCK = threading.Lock()
 
 def number(value, name, low, high, integer=False):

@@ -2,6 +2,7 @@
  * 시작 → 진행(단계 표시줄 + 질문 카드 + 확인된 내용) → 결과.
  * 에이전트(cost-agent /agent/v1/agent/sessions)가 단계를 진행하고, 이 화면은 상태를 그리기만 한다. 숫자 계산은 서버가 한다.
  */
+import { createProgressPlayback } from './agent-progress-playback.mjs?v=hold5-1127';
 import { AGENT_BASE, toCostForm, applyToForm, markMissing } from './bill-import.mjs';
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -133,12 +134,17 @@ export function renderStepper(s) {
 }
 
 // ------------------------------------------------------------------ 질문 카드
-function fieldInput(f) {
+function fieldPlaceholder(f, currency) {
+  if (f.name === 'acquisition_amount') return currency === 'KRW' ? '예: 300,000,000 (원)' : currency === 'USD' ? '예: 240,000 (달러)' : '예: 240,000';
+  if (/사내 인건비.*판관비/.test(f.label || '')) return '예: 50,000,000 (연간)';
+  return f.placeholder || '';
+}
+function fieldInput(f, currency) {
   const id = `ca-f-${esc(f.name)}`;
   const value = f.value ?? '';
   const control = f.type === 'select'
     ? `<select id="${id}" name="${esc(f.name)}">${f.value == null ? '<option value="">선택</option>' : ''}${f.options.map(o => `<option value="${esc(o.value)}" ${String(o.value) === String(value) ? 'selected' : ''}>${esc(o.label)}</option>`).join('')}</select>`
-    : `<input id="${id}" name="${esc(f.name)}" type="${f.type === 'number' ? 'number' : 'text'}" step="any" value="${esc(value)}" ${f.required ? 'required' : ''}>`;
+    : `<input id="${id}" name="${esc(f.name)}" type="${f.type === 'number' ? 'number' : 'text'}" step="any" placeholder="${esc(fieldPlaceholder(f, currency))}" value="${esc(value)}" ${f.required ? 'required' : ''}>`;
   return `<label class="ca-field" for="${id}" data-show-for="${esc((f.show_for || []).join(','))}"><span>${esc(f.label)}</span>${control}${f.hint ? `<small>${esc(f.hint)}</small>` : ''}</label>`;
 }
 
@@ -155,7 +161,7 @@ export function renderQuestion(q, s) {
     <h3>${esc(q.title)}</h3>
     <p class="ca-desc">${esc(q.text)}</p>
     ${opts}
-    ${q.fields.length ? `<div class="ca-fields">${q.fields.map(fieldInput).join('')}</div>` : ''}
+    ${q.fields.length ? `<div class="ca-fields">${q.fields.map(f => fieldInput(f, q.fields.find(field => field.name === 'acquisition_currency')?.value)).join('')}</div>` : ''}
     ${q.fields.length ? `<div class="ca-actions"><button type="button" class="ca-btn ca-btn-primary" data-submit>${esc(q.submit_label)}</button></div>` : ''}
     <div class="ca-error" role="alert"></div>
   </div>`;
@@ -173,13 +179,14 @@ export const WAIT_HINTS = {
 const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REPORT: '견적 근거서' };
 const KIND_ICON = { think: '◆', tool: '⚙', ask: '?', answer: '✎', result: '✓', warn: '!' };
 
-export function renderLive(s, { feed = [], waiting = false, hint = '' } = {}) {
+export function renderLive(s, { feed = [], waiting = false, hint = '', completed = false } = {}) {
   const step = s.board?.find(b => b.key === s.step);
   const lines = feed.map((e, i) => `<li data-kind="${esc(e.kind)}" class="ca-live-in"${i === feed.length - 1 && !waiting ? ' aria-current="true"' : ''}><i aria-hidden="true">${esc(KIND_ICON[e.kind] || '·')}</i><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('');
-  return `<div class="ca-card ca-live" aria-live="polite" aria-busy="true">
+  return `<div class="ca-card ca-live" aria-live="polite" aria-busy="${!completed}">
     <div class="ca-live-head"><span class="ca-orb" aria-hidden="true"><i></i><i></i><i></i></span>
-      <div><p class="ca-step-label">에이전트 작업 중</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
+      <div><p class="ca-step-label">${completed ? '처리 내역' : '에이전트 작업 중'}</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
     <ol class="ca-live-feed">${lines}${waiting ? `<li class="ca-live-wait"><i aria-hidden="true">…</i><span class="ca-live-hint">${esc(hint)}</span><span class="ca-dots" aria-hidden="true"><b></b><b></b><b></b></span></li>` : ''}</ol>
+    ${completed ? '<div class="ca-playback-controls"><span data-ca-playback-status role="timer">처리 내역 표시 중</span><div><button type="button" class="ca-btn ca-btn-ghost" data-ca-playback-pause aria-pressed="false">일시정지</button><button type="button" class="ca-btn ca-btn-primary" data-ca-playback-next>다음</button></div></div>' : ''}
     <div class="ca-shimmer" aria-hidden="true"></div>
   </div>`;
 }
@@ -355,10 +362,11 @@ function syncShowFor(card) {
 }
 
 // ------------------------------------------------------------------ 마운트
+let disposeMount = () => {};
+let activeMount = 0;
 let session = null;   // 탭을 오가도 진행 중인 세션을 유지한다
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const sleep = ms => new Promise(r => setTimeout(r, ms));
 const EVENT_DELAY = { think: 650, tool: 750, ask: 550, answer: 350, result: 600, warn: 650 };
 export function fmtElapsed(ms) {
   const sec = Math.max(0, Math.round(ms / 1000));
@@ -416,9 +424,13 @@ function countUp(root) {
 }
 
 export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fetchImpl = fetch }) {
-  let file = null;
-  let run = 0;          // 진행 중인 애니메이션 식별 (새 청구서·탭 이동 시 중단)
+  disposeMount();
+  const mountId = ++activeMount;
+  const isCurrent = () => mountId === activeMount;
   let hintTimer = null;
+  let playback = null;
+  let file = null;
+  let run = 0;          // 새 청구서로 전환하면 이전 요청의 응답을 무시한다
   // 에이전트가 실제로 일한 시간 (담당자가 답을 고르는 시간은 빼고 센다)
   let workMs = 0, busySince = null, clock = null;
   const elapsedNow = () => workMs + (busySince ? Date.now() - busySince : 0);
@@ -432,7 +444,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   const busyStart = () => {
     if (busySince) return;
     busySince = Date.now();
-    if (!clock) clock = setInterval(() => (onAgentTab() ? paintElapsed() : null), 1000);
+    if (!clock) clock = setInterval(() => { if (!isCurrent()) busyEnd(); else if (onAgentTab()) paintElapsed(); }, 1000);
   };
   const busyEnd = () => {
     if (busySince) workMs += Date.now() - busySince;
@@ -442,6 +454,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     paintElapsed();
   };
   const stopHints = () => { if (hintTimer) clearInterval(hintTimer); hintTimer = null; };
+  disposeMount = () => { run++; playback?.stop(); stopHints(); busyEnd(); };
   const draw = (opts = {}) => {
     stopHints();
     host.innerHTML = session ? renderWorkspace(session, { ...opts, models }) : renderStart(models);
@@ -454,6 +467,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
 
   /** 서버 응답을 기다리는 동안: 현재 단계를 진행 중으로 두고 작업 문구를 순환한다. */
   function showWaiting(base) {
+    playback?.stop(); playback = null;
     const hints = WAIT_HINTS[base.step] || ['처리하는 중'];
     const live = { ...base, question: null, board: base.board.map(b => (b.key === base.step ? { ...b, status: 'RUNNING' } : b)) };
     busyStart();
@@ -464,48 +478,58 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     if (reducedMotion()) return;
     hintTimer = setInterval(() => {
       const el = host.querySelector('.ca-live-hint');
-      if (!el || !onAgentTab()) return stopHints();
+      if (!isCurrent() || !host.isConnected || !el || !onAgentTab()) return stopHints();
       i = (i + 1) % hints.length;
       el.classList.remove('ca-live-in'); void el.offsetWidth; el.classList.add('ca-live-in');
       el.textContent = hints[i];
     }, 1800);
   }
 
-  /** 응답이 오면 에이전트가 한 일을 한 줄씩 재생하며 단계 표시줄을 채운 뒤 최종 화면을 보여 준다. */
-  async function replay(prev, next) {
-    stopHints();
-    const me = ++run;
-    const events = next.events.slice(prev?.events?.length || 0);
-    if (reducedMotion() || !events.length) { busyEnd(); session = next; draw({ enter: true }); return; }
-    let board = (prev?.board || pendingSession('', {}).board).map(b => ({ ...b }));
-    const feed = [];
-    const first = { ...next, board: boardAt(board, next, events[0]), step: events[0].step, question: null };
-    host.innerHTML = renderWorkspace(first, { models, live: { feed } });
-    paintElapsed();
-    for (const ev of events) {
-      if (me !== run) return;
-      if (!onAgentTab()) { busyEnd(); session = next; return; }
-      board = boardAt(board, next, ev);
-      const view = { ...next, board, step: ev.step, question: null };
-      updateStepper(host, view);
-      const head = host.querySelector('.ca-live h3');
-      if (head) head.textContent = board.find(b => b.key === ev.step)?.title || '';
-      feed.push(ev);
-      const list = host.querySelector('.ca-live-feed');
-      if (list) {
-        list.querySelector('[aria-current]')?.removeAttribute('aria-current');
-        list.insertAdjacentHTML('beforeend', `<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
-        list.scrollTop = list.scrollHeight;
-      }
-      await sleep(EVENT_DELAY[ev.kind] || 500);
-    }
-    if (me !== run) return;
-    updateStepper(host, next);
-    await sleep(350);
-    if (me !== run) return;
-    busyEnd();
+  /** 처리 내역을 순서대로 표시한 뒤 5초간 유지한다. */
+  function replay(prev, next, requestId) {
+    if (requestId !== run || !isCurrent()) return;
+    stopHints(); busyEnd(); playback?.stop();
     session = next;
-    if (onAgentTab()) draw({ enter: true });
+    if (!onAgentTab()) return;
+    const events = (next.events || []).slice(prev?.events?.length || 0);
+    if (!events.length) { draw({enter:true}); return; }
+    let board = (prev?.board || pendingSession('', {}).board).map(b => ({...b}));
+    const first = {...next, board:boardAt(board,next,events[0]), step:events[0].step, question:null};
+    host.innerHTML = renderWorkspace(first,{models,live:{feed:[],completed:true}});
+    paintElapsed();
+    const valid = () => requestId === run && isCurrent() && host.isConnected && onAgentTab();
+    let readingStarted = false;
+    playback = createProgressPlayback({events, immediate:reducedMotion(),
+      delayFor:ev=>EVENT_DELAY[ev.kind] || 500,
+      active:()=>{if (!valid()) {playback?.stop();return false;}return !document.hidden;},
+      onEvent:ev=>{
+        board = boardAt(board,next,ev);
+        updateStepper(host,{...next,board,step:ev.step,question:null});
+        const heading = host.querySelector('.ca-live h3');
+        if (heading) heading.textContent = board.find(b=>b.key===ev.step)?.title || '';
+        const list = host.querySelector('.ca-live-feed');
+        if (list) {
+          list.querySelector('[aria-current]')?.removeAttribute('aria-current');
+          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+          list.scrollTop = list.scrollHeight;
+        }
+      },
+      onState:({paused,phase,seconds})=>{
+        const status=host.querySelector('[data-ca-playback-status]');
+        const text=paused?'일시정지됨':phase==='reading'?`${seconds}초 후 다음 단계로 이동`:'처리 내역 표시 중';
+        if(status && status.textContent!==text)status.textContent=text;
+        const button=host.querySelector('[data-ca-playback-pause]');
+        if(button){button.textContent=paused?'계속':'일시정지';button.setAttribute('aria-pressed',String(paused));}
+        host.querySelector('.ca-live')?.classList.toggle('ca-playback-paused',paused);
+        if(phase==='reading' && !readingStarted){readingStarted=true;updateStepper(host,next);}
+      },
+      onComplete:()=>{
+        if(!valid())return;
+        playback=null;draw({enter:true});
+        const heading=host.querySelector('.ca-main h3');
+        heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});
+      }
+    });
   }
 
   function wireStart() {
@@ -531,17 +555,19 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     start.addEventListener('click', async () => {
       if (!file) return;
       const goal = { model_id: host.querySelector('[data-ca-model]').value || null, gpu_count: Number(host.querySelector('[data-ca-gpu]').value) || null };
+      const requestId = ++run;
       workMs = 0;
       const placeholder = pendingSession(file.name, goal);
       showWaiting(placeholder);
       host.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
       try {
         const next = await startSession(file, { modelId: goal.model_id, gpuCount: goal.gpu_count }, fetchImpl);
-        await replay(placeholder, next);
+        await replay(placeholder, next, requestId);
       } catch (ex) {
-        stopHints();
+        if (requestId !== run || !isCurrent()) return;
         busyEnd();
         session = null;
+        if (!onAgentTab()) return;
         draw();
         const err = host.querySelector('[data-ca-error]');
         if (err) err.textContent = ex.message;
@@ -552,13 +578,16 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   async function submit(card, choice) {
     const answer = readAnswer(card, choice);
     const prev = session;
+    const requestId = ++run;
     showWaiting(prev);
     try {
       const next = await sendAnswer(prev.id, answer, fetchImpl);
-      await replay(prev, next);
+      await replay(prev, next, requestId);
     } catch (ex) {
+      if (requestId !== run || !isCurrent()) return;
       busyEnd();
       session = prev;
+      if (!onAgentTab()) return;
       draw();
       const box = host.querySelector('.ca-question .ca-error');
       if (box) box.textContent = ex.message;
@@ -568,7 +597,9 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { run++; busyEnd(); workMs = 0; session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-playback-next')) { playback?.next(); return; }
+    if (btn.hasAttribute('data-ca-playback-pause')) { playback?.toggle(); return; }
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }
     const card = btn.closest('.ca-question');
     if (!card || !session) return;
@@ -580,6 +611,11 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     if (btn.hasAttribute('data-submit')) {
       await submit(card, btn.dataset.choice || card.querySelector('.ca-opt[aria-pressed="true"]')?.dataset.choice);
     }
+  };
+  host.onchange = e => {
+    if (e.target.name !== 'acquisition_currency') return;
+    const amount = e.target.closest('.ca-question')?.querySelector('[name="acquisition_amount"]');
+    if (amount) amount.placeholder = fieldPlaceholder({name:'acquisition_amount'}, e.target.value);
   };
   host.onkeydown = e => {
     if (e.key !== 'Enter' || e.target.tagName === 'BUTTON') return;
