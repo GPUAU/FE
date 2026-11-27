@@ -2,6 +2,7 @@
  * 시작 → 진행(단계 표시줄 + 질문 카드 + 확인된 내용) → 결과.
  * 에이전트(cost-agent /agent/v1/agent/sessions)가 단계를 진행하고, 이 화면은 상태를 그리기만 한다. 숫자 계산은 서버가 한다.
  */
+import { createProgressPlayback } from './agent-progress-playback.mjs?v=hold5-1127';
 import { AGENT_BASE, toCostForm, applyToForm, markMissing } from './bill-import.mjs';
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -178,13 +179,14 @@ export const WAIT_HINTS = {
 const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REPORT: '견적 근거서' };
 const KIND_ICON = { think: '◆', tool: '⚙', ask: '?', answer: '✎', result: '✓', warn: '!' };
 
-export function renderLive(s, { feed = [], waiting = false, hint = '' } = {}) {
+export function renderLive(s, { feed = [], waiting = false, hint = '', completed = false } = {}) {
   const step = s.board?.find(b => b.key === s.step);
   const lines = feed.map((e, i) => `<li data-kind="${esc(e.kind)}" class="ca-live-in"${i === feed.length - 1 && !waiting ? ' aria-current="true"' : ''}><i aria-hidden="true">${esc(KIND_ICON[e.kind] || '·')}</i><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('');
-  return `<div class="ca-card ca-live" aria-live="polite" aria-busy="true">
+  return `<div class="ca-card ca-live" aria-live="polite" aria-busy="${!completed}">
     <div class="ca-live-head"><span class="ca-orb" aria-hidden="true"><i></i><i></i><i></i></span>
-      <div><p class="ca-step-label">에이전트 작업 중</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
+      <div><p class="ca-step-label">${completed ? '처리 내역' : '에이전트 작업 중'}</p><h3>${esc(step?.title || '준비 중')}</h3></div></div>
     <ol class="ca-live-feed">${lines}${waiting ? `<li class="ca-live-wait"><i aria-hidden="true">…</i><span class="ca-live-hint">${esc(hint)}</span><span class="ca-dots" aria-hidden="true"><b></b><b></b><b></b></span></li>` : ''}</ol>
+    ${completed ? '<div class="ca-playback-controls"><span data-ca-playback-status role="timer">처리 내역 표시 중</span><div><button type="button" class="ca-btn ca-btn-ghost" data-ca-playback-pause aria-pressed="false">일시정지</button><button type="button" class="ca-btn ca-btn-primary" data-ca-playback-next>다음</button></div></div>' : ''}
     <div class="ca-shimmer" aria-hidden="true"></div>
   </div>`;
 }
@@ -360,16 +362,51 @@ function syncShowFor(card) {
 }
 
 // ------------------------------------------------------------------ 마운트
+let disposeMount = () => {};
 let activeMount = 0;
 let session = null;   // 탭을 오가도 진행 중인 세션을 유지한다
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+const EVENT_DELAY = { think: 650, tool: 750, ask: 550, answer: 350, result: 600, warn: 650 };
 export function fmtElapsed(ms) {
   const sec = Math.max(0, Math.round(ms / 1000));
   return sec < 60 ? `${sec}초` : `${Math.floor(sec / 60)}분 ${String(sec % 60).padStart(2, '0')}초`;
 }
 // 다른 탭으로 옮겼으면 화면을 덮어쓰지 않는다 (#cost 가 에이전트 탭)
 const onAgentTab = () => location.hash.startsWith('#cost') && !location.hash.split('/')[1];
+
+/** 단계 표시줄을 다시 그리지 않고 상태만 바꿔 전환 애니메이션이 보이게 한다. */
+function updateStepper(root, s) {
+  const prog = root.querySelector('.ca-progress');
+  if (!prog) return;
+  const p = progressOf(s);
+  const bar = prog.querySelector('.ca-bar i');
+  if (bar) bar.style.width = `${p.pct}%`;
+  prog.querySelector('.ca-bar')?.setAttribute('aria-valuenow', String(p.pct));
+  prog.toggleAttribute('data-finished', p.finished);
+  const pct = prog.querySelector('.ca-pct');
+  if (pct) pct.textContent = `${p.done}/${p.total} 단계 · ${p.pct}%`;
+  const head = prog.querySelector('.ca-head');
+  if (head) head.innerHTML = stepHead(p);
+  prog.querySelectorAll('.ca-steps > li').forEach((li, i) => {
+    const b = s.board[i];
+    if (!b) return;
+    if (li.dataset.status !== b.status && ['DONE', 'WARNING', 'ERROR'].includes(b.status)) {
+      li.classList.remove('ca-pop'); void li.offsetWidth; li.classList.add('ca-pop');
+    }
+    li.dataset.status = b.status;
+    if (b.key === s.step) li.setAttribute('aria-current', 'step'); else li.removeAttribute('aria-current');
+    const sum = li.querySelector('.ca-step-sum');
+    sum.textContent = shortSummary(b.summary) || STATUS_LABEL[b.status] || '';
+    sum.title = b.summary || '';
+  });
+  // 좁은 화면에서는 단계 줄이 가로로 스크롤되므로 현재 단계를 가운데로 옮긴다
+  const steps = prog.querySelector('.ca-steps');
+  const cur = steps?.querySelector('[aria-current="step"]');
+  if (steps && cur && steps.scrollWidth > steps.clientWidth) {
+    steps.scrollTo({ left: cur.offsetLeft - (steps.clientWidth - cur.offsetWidth) / 2, behavior: reducedMotion() ? 'auto' : 'smooth' });
+  }
+}
 
 function countUp(root) {
   root.querySelectorAll('[data-count]').forEach(el => {
@@ -387,8 +424,11 @@ function countUp(root) {
 }
 
 export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fetchImpl = fetch }) {
+  disposeMount();
   const mountId = ++activeMount;
   const isCurrent = () => mountId === activeMount;
+  let hintTimer = null;
+  let playback = null;
   let file = null;
   let run = 0;          // 새 청구서로 전환하면 이전 요청의 응답을 무시한다
   // 에이전트가 실제로 일한 시간 (담당자가 답을 고르는 시간은 빼고 센다)
@@ -413,7 +453,10 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     clock = null;
     paintElapsed();
   };
+  const stopHints = () => { if (hintTimer) clearInterval(hintTimer); hintTimer = null; };
+  disposeMount = () => { run++; playback?.stop(); stopHints(); busyEnd(); };
   const draw = (opts = {}) => {
+    stopHints();
     host.innerHTML = session ? renderWorkspace(session, { ...opts, models }) : renderStart(models);
     paintElapsed();
     const card = host.querySelector('.ca-question');
@@ -422,25 +465,71 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     if (opts.enter && !reducedMotion()) countUp(host);
   };
 
-  /** The request runs normally; completed actions appear once the response arrives. */
+  /** 서버 응답을 기다리는 동안: 현재 단계를 진행 중으로 두고 작업 문구를 순환한다. */
   function showWaiting(base) {
+    playback?.stop(); playback = null;
+    const hints = WAIT_HINTS[base.step] || ['처리하는 중'];
     const live = { ...base, question: null, board: base.board.map(b => (b.key === base.step ? { ...b, status: 'RUNNING' } : b)) };
     busyStart();
-    const hint = '서버 응답을 기다리고 있습니다. 처리가 끝나면 단계별 작업 내역을 확인할 수 있습니다.';
-    host.innerHTML = renderWorkspace(live, { models, live: { feed: [], waiting: true, hint } });
+    host.innerHTML = renderWorkspace(live, { models, live: { feed: [], waiting: true, hint: hints[0] } });
     paintElapsed();
+    let i = 0;
+    stopHints();
+    if (reducedMotion()) return;
+    hintTimer = setInterval(() => {
+      const el = host.querySelector('.ca-live-hint');
+      if (!isCurrent() || !host.isConnected || !el || !onAgentTab()) return stopHints();
+      i = (i + 1) % hints.length;
+      el.classList.remove('ca-live-in'); void el.offsetWidth; el.classList.add('ca-live-in');
+      el.textContent = hints[i];
+    }, 1800);
   }
 
-  function presentResponse(next, requestId) {
+  /** 처리 내역을 순서대로 표시한 뒤 5초간 유지한다. */
+  function replay(prev, next, requestId) {
     if (requestId !== run || !isCurrent()) return;
-    busyEnd();
+    stopHints(); busyEnd(); playback?.stop();
     session = next;
-    if (onAgentTab()) {
-      draw();
-      const heading = host.querySelector('.ca-main h3');
-      heading?.setAttribute('tabindex', '-1');
-      heading?.focus({preventScroll: true});
-    }
+    if (!onAgentTab()) return;
+    const events = (next.events || []).slice(prev?.events?.length || 0);
+    if (!events.length) { draw({enter:true}); return; }
+    let board = (prev?.board || pendingSession('', {}).board).map(b => ({...b}));
+    const first = {...next, board:boardAt(board,next,events[0]), step:events[0].step, question:null};
+    host.innerHTML = renderWorkspace(first,{models,live:{feed:[],completed:true}});
+    paintElapsed();
+    const valid = () => requestId === run && isCurrent() && host.isConnected && onAgentTab();
+    let readingStarted = false;
+    playback = createProgressPlayback({events, immediate:reducedMotion(),
+      delayFor:ev=>EVENT_DELAY[ev.kind] || 500,
+      active:()=>{if (!valid()) {playback?.stop();return false;}return !document.hidden;},
+      onEvent:ev=>{
+        board = boardAt(board,next,ev);
+        updateStepper(host,{...next,board,step:ev.step,question:null});
+        const heading = host.querySelector('.ca-live h3');
+        if (heading) heading.textContent = board.find(b=>b.key===ev.step)?.title || '';
+        const list = host.querySelector('.ca-live-feed');
+        if (list) {
+          list.querySelector('[aria-current]')?.removeAttribute('aria-current');
+          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+          list.scrollTop = list.scrollHeight;
+        }
+      },
+      onState:({paused,phase,seconds})=>{
+        const status=host.querySelector('[data-ca-playback-status]');
+        const text=paused?'일시정지됨':phase==='reading'?`${seconds}초 후 다음 단계로 이동`:'처리 내역 표시 중';
+        if(status && status.textContent!==text)status.textContent=text;
+        const button=host.querySelector('[data-ca-playback-pause]');
+        if(button){button.textContent=paused?'계속':'일시정지';button.setAttribute('aria-pressed',String(paused));}
+        host.querySelector('.ca-live')?.classList.toggle('ca-playback-paused',paused);
+        if(phase==='reading' && !readingStarted){readingStarted=true;updateStepper(host,next);}
+      },
+      onComplete:()=>{
+        if(!valid())return;
+        playback=null;draw({enter:true});
+        const heading=host.querySelector('.ca-main h3');
+        heading?.setAttribute('tabindex','-1');heading?.focus({preventScroll:true});
+      }
+    });
   }
 
   function wireStart() {
@@ -473,7 +562,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
       host.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
       try {
         const next = await startSession(file, { modelId: goal.model_id, gpuCount: goal.gpu_count }, fetchImpl);
-        presentResponse(next, requestId);
+        await replay(placeholder, next, requestId);
       } catch (ex) {
         if (requestId !== run || !isCurrent()) return;
         busyEnd();
@@ -493,7 +582,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     showWaiting(prev);
     try {
       const next = await sendAnswer(prev.id, answer, fetchImpl);
-      presentResponse(next, requestId);
+      await replay(prev, next, requestId);
     } catch (ex) {
       if (requestId !== run || !isCurrent()) return;
       busyEnd();
@@ -508,7 +597,9 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { run++; busyEnd(); workMs = 0; session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-playback-next')) { playback?.next(); return; }
+    if (btn.hasAttribute('data-ca-playback-pause')) { playback?.toggle(); return; }
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }
     const card = btn.closest('.ca-question');
     if (!card || !session) return;

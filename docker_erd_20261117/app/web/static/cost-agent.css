@@ -259,3 +259,10 @@
 .ca-side-empty{margin-top:10px;font-size:13px;color:var(--ca-muted)}
 
 .ca .ca-field input::placeholder{color:#9299a5;opacity:1}
+
+/* Controls for the existing inline processing log. */
+.ca-playback-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:18px;padding-top:16px;border-top:1px solid var(--ca-line)}
+.ca-playback-controls>span{font-size:13px;color:var(--ca-ink2);font-variant-numeric:tabular-nums}
+.ca-playback-controls>div{display:flex;gap:8px}
+.ca-playback-paused .ca-orb,.ca-playback-paused .ca-orb i,.ca-playback-paused .ca-shimmer,.ca-playback-paused .ca-live-feed span::after{animation-play-state:paused!important}
+@media(max-width:600px){.ca-playback-controls{flex-wrap:wrap}.ca-playback-controls>div{margin-left:auto}}

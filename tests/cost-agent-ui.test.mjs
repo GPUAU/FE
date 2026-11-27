@@ -132,7 +132,7 @@ test('elapsed agent time is formatted in seconds and minutes', () => {
   assert.equal(fmtElapsed(65000), '1분 05초');
 });
 
-test('server responses show questions and results directly with activity available below', () => {
+test('completed workspace shows questions and results with activity below and no reading checkpoint', () => {
   const question = renderWorkspace(session);
   assert.ok(question.includes('data-qid="q1"') && question.includes('ca-activity'));
   const result = renderWorkspace({...session, step:'DONE', question:null, simulation:{hourlyCost:2,candidatePrice:3}, terms:[], summary:[]});
