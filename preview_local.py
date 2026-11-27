@@ -75,7 +75,8 @@ class Handler(serve.Handler):
 def main():
     global AUTH
     # Acquire the FE port before starting a second service or opening a browser.
-    server = ThreadingHTTPServer(('127.0.0.1', 18091), partial(Handler, directory=str(serve.STATIC)))
+    port = int(os.environ.get('GPU_FE_PORT', '18115'))
+    server = ThreadingHTTPServer(('127.0.0.1', port), partial(Handler, directory=str(serve.STATIC)))
     try:
         try:
             OPENER.open(UPSTREAM + '/agent/health', timeout=10).close()
@@ -98,7 +99,7 @@ def main():
             print('팀 API 연결을 확인하지 못했습니다. 화면은 열리지만 데이터 조회는 실패할 수 있습니다.')
         from montecarlo.launch import ensure_started
         ensure_started()
-        url = 'http://127.0.0.1:18091/#home'
+        url = f'http://127.0.0.1:{port}/#home'
         print('로컬 통합본:', url, flush=True)
         print('종료: Ctrl+C / Monte Carlo 서비스: 18096', flush=True)
         threading.Thread(target=lambda: webbrowser.open(url), daemon=True).start()

@@ -1,0 +1,685 @@
+{
+  "schema_version": 1,
+  "kind": "mock",
+  "datasets": [
+    {
+      "schema_version": 1,
+      "id": "b300-presentation-mock-v1",
+      "model": "B300",
+      "kind": "mock",
+      "label": "B300 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA B300",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261127,
+        "version": 1,
+        "initial_price": 6.2,
+        "monthly_log_drift": -0.018,
+        "monthly_volatility": 0.035,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 6.2
+        },
+        {
+          "month": "2025-07",
+          "price": 6.2531
+        },
+        {
+          "month": "2025-08",
+          "price": 6.1801
+        },
+        {
+          "month": "2025-09",
+          "price": 5.9405
+        },
+        {
+          "month": "2025-10",
+          "price": 6.2151
+        },
+        {
+          "month": "2025-11",
+          "price": 5.7917
+        },
+        {
+          "month": "2025-12",
+          "price": 5.8637
+        },
+        {
+          "month": "2026-01",
+          "price": 5.9134
+        },
+        {
+          "month": "2026-02",
+          "price": 5.761
+        },
+        {
+          "month": "2026-03",
+          "price": 6.0855
+        },
+        {
+          "month": "2026-04",
+          "price": 6.0416
+        },
+        {
+          "month": "2026-05",
+          "price": 6.4046
+        },
+        {
+          "month": "2026-06",
+          "price": 6.3959
+        },
+        {
+          "month": "2026-07",
+          "price": 5.6824
+        },
+        {
+          "month": "2026-08",
+          "price": 5.5249
+        },
+        {
+          "month": "2026-09",
+          "price": 5.7082
+        },
+        {
+          "month": "2026-10",
+          "price": 5.5955
+        },
+        {
+          "month": "2026-11",
+          "price": 5.6763
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "gb300-presentation-mock-v1",
+      "model": "GB300",
+      "kind": "mock",
+      "label": "GB300 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA GB300",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261128,
+        "version": 1,
+        "initial_price": 7.8,
+        "monthly_log_drift": -0.012,
+        "monthly_volatility": 0.045,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 7.8
+        },
+        {
+          "month": "2025-07",
+          "price": 7.1784
+        },
+        {
+          "month": "2025-08",
+          "price": 7.2202
+        },
+        {
+          "month": "2025-09",
+          "price": 7.3166
+        },
+        {
+          "month": "2025-10",
+          "price": 6.3381
+        },
+        {
+          "month": "2025-11",
+          "price": 5.6746
+        },
+        {
+          "month": "2025-12",
+          "price": 5.417
+        },
+        {
+          "month": "2026-01",
+          "price": 5.8102
+        },
+        {
+          "month": "2026-02",
+          "price": 5.5343
+        },
+        {
+          "month": "2026-03",
+          "price": 6.194
+        },
+        {
+          "month": "2026-04",
+          "price": 6.2813
+        },
+        {
+          "month": "2026-05",
+          "price": 6.7054
+        },
+        {
+          "month": "2026-06",
+          "price": 6.9872
+        },
+        {
+          "month": "2026-07",
+          "price": 6.3293
+        },
+        {
+          "month": "2026-08",
+          "price": 6.464
+        },
+        {
+          "month": "2026-09",
+          "price": 6.2756
+        },
+        {
+          "month": "2026-10",
+          "price": 5.7038
+        },
+        {
+          "month": "2026-11",
+          "price": 5.4594
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "vr200-presentation-mock-v1",
+      "model": "VR200",
+      "kind": "mock",
+      "label": "VR200 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA VR200",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261129,
+        "version": 1,
+        "initial_price": 9.5,
+        "monthly_log_drift": -0.008,
+        "monthly_volatility": 0.06,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 9.5
+        },
+        {
+          "month": "2025-07",
+          "price": 10.2976
+        },
+        {
+          "month": "2025-08",
+          "price": 10.3505
+        },
+        {
+          "month": "2025-09",
+          "price": 11.1739
+        },
+        {
+          "month": "2025-10",
+          "price": 12.5993
+        },
+        {
+          "month": "2025-11",
+          "price": 10.8066
+        },
+        {
+          "month": "2025-12",
+          "price": 11.3689
+        },
+        {
+          "month": "2026-01",
+          "price": 11.4946
+        },
+        {
+          "month": "2026-02",
+          "price": 11.0156
+        },
+        {
+          "month": "2026-03",
+          "price": 12.3571
+        },
+        {
+          "month": "2026-04",
+          "price": 12.3999
+        },
+        {
+          "month": "2026-05",
+          "price": 12.9999
+        },
+        {
+          "month": "2026-06",
+          "price": 13.1458
+        },
+        {
+          "month": "2026-07",
+          "price": 10.6253
+        },
+        {
+          "month": "2026-08",
+          "price": 10.4334
+        },
+        {
+          "month": "2026-09",
+          "price": 9.9464
+        },
+        {
+          "month": "2026-10",
+          "price": 9.3952
+        },
+        {
+          "month": "2026-11",
+          "price": 10.069
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "b200-presentation-mock-v1",
+      "model": "B200",
+      "kind": "mock",
+      "label": "B200 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA B200",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261130,
+        "version": 1,
+        "initial_price": 4.9,
+        "monthly_log_drift": -0.02,
+        "monthly_volatility": 0.03,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 4.9
+        },
+        {
+          "month": "2025-07",
+          "price": 4.8159
+        },
+        {
+          "month": "2025-08",
+          "price": 4.537
+        },
+        {
+          "month": "2025-09",
+          "price": 4.711
+        },
+        {
+          "month": "2025-10",
+          "price": 4.7185
+        },
+        {
+          "month": "2025-11",
+          "price": 4.3688
+        },
+        {
+          "month": "2025-12",
+          "price": 4.2778
+        },
+        {
+          "month": "2026-01",
+          "price": 4.0887
+        },
+        {
+          "month": "2026-02",
+          "price": 3.8431
+        },
+        {
+          "month": "2026-03",
+          "price": 4.1322
+        },
+        {
+          "month": "2026-04",
+          "price": 3.8952
+        },
+        {
+          "month": "2026-05",
+          "price": 3.9352
+        },
+        {
+          "month": "2026-06",
+          "price": 4.0733
+        },
+        {
+          "month": "2026-07",
+          "price": 3.587
+        },
+        {
+          "month": "2026-08",
+          "price": 3.4752
+        },
+        {
+          "month": "2026-09",
+          "price": 3.3987
+        },
+        {
+          "month": "2026-10",
+          "price": 3.142
+        },
+        {
+          "month": "2026-11",
+          "price": 3.0092
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "h100-presentation-mock-v1",
+      "model": "H100",
+      "kind": "mock",
+      "label": "H100 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA H100",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261201,
+        "version": 1,
+        "initial_price": 3.4,
+        "monthly_log_drift": -0.025,
+        "monthly_volatility": 0.04,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 3.4
+        },
+        {
+          "month": "2025-07",
+          "price": 3.5413
+        },
+        {
+          "month": "2025-08",
+          "price": 3.7466
+        },
+        {
+          "month": "2025-09",
+          "price": 3.7113
+        },
+        {
+          "month": "2025-10",
+          "price": 3.6969
+        },
+        {
+          "month": "2025-11",
+          "price": 3.4125
+        },
+        {
+          "month": "2025-12",
+          "price": 3.3262
+        },
+        {
+          "month": "2026-01",
+          "price": 3.3297
+        },
+        {
+          "month": "2026-02",
+          "price": 3.2071
+        },
+        {
+          "month": "2026-03",
+          "price": 3.186
+        },
+        {
+          "month": "2026-04",
+          "price": 3.3494
+        },
+        {
+          "month": "2026-05",
+          "price": 3.3864
+        },
+        {
+          "month": "2026-06",
+          "price": 3.0862
+        },
+        {
+          "month": "2026-07",
+          "price": 2.689
+        },
+        {
+          "month": "2026-08",
+          "price": 2.5894
+        },
+        {
+          "month": "2026-09",
+          "price": 2.5659
+        },
+        {
+          "month": "2026-10",
+          "price": 2.3153
+        },
+        {
+          "month": "2026-11",
+          "price": 2.086
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "gb200-presentation-mock-v1",
+      "model": "GB200",
+      "kind": "mock",
+      "label": "GB200 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA GB200",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261202,
+        "version": 1,
+        "initial_price": 6.4,
+        "monthly_log_drift": -0.016,
+        "monthly_volatility": 0.038,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 6.4
+        },
+        {
+          "month": "2025-07",
+          "price": 6.4014
+        },
+        {
+          "month": "2025-08",
+          "price": 6.4818
+        },
+        {
+          "month": "2025-09",
+          "price": 6.3629
+        },
+        {
+          "month": "2025-10",
+          "price": 6.1372
+        },
+        {
+          "month": "2025-11",
+          "price": 5.3688
+        },
+        {
+          "month": "2025-12",
+          "price": 5.2736
+        },
+        {
+          "month": "2026-01",
+          "price": 5.4181
+        },
+        {
+          "month": "2026-02",
+          "price": 5.3444
+        },
+        {
+          "month": "2026-03",
+          "price": 5.7453
+        },
+        {
+          "month": "2026-04",
+          "price": 5.6978
+        },
+        {
+          "month": "2026-05",
+          "price": 5.6565
+        },
+        {
+          "month": "2026-06",
+          "price": 5.635
+        },
+        {
+          "month": "2026-07",
+          "price": 5.1772
+        },
+        {
+          "month": "2026-08",
+          "price": 5.1667
+        },
+        {
+          "month": "2026-09",
+          "price": 4.9907
+        },
+        {
+          "month": "2026-10",
+          "price": 4.7592
+        },
+        {
+          "month": "2026-11",
+          "price": 4.5228
+        }
+      ]
+    },
+    {
+      "schema_version": 1,
+      "id": "h200-presentation-mock-v1",
+      "model": "H200",
+      "kind": "mock",
+      "label": "H200 가격 이력 · 발표용 목데이터",
+      "product": "NVIDIA H200",
+      "provider": "가상 사업자",
+      "region": "가상 단일 리전",
+      "contract": "온디맨드",
+      "unit": "USD/GPU-hour",
+      "frequency": "monthly",
+      "price_basis": "시연을 위해 생성한 월별 GPU 시간당 단가",
+      "generator": {
+        "seed": 20261203,
+        "version": 1,
+        "initial_price": 4.1,
+        "monthly_log_drift": -0.015,
+        "monthly_volatility": 0.032,
+        "method": "모델별 가상 단가·변동 가정 + 난수 변동 + 가상 공급 이벤트"
+      },
+      "disclosure": "모든 모델의 이력은 가상입니다. 실제 출시 시점·상품 구성·시장가격·성능 차이를 반영하지 않습니다.",
+      "history": [
+        {
+          "month": "2025-06",
+          "price": 4.1
+        },
+        {
+          "month": "2025-07",
+          "price": 4.0676
+        },
+        {
+          "month": "2025-08",
+          "price": 3.9807
+        },
+        {
+          "month": "2025-09",
+          "price": 3.9671
+        },
+        {
+          "month": "2025-10",
+          "price": 3.9976
+        },
+        {
+          "month": "2025-11",
+          "price": 3.893
+        },
+        {
+          "month": "2025-12",
+          "price": 3.9712
+        },
+        {
+          "month": "2026-01",
+          "price": 3.9501
+        },
+        {
+          "month": "2026-02",
+          "price": 3.9318
+        },
+        {
+          "month": "2026-03",
+          "price": 3.8229
+        },
+        {
+          "month": "2026-04",
+          "price": 3.7069
+        },
+        {
+          "month": "2026-05",
+          "price": 3.5872
+        },
+        {
+          "month": "2026-06",
+          "price": 3.3785
+        },
+        {
+          "month": "2026-07",
+          "price": 3.0114
+        },
+        {
+          "month": "2026-08",
+          "price": 2.8864
+        },
+        {
+          "month": "2026-09",
+          "price": 2.7361
+        },
+        {
+          "month": "2026-10",
+          "price": 2.6564
+        },
+        {
+          "month": "2026-11",
+          "price": 2.5011
+        }
+      ]
+    }
+  ]
+}
