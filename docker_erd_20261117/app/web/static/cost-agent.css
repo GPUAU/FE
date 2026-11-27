@@ -199,10 +199,14 @@
 .ca-activity{background:#fff;border:1px solid var(--ca-line);border-radius:14px;padding:14px 20px}
 .ca-activity summary{cursor:pointer;display:flex;gap:12px;align-items:center;font-size:13px;font-weight:750}
 .ca-last{font-weight:500;color:var(--ca-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.ca-timeline{list-style:none;margin:14px 0 0;padding:0 0 0 14px;border-left:2px solid #eef0f3;display:grid;gap:10px;max-height:320px;overflow:auto}
-.ca-timeline li{position:relative;display:grid;grid-template-columns:42px 1fr;gap:8px;font-size:13px;color:var(--ca-ink2)}
-.ca-timeline li::before{content:"";position:absolute;left:-20px;top:6px;width:8px;height:8px;border-radius:50%;background:#cbd2db}
-.ca-timeline b{font-size:12px}
+.ca-timeline{list-style:none;margin:14px 0 0;padding:4px 12px 4px 4px;display:grid;gap:12px;min-width:0;max-height:320px;overflow:auto;scrollbar-gutter:stable}
+.ca-timeline li{position:relative;display:grid;grid-template-columns:8px 42px minmax(0,1fr);align-items:start;gap:10px;min-width:0;font-size:13px;line-height:1.7;color:var(--ca-ink2)}
+.ca-timeline li::before{content:"";position:static;grid-column:1;grid-row:1;margin-top:.55em;width:8px;height:8px;border-radius:50%;background:#cbd2db}
+.ca-timeline li>b{grid-column:2;grid-row:1;min-width:0;font-size:12px;white-space:nowrap}
+.ca-timeline li>span{grid-column:3;grid-row:1;min-width:0;overflow-wrap:anywhere;word-break:normal}
+.ca-review-events,.ca-activity{min-width:0;max-width:100%;box-sizing:border-box}
+.ca-review-next{overflow-wrap:anywhere}
+@media(max-width:600px){.ca-timeline{padding-right:6px}.ca-timeline li{grid-template-columns:8px 32px minmax(0,1fr);gap:8px}}
 .ca-timeline li[data-kind="think"] b,.ca-timeline li[data-kind="think"]::before{color:#6d4ae0;background:#6d4ae0}
 .ca-timeline li[data-kind="tool"] b{color:#2563eb}.ca-timeline li[data-kind="tool"]::before{background:#2563eb}
 .ca-timeline li[data-kind="ask"] b,.ca-timeline li[data-kind="warn"] b{color:var(--ca-warn)}.ca-timeline li[data-kind="ask"]::before,.ca-timeline li[data-kind="warn"]::before{background:#f59e0b}
@@ -253,3 +257,5 @@
   .ca *, .ca *::before, .ca *::after{animation:none!important;transition:none!important}
 }
 .ca-side-empty{margin-top:10px;font-size:13px;color:var(--ca-muted)}
+
+.ca .ca-field input::placeholder{color:#9299a5;opacity:1}
