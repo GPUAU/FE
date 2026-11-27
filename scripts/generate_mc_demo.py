@@ -38,11 +38,38 @@ def generate(model, initial, drift, volatility, seed):
         'history': history,
     }
 
-datasets = [generate(*profile) for profile in PROFILES]
+topology = json.loads((Path(__file__).parent / 'mc_demo_topology.json').read_text())
+groups = []
+for model_index, profile in enumerate(PROFILES):
+    model = profile[0]
+    base = generate(*profile)
+    series = []
+    for provider_index, provider in enumerate(topology['providers']):
+        for region_index, region in enumerate(provider['regions']):
+            for offer_index in range(2):
+                seed = profile[4] + (provider_index+1)*10000 + region_index*10 + offer_index
+                rng = random.Random(seed)
+                factor = (.85 + provider_index*.07) * (.94 + region_index%7*.025) * (1 + offer_index*.06)
+                level = 1
+                history = []
+                for row in base['history']:
+                    level *= math.exp(rng.gauss(0,.018))
+                    history.append({'month': row['month'], 'price': round(row['price']*factor*level,4)})
+                series.append({**base, 'id': f'{model.lower()}-p{provider_index}-r{region_index}-o{offer_index}',
+                    'provider': provider['name'], 'region': region, 'history': history,
+                    'generator': {'seed':seed,'version':2},
+                    'disclosure': '사업자·리전 명칭만 카탈로그에서 참고한 가상 상품입니다. 실제 GPU 제공 여부·출시 시점·가격을 의미하지 않습니다.'})
+    # A deliberately incomplete offer demonstrates fixed-panel exclusions.
+    series.append({**series[0], 'id':base['model'].lower()+'-incomplete-demo', 'history':series[0]['history'][2:]})
+    groups.append({'schema_version':2,'id':model.lower()+'-market-mock-v2','model':model,
+                   'product':base['product'],'kind':'mock','contract':'온디맨드','unit':'USD/GPU-hour',
+                   'analysis_months':[x['month'] for x in base['history']], 'sourceSeries':series,
+                   'disclosure':series[0]['disclosure']})
 static = Path(__file__).resolve().parents[1] / 'docker_erd_20261117/app/web/static'
-# Keep the original B300 fixture for compatibility and engine regression tests.
-(static / 'montecarlo-demo-data.json').write_text(json.dumps(datasets[0], ensure_ascii=False, indent=2) + '\n')
+# Single-series fixture remains available for engine regression tests.
+(static / 'montecarlo-demo-data.json').write_text(json.dumps(generate(*PROFILES[0]), ensure_ascii=False, indent=2)+'\n')
 (static / 'montecarlo-demo-catalog.json').write_text(json.dumps({
-    'schema_version': 1, 'kind': 'mock', 'datasets': datasets,
-}, ensure_ascii=False, indent=2) + '\n')
-print(f'Created {len(datasets)} fictional GPU histories, 18 months each.')
+    'schema_version':2,'kind':'mock','datasets':groups,
+    'topology_note':'카탈로그 7개 사업자 중 리전 코드가 있는 6개 사업자·56개 리전 조합. Oracle은 리전 미확인으로 제외. 가용영역(-azN)은 리전에 중복 합산하지 않음.',
+},ensure_ascii=False,separators=(',',':'))+'\n')
+print(f'Created {len(groups)} GPU groups, {len(groups[0]["sourceSeries"])} mock offers per group.')

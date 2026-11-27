@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {simulate,validateDataset,validateSettings,futureMonth,quantile} from '../docker_erd_20261117/app/web/static/montecarlo-core.mjs';
+import {simulate,validateDataset,validateSettings,futureMonth,quantile,aggregateMarket} from '../docker_erd_20261117/app/web/static/montecarlo-core.mjs';
 const sample=JSON.parse(readFileSync(new URL('../docker_erd_20261117/app/web/static/montecarlo-demo-data.json',import.meta.url),'utf8'));
 const noWait={yieldControl:async()=>{}};
 const settings={nPaths:1000,seed:71,blockLength:3,jumpProbability:0};
@@ -62,7 +62,9 @@ test('all seven selectable models have distinct histories and preserve model ide
  const catalog=JSON.parse(readFileSync(new URL('../docker_erd_20261117/app/web/static/montecarlo-demo-catalog.json',import.meta.url),'utf8'));
  const datasets=validateDemoCatalog(catalog);
  assert.deepEqual(datasets.map(d=>d.model),['B300','GB300','VR200','B200','H100','GB200','H200']);
- assert.deepEqual(datasets[0],sample);
+ assert.equal(datasets[0].aggregation.providerCount,6);assert.equal(datasets[0].aggregation.regionCount,56);
+ assert.equal(datasets[0].aggregation.offerCount,112);assert.equal(datasets[0].aggregation.excluded.length,1);
+ assert.equal(datasets[0].aggregation.observationCount,2016);
  assert.equal(new Set(datasets.map(d=>JSON.stringify(d.history))).size,7);
  const results=[];
  for(const data of datasets){
@@ -75,4 +77,44 @@ test('all seven selectable models have distinct histories and preserve model ide
  const duplicate=structuredClone(catalog);duplicate.datasets.push(duplicate.datasets[0]);assert.throws(()=>validateDemoCatalog(duplicate),/중복/);
  const observed=structuredClone(catalog);observed.datasets[0].kind='observed';assert.throws(()=>validateDemoCatalog(observed));
  const empty=structuredClone(catalog);empty.datasets=[];assert.throws(()=>validateDemoCatalog(empty));
+});
+
+function marketFixture(){
+ const offer=(id,provider,region,price)=>({...structuredClone(sample),id,provider,region,history:sample.history.map(row=>({...row,price}))});
+ return {id:'market-test',model:'B300',product:'NVIDIA B300',kind:'mock',contract:'온디맨드',unit:'USD/GPU-hour',analysis_months:sample.history.map(x=>x.month),
+ sourceSeries:[offer('a1','A','east',10),offer('a2','A','east',20),offer('a3','A','west',30),offer('b1','B','east',100)]};
+}
+test('market aggregation uses region medians then equal region and provider means, not a pooled mean',()=>{
+ const group=marketFixture(),r=aggregateMarket(group);
+ // A east median 15, west 30 -> A 22.5; B 100 -> market 61.25.
+ assert.ok(r.history.every(x=>x.price===61.25));assert.equal(r.aggregation.regionCount,3);
+ assert.deepEqual(r.aggregation.monthly[0].providers,[{provider:'A',price:22.5},{provider:'B',price:100}]);
+ assert.deepEqual(r.aggregation.members.map(x=>x.weight),[.25,.25,.5]);
+ assert.equal(r.aggregation.members.reduce((s,x)=>s+x.weight,0),1);
+});
+test('provider and provider-scoped region filters recompute weights without mixing identically named regions',()=>{
+ const group=marketFixture();
+ assert.equal(aggregateMarket(group,{provider:'A'}).history[0].price,22.5);
+ const single=aggregateMarket(group,{provider:'A',region:'east'});
+ assert.equal(single.history[0].price,15);assert.equal(single.aggregation.members[0].weight,1);
+ assert.equal(single.aggregation.providerCount,1);assert.equal(single.aggregation.offerCount,2);
+ assert.throws(()=>aggregateMarket(group,{region:'east'}));assert.throws(()=>aggregateMarket(group,{provider:'missing'}));
+});
+test('fixed full-period cohort excludes incomplete or incompatible offers with explicit reasons',()=>{
+ const group=marketFixture();const extra=structuredClone(group.sourceSeries[0]);extra.id='incomplete';extra.history.pop();extra.history.forEach(x=>x.price=9000);group.sourceSeries.push(extra);
+ const wrong=structuredClone(extra);wrong.id='spot';wrong.contract='스팟';group.sourceSeries.push(wrong);
+ const r=aggregateMarket(group);assert.equal(r.history[0].price,61.25);assert.equal(r.history.at(-1).price,61.25);
+ assert.equal(r.aggregation.excluded.length,2);assert.match(r.aggregation.excluded[0].reason,/부족/);assert.equal(r.aggregation.offerCount,4);
+ const invalid=structuredClone(group.sourceSeries[0]);invalid.id='bad-unit';invalid.unit='USD/server-hour';group.sourceSeries.push(invalid);
+ assert.equal(aggregateMarket(group).aggregation.excluded.length,3);
+});
+test('duplicate offer IDs fail and repeated aggregation preserves input and scope identity',()=>{
+ const group=marketFixture(),before=JSON.stringify(group),r=aggregateMarket(group),again=aggregateMarket(r);
+ assert.equal(r.id,again.id);assert.deepEqual(r.history,again.history);assert.equal(JSON.stringify(group),before);
+ group.sourceSeries.push(group.sourceSeries[0]);assert.throws(()=>aggregateMarket(group),/중복/);
+});
+test('forecast carries aggregation provenance and uses the aggregated starting price',async()=>{
+ const data=aggregateMarket(marketFixture()),r=await simulate(data,settings,noWait);
+ assert.equal(r.evidence.lastPrice,61.25);assert.equal(r.dataset.aggregation.offerCount,4);assert.equal(r.dataset.scope,'전체 사업자·리전');
+ assert.ok(r.monthly.every(x=>x.p10===61.25&&x.p50===61.25&&x.p90===61.25));
 });

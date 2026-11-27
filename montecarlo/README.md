@@ -6,7 +6,7 @@
 
 - GPU별 목데이터: `docker_erd_20261117/app/web/static/montecarlo-demo-catalog.json` (B300·GB300·VR200·B200·H100·GB200·H200)
 - B300 단일 자료는 `montecarlo-demo-data.json`에도 호환용으로 유지한다.
-- 재생성: `python3 scripts/generate_mc_demo.py` (고정 시드, 18개월의 가상 월별 가격)
+- 재생성: `python3 scripts/generate_mc_demo.py` (고정 시드, 6개 사업자·56개 리전 조합의 상품별 18개월 가상 가격)
 - 계산: `montecarlo-core.mjs` / `montecarlo-worker.mjs`
 - 회귀 검증: `node --test tests/montecarlo-core.test.mjs`
 - 상세 시연 및 실제 데이터 전환 안내: `docs/MONTECARLO_PRESENTATION.md`

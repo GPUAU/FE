@@ -1,0 +1,92 @@
+{
+  "source": "Local catalog /api/v1/catalog, 2026-11-27; labels only, not GPU availability or prices",
+  "excluded": "Unknown region codes and availability-zone codes (-azN)",
+  "providers": [
+    {
+      "name": "AWS",
+      "regions": [
+        "ap-northeast-2",
+        "ap-south-2",
+        "eu-west-2",
+        "sa-east-1",
+        "us-east-1",
+        "us-gov-east-1",
+        "us-west-2"
+      ]
+    },
+    {
+      "name": "Azure",
+      "regions": [
+        "australiaeast",
+        "australiasoutheast",
+        "brazilsouth",
+        "canadacentral",
+        "canadaeast",
+        "centralus",
+        "eastus",
+        "eastus2",
+        "germanywestcentral",
+        "indonesiacentral",
+        "italynorth",
+        "japaneast",
+        "japanwest",
+        "koreacentral",
+        "koreasouth",
+        "northcentralus",
+        "polandcentral",
+        "southafricanorth",
+        "southafricawest",
+        "southcentralus",
+        "southindia",
+        "spaincentral",
+        "swedencentral",
+        "switzerlandnorth",
+        "uaecentral",
+        "uaenorth",
+        "uksouth",
+        "usgovarizona",
+        "westcentralus",
+        "westeurope",
+        "westus",
+        "westus2",
+        "westus3"
+      ]
+    },
+    {
+      "name": "Verda",
+      "regions": [
+        "FIN-01",
+        "FIN-02",
+        "FIN-03"
+      ]
+    },
+    {
+      "name": "Nebius",
+      "regions": [
+        "eu-north1",
+        "eu-north2",
+        "eu-west1",
+        "eu-west2",
+        "me-west1",
+        "uk-south1",
+        "us-central1",
+        "us-north1"
+      ]
+    },
+    {
+      "name": "Scaleway",
+      "regions": [
+        "fr-par-2",
+        "pl-waw-2"
+      ]
+    },
+    {
+      "name": "Hyperstack",
+      "regions": [
+        "CANADA-1",
+        "CANADA-2",
+        "US-1"
+      ]
+    }
+  ]
+}

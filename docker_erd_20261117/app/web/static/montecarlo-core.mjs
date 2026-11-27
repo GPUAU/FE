@@ -19,16 +19,52 @@ export function validateDataset(data){
  }
  return data;
 }
-export function validateDemoCatalog(catalog){
- if(catalog?.schema_version!==1||catalog.kind!=='mock'||!Array.isArray(catalog.datasets)||!catalog.datasets.length)throw Error('GPU별 목데이터 목록을 확인하세요.');
- const ids=new Set(),models=new Set();
- for(const data of catalog.datasets){
-  validateDataset(data);
-  if(data.kind!=='mock'||typeof data.model!=='string'||!/^[-A-Z0-9]+$/.test(data.model))throw Error('이 발표 화면에는 모델명이 있는 목데이터만 사용할 수 있습니다.');
-  if(ids.has(data.id)||models.has(data.model))throw Error('중복된 GPU 목데이터가 있습니다.');
-  ids.add(data.id);models.add(data.model);
+// Fixed cohort, region median -> equal-weight region mean -> equal-weight provider mean.
+export function aggregateMarket(group,{provider='',region=''}={}){
+ const source=group.sourceSeries,months=group.analysis_months;
+ if(!Array.isArray(source)||!Array.isArray(months)||months.length<3)throw Error('집계할 상품 이력과 분석 기간이 필요합니다.');
+ if(region&&!provider)throw Error('리전을 선택하려면 사업자를 먼저 선택하세요.');
+ const ids=new Set(),included=[],excluded=[];
+ for(const item of source){
+  if(ids.has(item.id))throw Error('중복 상품 ID가 있습니다.');ids.add(item.id);
+  if(provider&&item.provider!==provider||region&&item.region!==region)continue;
+  let reason='';
+  try{validateDataset(item);}catch(error){reason=error.message;}
+  if(item.kind!=='mock'||item.model!==group.model||item.contract!==group.contract||item.unit!==group.unit)reason='모델·계약·단위·자료 구분 불일치';
+  if(!reason&&months.some(m=>!item.history.some(row=>row.month===m)))reason='분석 기간의 월별 이력 부족';
+  if(reason)excluded.push({id:item.id,provider:item.provider,region:item.region,reason});else included.push(item);
  }
- return catalog.datasets;
+ if(!included.length)throw Error('선택 범위에 분석 기간 전체를 충족하는 상품이 없습니다.');
+ const providerNames=[...new Set(included.map(x=>x.provider))].sort();
+ const regions=providerNames.flatMap(p=>[...new Set(included.filter(x=>x.provider===p).map(x=>x.region))].sort().map(r=>({provider:p,region:r,offers:included.filter(x=>x.provider===p&&x.region===r)})));
+ const median=values=>quantile(values.sort((a,b)=>a-b),.5),mean=values=>values.reduce((a,b)=>a+b,0)/values.length;
+ const rows=months.map(m=>{
+  const regional=regions.map(g=>({provider:g.provider,region:g.region,price:median(g.offers.map(o=>o.history.find(x=>x.month===m).price))}));
+  const providers=providerNames.map(p=>({provider:p,price:mean(regional.filter(x=>x.provider===p).map(x=>x.price))}));
+  return {month:m,price:mean(providers.map(x=>x.price)),providers,regions:regional};
+ });
+ const scope=region?provider+' / '+region:provider||'전체 사업자·리전';
+ const result={schema_version:1,id:(group.baseId||group.id)+':'+encodeURIComponent(scope),model:group.model,product:group.product,kind:'mock',
+  provider:provider||'사업자 동일 비중',region:region||'리전 동일 비중',contract:group.contract,unit:group.unit,frequency:'monthly',
+  price_basis:'리전별 상품 중앙값 → 사업자 내 리전 동일 비중 평균 → 사업자 동일 비중 평균',
+  history:rows.map(({month,price})=>({month,price})),disclosure:group.disclosure,
+  sourceSeries:source,analysis_months:months,baseId:group.baseId||group.id,scope,
+  aggregation:{method:'region-median_provider-equal-mean_v1',providerCount:providerNames.length,regionCount:regions.length,
+   offerCount:included.length,observationCount:included.length*months.length,excluded,monthly:rows,
+   members:regions.map(g=>({provider:g.provider,region:g.region,offerCount:g.offers.length,
+    lastPrice:rows.at(-1).regions.find(x=>x.provider===g.provider&&x.region===g.region).price,
+    weight:1/providerNames.length/regions.filter(x=>x.provider===g.provider).length})),
+   includedIds:included.map(x=>x.id)}};
+ validateDataset(result);return result;
+}
+export function validateDemoCatalog(catalog){
+ if(catalog?.schema_version!==2||catalog.kind!=='mock'||!Array.isArray(catalog.datasets)||!catalog.datasets.length)throw Error('GPU별 다중 사업자 목데이터 목록을 확인하세요.');
+ const ids=new Set(),models=new Set();
+ return catalog.datasets.map(group=>{
+  if(group.kind!=='mock'||typeof group.model!=='string'||!/^[-A-Z0-9]+$/.test(group.model))throw Error('모델명이 있는 목데이터만 사용할 수 있습니다.');
+  if(ids.has(group.id)||models.has(group.model))throw Error('중복된 GPU 목데이터가 있습니다.');
+  ids.add(group.id);models.add(group.model);return aggregateMarket(group);
+ });
 }
 export function validateSettings(raw={}){
  const c={nPaths:20000,seed:20261127,blockLength:3,jumpProbability:0,...raw};
@@ -76,5 +112,5 @@ export async function simulate(dataset,rawSettings,{onProgress=()=>{},yieldContr
   values.sort((a,b)=>a-b);
   return {month:index+1,date:futureMonth(data.history.at(-1).month,index+1),p10:quantile(values,.1),p25:quantile(values,.25),p50:quantile(values,.5),p75:quantile(values,.75),p90:quantile(values,.9),probBelowNow:values.filter(p=>p<=ev.lastPrice).length/values.length};
  });
- return {dataset:{id:data.id,kind:data.kind,product:data.product,provider:data.provider,region:data.region,contract:data.contract,unit:data.unit},history:data.history,monthly,samplePaths,settings,evidence:{...ev,returns:undefined},meta:{modelVersion:MODEL_VERSION,rng:'mulberry32',runAt:new Date().toISOString(),durationMs:Date.now()-started,horizonMonths:12,historyCount:ev.nMonths,disclosure:data.disclosure||'입력 데이터와 가정에 따른 시뮬레이션입니다.'}};
+ return {dataset:{id:data.id,kind:data.kind,product:data.product,provider:data.provider,region:data.region,contract:data.contract,unit:data.unit,scope:data.scope||null,aggregation:data.aggregation||null},history:data.history,monthly,samplePaths,settings,evidence:{...ev,returns:undefined},meta:{modelVersion:MODEL_VERSION,rng:'mulberry32',runAt:new Date().toISOString(),durationMs:Date.now()-started,horizonMonths:12,historyCount:ev.nMonths,disclosure:data.disclosure||'입력 데이터와 가정에 따른 시뮬레이션입니다.'}};
 }
