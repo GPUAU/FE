@@ -93,8 +93,8 @@ import { renderLive, pendingSession, boardAt, WAIT_HINTS } from '../docker_erd_2
 
 test('pending session starts with analysis running and others waiting', () => {
   const p = pendingSession('c.xlsx', { model_id: '29' });
-  assert.equal(p.board.length, 7);
-  assert.deepEqual(p.board.map(b => b.status), ['RUNNING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING']);
+  assert.equal(p.board.length, 8);   // 승인 검토 단계 포함
+  assert.deepEqual(p.board.map(b => b.status), ['RUNNING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING']);
   assert.equal(p.draft.file_name, 'c.xlsx');
 });
 
@@ -140,4 +140,50 @@ test('completed workspace shows questions and results with activity below and no
   for (const html of [question,result]) {
     assert.ok(!html.includes('data-ca-countdown') && !html.includes('data-ca-continue') && !html.includes('data-ca-review'));
   }
+});
+
+// ---------------------------------------------------------------- 2순위: 승인 검토 · 묶음 카드 · 보고서
+import { hiddenFields, reportHtmlUrl } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('pending board includes the approval review step between terms and report', () => {
+  const keys = pendingSession('a.xlsx', {}).board.map(b => b.key);
+  assert.deepEqual(keys.slice(-3), ['TERMS', 'REVIEW', 'REPORT']);
+  assert.equal(pendingSession('a.xlsx', {}).board.find(b => b.key === 'REVIEW').title, '승인 검토');
+});
+
+test('grouped card: prefixed fields follow their own choice select', () => {
+  const fields = [
+    { name: 'choice:네트워크', type: 'select', value: 'amount', options: [{ value: 'amount' }, { value: 'included' }] },
+    { name: 'amount:네트워크', show_for: ['amount'] },
+    { name: 'parent:네트워크', show_for: ['included'] },
+    { name: 'finding:NO_FINANCING', type: 'select', value: 'proceed', options: [{ value: 'fix' }, { value: 'proceed' }] },
+    { name: 'reason:NO_FINANCING', show_for: ['proceed'] },
+  ];
+  assert.deepEqual(hiddenFields(fields, { 'choice:네트워크': 'included', 'finding:NO_FINANCING': 'fix' }),
+    ['amount:네트워크', 'reason:NO_FINANCING']);
+  assert.deepEqual(hiddenFields(fields, {}), ['parent:네트워크']);
+});
+
+test('fields-only card: a field shows for the select whose options it names (interest rate)', () => {
+  const fields = [
+    { name: 'interest_rate_type', type: 'select', value: 'NOT_APPLIED', options: [{ value: 'NOT_APPLIED' }, { value: 'ASSUMED' }, { value: 'ACTUAL_LOAN' }] },
+    { name: 'annual_interest_rate', show_for: ['ASSUMED', 'ACTUAL_LOAN'] },
+  ];
+  assert.deepEqual(hiddenFields(fields, {}), ['annual_interest_rate']);
+  assert.deepEqual(hiddenFields(fields, { interest_rate_type: 'ASSUMED' }), []);
+});
+
+test('option-button card keeps the old behaviour', () => {
+  const fields = [{ name: 'amount', show_for: ['amount'] }, { name: 'parent', show_for: ['included'] }];
+  assert.deepEqual(hiddenFields(fields, {}, 'amount'), ['parent']);
+});
+
+test('result shows the verdict and opens the one-page report in a new tab', () => {
+  const done = { ...session, id: 's1', step: 'DONE', question: null, report_ready: true,
+    simulation: { hourlyCost: '2.52', candidatePrice: '3.15' }, assumptions: { target_rate: 0.2 }, market: null, terms: [], summary: [],
+    approval: { verdict: '조건부', reasons: ['금융비용(이자)이 원가에 반영되지 않았어요'] } };
+  const html = renderResult(done);
+  assert.ok(html.includes('권고: 조건부') && html.includes('금융비용(이자)'));
+  assert.ok(html.includes(`href="${reportHtmlUrl('s1')}"`) && html.includes('target="_blank"'));
+  assert.ok(reportHtmlUrl('s1').endsWith('/agent/sessions/s1/report.html'));
 });

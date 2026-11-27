@@ -6,7 +6,7 @@ import { createProgressPlayback } from './agent-progress-playback.mjs?v=hold5-11
 import { AGENT_BASE, toCostForm, applyToForm, markMissing } from './bill-import.mjs';
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
-const STEP_ORDER = ['ANALYZE', 'MISSING', 'ASSUMPTIONS', 'SIMULATE', 'MARKET', 'TERMS', 'REPORT'];
+const STEP_ORDER = ['ANALYZE', 'MISSING', 'ASSUMPTIONS', 'SIMULATE', 'MARKET', 'TERMS', 'REVIEW', 'REPORT'];
 const STATUS_LABEL = { PENDING: '대기', RUNNING: '진행 중', WAITING: '확인 필요', DONE: '완료', WARNING: '완료 · 확인 사항', ERROR: '중단' };
 const KIND_LABEL = { think: '판단', tool: '도구', ask: '질문', answer: '답변', result: '결과', warn: '주의' };
 const ITEM_LABEL = {
@@ -56,6 +56,7 @@ export function sendAnswer(id, answer, fetchImpl = fetch) {
 }
 
 export const reportUrl = id => `${AGENT_BASE}/agent/sessions/${encodeURIComponent(id)}/report.xlsx`;
+export const reportHtmlUrl = id => `${AGENT_BASE}/agent/sessions/${encodeURIComponent(id)}/report.html`;
 
 // ------------------------------------------------------------------ 진행률
 export function progressOf(s) {
@@ -176,7 +177,7 @@ export const WAIT_HINTS = {
   MARKET: ['목표 마진을 조정해 다시 계산하는 중', '시장 위치를 다시 확인하는 중'],
   TERMS: ['장기계약 가격을 계산하는 중', '견적 근거서를 만드는 중']
 };
-const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REPORT: '견적 근거서' };
+const STEP_TITLES = { ANALYZE: '청구서 분석', MISSING: '누락 확인', ASSUMPTIONS: '가정값 확인', SIMULATE: '원가 계산', MARKET: '시장 비교', TERMS: '기간별 가격', REVIEW: '승인 검토', REPORT: '견적 근거서' };
 const KIND_ICON = { think: '◆', tool: '⚙', ask: '?', answer: '✎', result: '✓', warn: '!' };
 
 export function renderLive(s, { feed = [], waiting = false, hint = '', completed = false } = {}) {
@@ -247,10 +248,12 @@ export function renderResult(s) {
       <div><span>목표 마진</span><strong ${a.target_rate != null ? `data-count="${Math.round(a.target_rate * 100)}" data-fmt="pct"` : ''}>${a.target_rate != null ? Math.round(a.target_rate * 100) + '%' : '—'}</strong></div>
       ${(s.terms || []).map(t => `<div><span>${t.years}년 계약가 · 할인 ${Math.round(t.discount_rate * 100)}%</span><strong data-count="${esc(t.price)}" data-fmt="usd">${usd(t.price)}</strong></div>`).join('')}
     </div>
+    ${s.approval ? `<p class="ca-verdict" data-verdict="${esc(s.approval.verdict)}"><b>권고: ${esc(s.approval.verdict)}</b>${(s.approval.reasons || []).slice(0, 3).map(x => ` · ${esc(x)}`).join('')}</p>` : ''}
     <h4>시장에서의 위치</h4>${renderMarket(s.market)}
     <h4>에이전트 판단 요약</h4><ul class="ca-summary-list">${(s.summary || []).map(l => `<li>${esc(l)}</li>`).join('')}</ul>
     <div class="ca-actions">
-      ${s.report_ready ? `<a class="ca-btn ca-btn-primary" href="${reportUrl(s.id)}" download>견적 근거서 엑셀 다운로드</a>` : ''}
+      ${s.report_ready && s.approval ? `<a class="ca-btn ca-btn-primary" href="${reportHtmlUrl(s.id)}" target="_blank" rel="noopener">승인 보고서 (한 장)</a>` : ''}
+      ${s.report_ready ? `<a class="ca-btn ${s.approval ? 'ca-btn-ghost' : 'ca-btn-primary'}" href="${reportUrl(s.id)}" download>견적 근거서 엑셀 다운로드</a>` : ''}
       <button type="button" class="ca-btn ca-btn-ghost" data-ca-send>항목별 계산기로 보내기</button>
       <button type="button" class="ca-btn ca-btn-text" data-ca-reset>새 청구서로 시작</button>
     </div>
@@ -353,12 +356,40 @@ export function readAnswer(card, choice) {
   return { question_id: card.dataset.qid, choice: choice ?? null, values };
 }
 
+// 조건부 입력칸: 'amount:네트워크'처럼 접두사가 있으면 같은 그룹의 'choice:'/'finding:' 칸을,
+// 선택지 버튼이 있으면 그 선택을, 아니면 show_for 값을 선택지로 가진 select 칸을 따른다.
+export function hiddenFields(fields, values = {}, chosen) {
+  const valueOf = f => values[f.name] ?? f.value;
+  const byName = Object.fromEntries(fields.map(f => [f.name, f]));
+  const hidden = [];
+  for (const f of fields) {
+    const only = f.show_for || [];
+    if (!only.length) continue;
+    let current;
+    const key = f.name.includes(':') ? f.name.split(':').slice(1).join(':') : null;
+    const ctl = key && (byName[`choice:${key}`] || byName[`finding:${key}`]);
+    if (ctl) current = valueOf(ctl);
+    else if (chosen !== undefined) current = chosen;
+    else {
+      const sel = fields.find(g => g !== f && g.type === 'select' && (g.options || []).some(o => only.includes(String(o.value))));
+      current = sel ? valueOf(sel) : undefined;
+    }
+    if (!only.includes(String(current))) hidden.push(f.name);
+  }
+  return hidden;
+}
+
 function syncShowFor(card) {
   const chosen = card.querySelector('.ca-opt[aria-pressed="true"]')?.dataset.choice;
-  card.querySelectorAll('.ca-field').forEach(label => {
-    const only = label.dataset.showFor ? label.dataset.showFor.split(',') : [];
-    label.hidden = only.length > 0 && !only.includes(chosen);
+  const labels = [...card.querySelectorAll('.ca-field')];
+  const fields = labels.map(label => {
+    const el = label.querySelector('input,select');
+    return { name: el?.name || '', type: el?.tagName === 'SELECT' ? 'select' : 'text', value: el?.value,
+      options: el?.tagName === 'SELECT' ? [...el.options].map(o => ({ value: o.value })) : [],
+      show_for: label.dataset.showFor ? label.dataset.showFor.split(',') : [] };
   });
+  const hidden = new Set(hiddenFields(fields, {}, card.querySelector('.ca-opt') ? chosen : undefined));
+  labels.forEach((label, i) => { label.hidden = hidden.has(fields[i].name); });
 }
 
 // ------------------------------------------------------------------ 마운트
@@ -460,7 +491,10 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     host.innerHTML = session ? renderWorkspace(session, { ...opts, models }) : renderStart(models);
     paintElapsed();
     const card = host.querySelector('.ca-question');
-    if (card) syncShowFor(card);
+    if (card) {
+      syncShowFor(card);
+      card.addEventListener('change', () => syncShowFor(card));  // select를 바꾸면 조건부 입력칸을 다시 맞춘다
+    }
     if (!session) wireStart();
     if (opts.enter && !reducedMotion()) countUp(host);
   };
