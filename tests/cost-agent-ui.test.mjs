@@ -187,3 +187,9 @@ test('result shows the verdict and opens the one-page report in a new tab', () =
   assert.ok(html.includes(`href="${reportHtmlUrl('s1')}"`) && html.includes('target="_blank"'));
   assert.ok(reportHtmlUrl('s1').endsWith('/agent/sessions/s1/report.html'));
 });
+
+test('upload accepts PDF bills as well as Excel and CSV', () => {
+  const html = renderStart([]);
+  assert.ok(html.includes('accept=".xlsx,.csv,.pdf"'));
+  assert.ok(html.includes('PDF'));
+});

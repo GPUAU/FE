@@ -73,11 +73,11 @@ export function renderStart(models = []) {
     <div class="ca-start-card">
       <header class="ca-section-head"><div><p class="ca-eyebrow">청구서 기반 산정</p><h2>청구서 등록</h2><p class="ca-desc">임차료·전력비 등 청구 내역을 바탕으로 원가와 제안가를 계산합니다.</p></div><span class="ca-stage-label">새 분석</span></header>
       <label class="ca-drop" data-ca-drop tabindex="0" role="button" aria-label="청구서 파일 선택">
-        <input type="file" accept=".xlsx,.csv" data-ca-file hidden>
+        <input type="file" accept=".xlsx,.csv,.pdf" data-ca-file hidden>
         <span class="ca-document" aria-hidden="true"><svg viewBox="0 0 48 56" fill="none"><path d="M8 2h22l12 12v38a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M30 2v12h12M15 25h18M15 32h18M15 39h10"/></svg></span>
         <strong>청구서 파일을 여기에 놓으세요</strong>
         <span class="ca-upload-sub">또는 <span class="ca-file-action">파일 선택</span></span>
-        <small>XLSX, CSV · 최대 5MB</small>
+        <small>XLSX, CSV, PDF (스캔본은 서버 안에서 OCR) · 최대 5MB</small>
         <span class="ca-file" data-ca-filename aria-live="polite"></span>
       </label>
       <div class="ca-context-head"><h3>GPU 정보</h3><span>선택 입력</span></div>
