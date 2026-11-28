@@ -60,7 +60,7 @@
   const canvas=$('#rwCatalogTrend'),area=$('#rwCatalogTrendArea'),status=$('#rwCatalogTrendStatus');
   const current=()=>canvas&&canvas.isConnected&&$('#rwCatalogTrend')===canvas;
   try{
-   const [snapshot,{weeklyPriceHistory},{createWeeklyHover}]=await Promise.all([sgData(),import('/static/price-history-median.mjs?v=hover1125'),import('/static/price-history-hover.mjs?v=hover1125b')]);if(!current())return;
+   const [snapshot,{weeklyPriceHistory},{createWeeklyHover}]=await Promise.all([sgModelHistory(model),import('/static/price-history-median.mjs?v=hover1125'),import('/static/price-history-hover.mjs?v=hover1125b')]);if(!current())return;
    const countries=new Map((RW.data?.candidates||[]).map(r=>[r.provider_name+'|'+r.region_code,r.country_code]));
    const months=$('#rwTrendMonths'),payment=$('#rwTrendPayment');
    RW.trendChoices ||= new Map();
@@ -191,10 +191,10 @@
  }
  async function history(){
   const ticket=++RW.seq,root=$('#v-trend');frame(root,'GPU','가격 이력','수집 시점별 가격 변동과 원본 출처를 제공합니다.');
-  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgData(),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=hover-range1128")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;SG.data=snapshot;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
+  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgModelHistory(RW.history.model),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=hover-range1128")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;RW.historyRows=snapshot.history;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
   marketPriceFrame('가격 이력','수집 시각 기준 가격 관측');const H=RW.history;
   function draw(){
-   const focus=focusState(root),source=SG.data.history.filter(r=>r.model_name===H.model&&r.term===H.term);
+   const focus=focusState(root),source=RW.historyRows.filter(r=>r.model_name===H.model&&r.term===H.term);
    if(H.provider!=='ALL'&&!source.some(r=>r.provider_name===H.provider))H.provider='ALL';
    if(H.region!=='ALL'&&!source.some(r=>(H.provider==='ALL'||r.provider_name===H.provider)&&r.region_code===H.region))H.region='ALL';
    const pool=source.filter(r=>(H.provider==='ALL'||r.provider_name===H.provider)&&(H.region==='ALL'||r.region_code===H.region));
@@ -219,10 +219,10 @@
     <div class="rw-chart-note">최근 730일 범위에서 조회한 자료입니다. ${rows.length-plotted.length}개 환산 불가·시각 미확인 기록은 그래프에서 제외됩니다.<button class="rw-text-button" id="rwHistoryReload">저장 데이터 다시 조회</button></div>
     <div class="cp-results-head"><div><h2>가격 관측 기록 <small>${rows.length.toLocaleString()}</small></h2><p>최근 수집 시각순 · 표시 단위 USD / GPU·시간</p></div><button class="mv-btn" id="rwHistoryCSV">전체 선택 기록 CSV</button></div>
     <div class="mv-tablebox" tabindex="0" role="region" aria-label="가격 관측 기록 표"><table class="mv-table rw-history-table"><thead><tr><th>수집 시각 · KST</th><th>사업자 / 상품</th><th>리전 / 계약</th><th>관측 단가</th><th>가격 근거</th></tr></thead><tbody>${rows.slice(H.page*20,(H.page+1)*20).map(r=>`<tr><td><b>${sgDay(r.chart_at)}</b><span>${mtime(r.chart_at)}</span></td><td><b>${mh(r.provider_name)}</b><span>${mh(r.original_product_name||'상품명 미확인')}</span><span>오퍼 ${mh(r.offer_id)}</span></td><td><b>${mh(r.region_code||'미확인')}</b><span>${mh(r.contract_product_type||MT[r.term]||'계약 미확인')}</span></td><td class="cp-price"><strong>${fxPrice(r.price)}</strong><span>USD / GPU·시간</span></td><td><button class="mv-btn" data-observation="${mh(r.observation_id)}">상세·근거</button></td></tr>`).join('')||`<tr><td colspan="5">${empty('선택한 조건의 관측 기록이 없습니다.')}</td></tr>`}</tbody></table></div>${pager('rwHistory',H.page,pages)}${springMarketFooter()}</div>`;
-   root.querySelectorAll('[data-rw-history-model]').forEach(b=>b.onclick=()=>{Object.assign(H,{model:b.dataset.rwHistoryModel,provider:'ALL',region:'ALL',offer:'ALL',page:0});draw();root.querySelector(`[data-rw-history-model="${H.model}"]`).focus({preventScroll:true});});
+   root.querySelectorAll('[data-rw-history-model]').forEach(b=>b.onclick=async()=>{Object.assign(H,{model:b.dataset.rwHistoryModel,provider:'ALL',region:'ALL',offer:'ALL',page:0});if(!RW.historyRows.some(r=>r.model_name===H.model)){b.setAttribute('aria-busy','true');try{const s=await sgModelHistory(H.model);if(ticket!==RW.seq||H.model!==b.dataset.rwHistoryModel)return;RW.historyRows=s.history;SG.historyFailures=s.historyFailures||[];}catch(e){error(root,e,history);return;}}draw();root.querySelector(`[data-rw-history-model="${H.model}"]`).focus({preventScroll:true});});
    for(const [id,key] of [['rwHistoryTerm','term'],['rwHistoryProvider','provider'],['rwHistoryRegion','region'],['rwHistoryOffer','offer'],['rwHistoryPeriod','period']])$('#'+id).onchange=e=>{H[key]=e.target.value;H.page=0;if(key==='term')H.provider='ALL';if(['term','provider'].includes(key)){H.region='ALL';H.offer='ALL';}draw();};
    $('#rwHistorySearch').oninput=e=>{H.q=e.target.value;H.page=0;draw();};$('#rwHistoryPrev').onclick=()=>{H.page--;draw();};$('#rwHistoryNext').onclick=()=>{H.page++;draw();};
-   $('#rwHistoryReload').onclick=()=>{RW.promise=null;SG.pending=null;SG.data=null;history();};
+   $('#rwHistoryReload').onclick=()=>{RW.promise=null;SG.historyBy=null;SG.data=null;history();};
    $('#rwHistoryCSV').onclick=()=>downloadCSV('GPU_price_history.csv',['관측ID','사업자','모델','상품','리전','계약','표시기준UTC','수집UTC','USD_GPU시간','출처'],rows.map(r=>[r.observation_id,r.provider_name,r.model_name,r.original_product_name,r.region_code,r.contract_product_type,r.chart_at,r.collected_at,r.price,r.original_url]));
    destroyCharts('rwHistoryChart');
    if(!plotted.length)$('#rwHistoryChartArea').innerHTML=empty('그래프로 표시할 관측 기록이 없습니다.');
