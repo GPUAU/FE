@@ -191,7 +191,7 @@
  }
  async function history(){
   const ticket=++RW.seq,root=$('#v-trend');frame(root,'GPU','가격 이력','수집 시점별 가격 변동과 원본 출처를 제공합니다.');
-  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgData(),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=scope1127")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;SG.data=snapshot;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
+  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgData(),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=single-line1128")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;SG.data=snapshot;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
   marketPriceFrame('가격 이력','수집 시각 기준 가격 관측');const H=RW.history;
   function draw(){
    const focus=focusState(root),source=SG.data.history.filter(r=>r.model_name===H.model&&r.term===H.term);
@@ -203,14 +203,11 @@
    if(H.period!=='ALL'&&rows.length){const latest=Math.max(...rows.map(r=>Date.parse(r.chart_at)).filter(Number.isFinite));rows=rows.filter(r=>Date.parse(r.chart_at)>=latest-Number(H.period)*86400000);}
    const q=H.q.trim().toLowerCase();rows=rows.filter(r=>!q||`${r.provider_name} ${r.original_product_name} ${r.region_code} ${r.contract_product_type}`.toLowerCase().includes(q)).sort((a,b)=>Date.parse(b.chart_at)-Date.parse(a.chart_at));
    const plotted=rows.filter(r=>valid(r.price)&&Number.isFinite(Date.parse(r.chart_at))),pages=Math.max(1,Math.ceil(rows.length/20));H.page=Math.min(H.page,pages-1);
-   const summary=buildHistoryRange(plotted),singlePrice=summary.length>0&&summary.every(p=>p.min===p.max);
+   const summary=buildHistoryRange(plotted);
    const providers=[...new Set(plotted.map(r=>r.provider_name).filter(Boolean))],regions=[...new Set(plotted.map(r=>r.region_code).filter(Boolean))];
    const scopeLabel=(H.provider!=='ALL'?H.provider:providers.length===1?providers[0]:'전체 사업자')+' · '+(H.region!=='ALL'?H.region:regions.length===1?regions[0]:'전체 리전');
-   const detailLegend=H.region!=='ALL'||H.offer!=='ALL'||singlePrice;
    const historyNote=!summary.length?'선택한 조건의 가격 관측 기록이 없습니다.':
-    (singlePrice?mh(scopeLabel)+'의 날짜별 가격 추이입니다. KST 기준 오퍼별 당일 마지막 유효 관측 가격을 표시합니다.':
-     (detailLegend?mh(scopeLabel)+'의 가격 이력입니다. ':'')+'색 영역은 날짜별 최저~최고 가격, 선은 중앙값입니다. KST 기준 오퍼별 당일 마지막 유효 관측을 집계합니다. 날짜마다 포함된 오퍼'+(H.region==='ALL'?'·리전':'')+'가 달라질 수 있습니다.')+
-    ' 곡선은 관측일 사이를 매끄럽게 연결한 표현이며 미관측 가격을 뜻하지 않습니다.';
+    '선은 날짜별 중앙값입니다. KST 기준 오퍼별 당일 마지막 유효 관측을 집계합니다. 날짜마다 포함된 상품·지역이 달라질 수 있습니다. 곡선은 관측일 사이를 연결한 시각적 안내입니다.';
    root.innerHTML=`<div class="mv cp-page rw-page">${heading('GPU','가격 이력','수집 시점별 가격 변동과 원본 출처를 제공합니다.')}${overview(d.candidates)}${tabs(H.model,'data-rw-history-model',d.candidates.filter(r=>!['1_YEAR','3_YEAR'].includes(H.term)||r.commitment_months===(H.term==='1_YEAR'?12:36)),H.term==='ON_DEMAND'?'on_demand':H.term==='SPOT'?'spot':'commitment')}
     <div class="cp-filterbar rw-history-filters">${cpSelect('rwHistoryTerm','계약 유형',Object.entries(MT),H.term)}${cpSelect('rwHistoryProvider','사업자',options(source,'provider_name'),H.provider)}${cpSelect('rwHistoryRegion','리전',options(source.filter(r=>H.provider==='ALL'||r.provider_name===H.provider),'region_code'),H.region)}${cpSelect('rwHistoryPeriod','관측 기간',[['ALL','조회한 전체 기록'],['365','마지막 기록 기준 1년'],['90','마지막 기록 기준 90일']],H.period)}</div>
     <div class="rw-history-detail-filters">${cpSelect('rwHistoryOffer','개별 오퍼',[['ALL','선택 조건의 모든 오퍼'],...ids.map(id=>{const r=pool.find(r=>String(r.offer_id)===id);return [id,`${r.provider_name} · ${r.original_product_name||'상품명 미확인'} · ${r.region_code} · #${id}`];})],H.offer)}${search('rwHistorySearch',H.q,'상품, 리전 검색 · 그래프와 표에 함께 적용')}</div>
@@ -233,16 +230,23 @@
     const fullMin=first===last?first-86400000:first,fullMax=first===last?last+86400000:last;
     const card=$('#rwHistoryChart').closest('.rw-chart-card');card.classList.add('history-price-card');card.querySelector('.cp-results-head').after($('#rwHistoryTools'));
     const base={pointRadius:0,pointHoverRadius:0,pointHitRadius:12,tension:0,spanGaps:true};
-    const datasets=[
-     {...base,label:'최저가',data:curve.map(p=>({...p,y:p.min})),borderColor:'#e8ab4c',borderWidth:1,fill:false,order:2},
-     {...base,label:'최고가',data:curve.map(p=>({...p,y:p.max})),borderColor:'#e8ab4c',borderWidth:1,backgroundColor:'rgba(239,178,77,0.40)',fill:{target:0},order:2},
-     {...base,label:singlePrice?scopeLabel:'중앙값',data:curve.map(p=>({...p,y:p.median})),borderColor:'#d84b23',backgroundColor:'#d84b23',borderWidth:2.5,fill:false,order:0}
-    ];
-    if(singlePrice)datasets.splice(0,2);
-    const chart=new Chart($('#rwHistoryChart'),{type:'line',plugins:[historyZoom({reset:$('#rwHistoryZoomReset'),zoomIn:$('#rwHistoryZoomIn'),zoomOut:$('#rwHistoryZoomOut'),status:$('#rwHistoryZoomStatus'),format:sgDay,summary,curve,fullMin,fullMax,scopeLabel,presets:[...root.querySelectorAll('[data-history-days]')]})],data:{datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',axis:'x',intersect:false},scales:{x:{type:'linear',min:Math.max(fullMin,fullMax-30*86400000),max:fullMax,afterBuildTicks:axis=>{axis.ticks=historyTicks(axis.min,axis.max);},grid:{display:false},border:{display:false},ticks:{maxTicksLimit:7,maxRotation:0,color:'#798393',padding:10,callback:function(v){return this.max-this.min<=2*86400000?sgDay(v).slice(5)+' '+new Date(v+9*3600000).toISOString().slice(11,16):sgDay(v).slice(5);}}},y:{beginAtZero:false,grid:{color:'#f0f1f4'},border:{display:false},ticks:{maxTicksLimit:6,color:'#798393',padding:12,callback:v=>'$'+Number(v).toLocaleString('en-US',{maximumFractionDigits:3})}}},plugins:{legend:{display:false},tooltip:{enabled:false,backgroundColor:'#252c38',padding:12,itemSort:(a,b)=>b.datasetIndex-a.datasetIndex,callbacks:{title:items=>sgDay(items[0].parsed.x)+' · KST',label:c=>c.dataset.label+': '+mp(c.parsed.y)+' / GPU·시간',footer:items=>'당일 관측 '+items[0].raw.count+'개 오퍼 · 오퍼별 마지막 유효 관측'}}}}});
+    const datasets=[{
+     ...base,label:'일별 중앙값',data:curve.map(p=>({...p,y:p.median})),
+     borderColor:'#ef4b23',borderWidth:2.5,fill:'start',pointRadius:summary.length===1?4:0,
+     backgroundColor:context=>{
+      const {ctx,chartArea}=context.chart;
+      if(!chartArea)return 'rgba(239,75,35,.07)';
+      const gradient=ctx.createLinearGradient(0,chartArea.top,0,chartArea.bottom);
+      gradient.addColorStop(0,'rgba(239,75,35,.14)');
+      gradient.addColorStop(1,'rgba(239,75,35,.02)');return gradient;
+     }
+    }];
+    const chart=new Chart($('#rwHistoryChart'),{type:'line',plugins:[historyZoom({reset:$('#rwHistoryZoomReset'),zoomIn:$('#rwHistoryZoomIn'),zoomOut:$('#rwHistoryZoomOut'),status:$('#rwHistoryZoomStatus'),format:sgDay,summary,curve,fullMin,fullMax,scopeLabel,medianOnly:true,presets:[...root.querySelectorAll('[data-history-days]')]})],data:{datasets},options:{responsive:true,maintainAspectRatio:false,animation:false,interaction:{mode:'index',axis:'x',intersect:false},scales:{x:{type:'linear',min:Math.max(fullMin,fullMax-30*86400000),max:fullMax,afterBuildTicks:axis=>{axis.ticks=historyTicks(axis.min,axis.max);},grid:{display:false},border:{display:false},ticks:{maxTicksLimit:7,maxRotation:0,color:'#798393',padding:10,callback:function(v){return this.max-this.min<=2*86400000?sgDay(v).slice(5)+' '+new Date(v+9*3600000).toISOString().slice(11,16):sgDay(v).slice(5);}}},y:{beginAtZero:false,grid:{color:'#f0f1f4'},border:{display:false},ticks:{maxTicksLimit:6,color:'#798393',padding:12,callback:v=>'$'+Number(v).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})}}},plugins:{legend:{display:false},tooltip:{enabled:false,backgroundColor:'#252c38',padding:12,itemSort:(a,b)=>b.datasetIndex-a.datasetIndex,callbacks:{title:items=>sgDay(items[0].parsed.x)+' · KST',label:c=>c.dataset.label+': '+mp(c.parsed.y)+' / GPU·시간',footer:items=>'당일 관측 '+items[0].raw.count+'개 오퍼 · 오퍼별 마지막 유효 관측'}}}}});
     RW.charts.set('rwHistoryChart',chart);
-    const rangeKey='<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#596374"><span style="width:22px;height:12px;background:rgba(239,178,77,.4);border:1px solid #e8ab4c"></span>최저~최고 가격</span>';
-    $('#rwHistoryLegend').innerHTML=(detailLegend?'':rangeKey)+'<span style="display:inline-flex;align-items:center;gap:8px;font-size:13px;color:#596374"><span style="width:22px;height:3px;background:#d84b23"></span>'+mh(detailLegend?scopeLabel:'중앙값')+'</span><span style="font-size:12px;color:#798393">'+summary.length+'개 관측일 · '+mh(H.model)+' · '+mh(MT[H.term])+(summary.length===1?' · 관측일이 1개여서 추이선을 표시할 수 없습니다.':'')+'</span>';
+    $('#rwHistoryLegend').innerHTML='<span class="history-line-key"><i aria-hidden="true"></i>일별 중앙값</span><span class="history-series-context">'+summary.length+'개 관측일 · '+mh(H.model)+' · '+mh(MT[H.term])+(summary.length===1?' · 관측일이 1개여서 점으로 표시합니다.':'')+'</span>';
+    card.querySelector('.history-chart-actions').append($('#rwHistoryLegend'));
+    $('#rwHistoryChart').setAttribute('aria-label',mh(H.model)+' 일별 중앙값 가격 추이. 아래 음영은 가격 범위가 아닌 시각적 강조입니다. 휠로 확대·축소, 드래그로 기간 이동.');
+
 
    }refreshKrw();restoreFocus(focus);
   }draw();
