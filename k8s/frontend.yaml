@@ -69,6 +69,11 @@ metadata:
     nginx.ingress.kubernetes.io/auth-type: basic
     nginx.ingress.kubernetes.io/auth-secret: gpu-basic-auth
     nginx.ingress.kubernetes.io/auth-realm: "GPU AU - team only"
+    # 원가 에이전트 업로드: 기본 1MB를 넘으면 ingress가 413을 돌려줘 앱의 안내 문구가 보이지 않는다.
+    # cost-agent 합계 한도 20MB + 여유, 스캔 PDF OCR 시간까지 (FE nginx /agent 설정과 맞춤)
+    nginx.ingress.kubernetes.io/proxy-body-size: "25m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
 spec:
   ingressClassName: nginx
   tls:

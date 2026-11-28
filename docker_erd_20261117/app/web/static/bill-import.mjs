@@ -18,17 +18,50 @@ const ROLE_LABEL = { COST: '원가', SUBTOTAL: '소계', TOTAL: '총액', TAX: '
 const LEVEL_LABEL = { ERROR: '오류', WARNING: '확인 필요', INFO: '참고' };
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 
+// ------------------------------------------------------------------ 오류 문구
+// 업로드 한도 (cost-agent MAX_UPLOAD_MB·MAX_TOTAL_UPLOAD_MB, nginx·ingress 한도와 맞춘다)
+export const UPLOAD_LIMITS = { fileMb: 5, totalMb: 20, files: 20 };
+// 서버가 문구를 주지 못한 경우(프록시가 막은 413 등)에 보여 줄 문구. 상태 코드 숫자는 보여 주지 않는다.
+const STATUS_MESSAGE = {
+  400: '요청 내용을 확인해 주세요.',
+  401: '로그인이 필요합니다. 다시 로그인해 주세요.',
+  403: '권한이 없습니다.',
+  404: '요청한 대상을 찾을 수 없어요. 처음부터 다시 시작해 주세요.',
+  408: '응답이 늦어요. 잠시 후 다시 시도해 주세요.',
+  409: '아직 준비되지 않았어요. 남은 단계를 마친 뒤 다시 시도해 주세요.',
+  413: `파일이 너무 커요. 파일 하나는 ${UPLOAD_LIMITS.fileMb}MB, 합쳐서 ${UPLOAD_LIMITS.totalMb}MB까지 올릴 수 있어요. 나눠서 올려 주세요.`,
+  415: 'xlsx, csv, pdf 파일만 올릴 수 있어요.',
+  422: '입력값을 확인해 주세요.',
+  429: '요청이 많아요. 잠시 후 다시 시도해 주세요.',
+  500: '일시적인 오류가 발생했어요. 잠시 후 다시 시도해 주세요.',
+  502: '원가 에이전트 서버에 연결할 수 없어요. 잠시 후 다시 시도해 주세요.',
+  503: '원가 에이전트 서버가 잠시 사용할 수 없어요. 잠시 후 다시 시도해 주세요.',
+  504: '응답이 늦어요. 잠시 후 다시 시도해 주세요.'
+};
+export const NETWORK_MESSAGE = '서버에 연결할 수 없어요. 네트워크 연결을 확인한 뒤 다시 시도해 주세요.';
+
+/** 오류 응답 → 사용자 문구. 서버(BE·cost-agent)가 준 message를 우선 쓰고, 없으면 상태별 문구. */
+export function errorMessage(status, data) {
+  const detail = data?.detail;
+  const fromServer = data?.message || (typeof detail === 'string' ? detail : detail?.message);
+  if (fromServer && !(status >= 502 && status <= 504)) return fromServer;
+  return STATUS_MESSAGE[status] || (status >= 500 ? STATUS_MESSAGE[500] : STATUS_MESSAGE[400]);
+}
+
+/** fetch + 오류 문구. 네트워크가 끊겨도 사용자 문구로. */
+export async function requestJson(fetchImpl, url, init) {
+  let response;
+  try { response = await fetchImpl(url, init); } catch { throw new Error(NETWORK_MESSAGE); }
+  let data = null;
+  try { data = await response.json(); } catch { /* 비 JSON (프록시 오류 페이지 등) */ }
+  if (!response.ok) throw new Error(errorMessage(response.status, data));
+  return data;
+}
+
 async function readJson(response) {
   let data = null;
   try { data = await response.json(); } catch { /* 비 JSON */ }
-  if (!response.ok) {
-    const detail = data?.detail;
-    const message = typeof detail === 'string' ? detail : detail?.message;
-    if (response.status === 502 || response.status === 503 || response.status === 504) {
-      throw new Error('청구서 분석 서버(cost-agent)에 연결할 수 없습니다. 배포 상태를 확인하세요.');
-    }
-    throw new Error(message || `청구서 분석 실패 (${response.status})`);
-  }
+  if (!response.ok) throw new Error(errorMessage(response.status, data));
   return data;
 }
 

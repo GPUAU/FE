@@ -62,7 +62,7 @@ test('upload and correction call the agent through the /agent proxy', async () =
   await correctBill('abc', [{ ref: '청구서!5', item_type: 'OPERATIONS' }], fake);
   assert.deepEqual(calls.slice(-2), [[`${AGENT_BASE}/bills`, 'POST'], [`${AGENT_BASE}/bills/abc/lines`, 'PUT']]);
   const down = async () => ({ ok: false, status: 502, json: async () => { throw new Error('html'); } });
-  await assert.rejects(uploadBill(new File(['x'], 'a.csv'), down), /cost-agent/);
+  await assert.rejects(uploadBill(new File(['x'], 'a.csv'), down), /원가 에이전트 서버에 연결할 수 없어요/);
 });
 
 test('rendered review escapes file content', () => {
