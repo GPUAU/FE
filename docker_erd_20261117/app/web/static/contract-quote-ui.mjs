@@ -14,8 +14,7 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     <header class="cp-hero"><p class="cp-eyebrow">GPU 시세 인덱스</p><h1>계약 할인 <em>· 예상 견적</em></h1><p>우리 판매단가와 할인율로 장기계약 견적을 계산하고 경쟁사 공개 가격을 참고합니다.</p></header>
     <div class="cq-path"><span>GPU 1개당 시간당 판매단가</span><b>×</b><span>(1 − 할인율 ÷ 100)</span><b>×</b><span>GPU 수</span><b>×</b><span>계약 전체 과금 시간</span><b>=</b><strong>예상 계약금액</strong></div>
     <div class="cq-layout"><section class="cq-panel"><div class="cp-results-head cq-section-head"><div><h2>계약 조건 입력</h2><p>경쟁사 온디맨드 가격이 없어도 직접 입력한 단가로 계산할 수 있습니다.</p></div></div>
-    <div class="cq-actions"><button type="button" class="mv-btn" data-import>원가·제안가 결과 가져오기</button><a href="#cost/datacenter" class="cq-link">데이터센터 원가 계산</a></div>
-    <p class="cq-source" data-source></p><p role="status" data-import-status></p>
+    <p role="status" data-import-status></p>
     <form data-quote-form novalidate><div class="cq-fields">
       <div class="cq-model-field"><label for="cq-model-choice">견적 대상 GPU·상품<select id="cq-model-choice" name="modelChoice">${modelOptions()}</select><small data-model-help>GPU 모델을 선택하세요. 상품명·세부 사양은 직접 입력할 수 있습니다.</small></label><label for="cq-model" data-model-custom ${modelChoice()==='__custom__'?'':'hidden'}>상품명·세부 사양<input id="cq-model" name="model" maxlength="120" value="${esc(d.model)}" placeholder="예: B300 · 8 GPU 서버"></label></div>
       <label for="cq-currency">견적 통화<select name="currency" id="cq-currency"><option value="USD" ${d.currency==='USD'?'selected':''}>USD · 미국 달러</option><option value="KRW" ${d.currency==='KRW'?'selected':''}>KRW · 대한민국 원</option></select><small>통화 변경은 환율 변환이 아닙니다. 단가를 새로 입력하세요.</small></label>
@@ -52,7 +51,6 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     });
   }
   const note = text => { host.querySelector('[data-import-status]').textContent = text; };
-  const sourceLabel = () => {host.querySelector('[data-source]').textContent = '단가 출처: ' + d.sourceLabel;};
   const stale = () => saved.sourceId && saved.sourceId !== getSource()?.id;
   const read = () => {for (const key of Object.keys(defaults())) if (field(key)) d[key] = field(key).value;};
   const money = (cents, currency=d.currency) => (cents / 100).toLocaleString('ko-KR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ' + esc(currency);
@@ -93,7 +91,7 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     d.currency='USD';d.price=Number(source.price).toFixed(6);d.cost=Number(source.cost).toFixed(6);
     d.sourceLabel='원가·제안가 계산 결과 · USD · '+source.time+' · 대상 GPU·사양 직접 확인';saved.sourceId=source.id;
     for(const key of ['currency','price','cost'])field(key).value=d[key];
-    sourceLabel();invalidate();note('우리 목표 판매단가와 참고 원가를 가져왔습니다. 소수 6자리 기준이며 GPU 모델·계약 수량은 직접 확인하세요.');
+    invalidate();note('우리 목표 판매단가와 참고 원가를 가져왔습니다. 소수 6자리 기준이며 GPU 모델·계약 수량은 직접 확인하세요.');
   }
   form.addEventListener('input',event=>{
     if(event.target.name==='modelChoice') {
@@ -106,7 +104,7 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
       field('price').value='';field('cost').value='';note('환율을 자동 적용하지 않습니다. 선택한 통화로 단가와 원가를 다시 입력하세요.');
     }
     if(['price','cost','currency'].includes(event.target.name)) {saved.sourceId=null;d.sourceLabel='사용자 직접 입력'+(d.sourceLabel.includes('가상 예시')?' · 가상 예시에서 수정':'');}
-    read();for (const key of ['price','cost']) field(key).placeholder=examples()[key];sourceLabel();host.querySelector('[data-monthly]').hidden=d.billing==='full';invalidate();
+    read();for (const key of ['price','cost']) field(key).placeholder=examples()[key];host.querySelector('[data-monthly]').hidden=d.billing==='full';invalidate();
   });
   form.onsubmit=event=>{
     event.preventDefault();read();saved.result=null;
@@ -114,7 +112,6 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     try {saved.result=calculateContractQuote(d);errorHost.textContent='';paint();}
     catch(error){paint('입력값을 확인해 주세요.');errorHost.textContent=error.message;}
   };
-  host.querySelector('[data-import]').onclick=importCost;
   host.querySelector('[data-example]').onclick=()=>{
     Object.assign(d,defaults(),{model:'B300 · 가상 예시',price:'5',cost:'3',quantity:'8',discount3:'10',discount5:'20',sourceLabel:'가상 예시 · 실제 시세나 권장 할인율이 아님'});
     saved.sourceId=null;saved.result=null;mountQuote({host,saved,getSource,loadMarket,request});
@@ -122,6 +119,6 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
   host.querySelector('[data-clear]').onclick=()=>{saved.draft=defaults();saved.sourceId=null;saved.result=null;mountQuote({host,saved,getSource,loadMarket,request});};
   const market=host.querySelector('.cq-market');let loaded=false;
   market.addEventListener('toggle',()=>{if(market.open&&!loaded){loaded=true;loadMarket(host.querySelector('[data-market]'));}});
-  sourceLabel();paint();
+  paint();
   if(saved.autoImport){saved.autoImport=false;importCost();}
 }
