@@ -143,7 +143,7 @@ test('completed workspace shows questions and results with activity below and no
 });
 
 // ---------------------------------------------------------------- 2순위: 승인 검토 · 묶음 카드 · 보고서
-import { hiddenFields, reportHtmlUrl } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+import { hiddenFields, reportHtmlUrl, reportPdfUrl, stepLevel, renderFlagPanel, flagResolution, summaryTone } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
 
 test('pending board includes the approval review step between terms and report', () => {
   const keys = pendingSession('a.xlsx', {}).board.map(b => b.key);
@@ -184,8 +184,76 @@ test('result shows the verdict and opens the one-page report in a new tab', () =
     approval: { verdict: '조건부', reasons: ['금융비용(이자)이 원가에 반영되지 않았어요'] } };
   const html = renderResult(done);
   assert.ok(html.includes('권고: 조건부') && html.includes('금융비용(이자)'));
-  assert.ok(html.includes(`href="${reportHtmlUrl('s1')}"`) && html.includes('target="_blank"'));
+  assert.ok(html.includes(`href="${reportPdfUrl('s1')}"`) && html.includes('target="_blank"') && html.includes('승인 보고서 PDF 저장'));
   assert.ok(reportHtmlUrl('s1').endsWith('/agent/sessions/s1/report.html'));
+  assert.ok(reportPdfUrl('s1').endsWith('/agent/sessions/s1/report.html?print=1'));
+});
+
+// ---------------------------------------------------------------- '!' 단계: 무게·사유·처리 방법
+const reviewed = (() => {
+  const steps = ['ANALYZE', 'MISSING', 'ASSUMPTIONS', 'SIMULATE', 'MARKET', 'TERMS', 'REVIEW', 'REPORT'];
+  const st = { ASSUMPTIONS: 'WARNING', SIMULATE: 'WARNING', MARKET: 'WARNING', TERMS: 'WARNING', REVIEW: 'WARNING' };
+  const sum = { MARKET: '시장 최저가보다 낮음 · 유지', TERMS: '3년 $1.48 · 5년 $1.31', REVIEW: '판정: 재검토' };
+  const det = { ASSUMPTIONS: ['월 전력 사용량 ÷ GPU 수가 250kWh예요.'], SIMULATE: ['BE가 미반영으로 본 항목: 조달 금리'],
+    TERMS: ['5년 가격이 원가($1.40)보다 낮습니다'] };
+  return {
+    ...session, id: 's2', step: 'DONE', question: null, report_ready: true,
+    board: steps.map(k => ({ key: k, title: k, status: st[k] || 'DONE', summary: sum[k] || '', details: det[k] || [] })),
+    simulation: { hourlyCost: '1.40', candidatePrice: '1.74' }, assumptions: { target_rate: 0.2 },
+    market: { count: 5, min: 1.9, median: 2.5, max: 4, providers: 5, position: '시장 최저가보다 낮음' },
+    terms: [{ years: 3, discount_rate: 0.15, price: 1.48 }, { years: 5, discount_rate: 0.25, price: 1.31 }],
+    summary: ['3년 계약가 $1.480 (할인 15%).', '5년 계약가 $1.310 (할인 25%).', '승인 검토 판정: 재검토.', '자동 검증 7/7 통과.',
+      '시장 공개가격 5개 기준 시장 최저가보다 낮음 (중앙값 $2.50).'],
+    approval: { verdict: '재검토', reasons: [], findings: [
+      { code: 'PRICE_BELOW_COST', level: '재검토', message: '5년가: 원가 $1.40보다 낮아 손실이에요', fix_step: 'TERMS', reason: '' },
+      { code: 'MARKET_OUT_KEPT', level: '조건부', message: '제안가 $1.74가 시장 범위 밖이에요', fix_step: 'MARKET', reason: '전략 가격' },
+      { code: 'NO_FINANCING', level: '조건부', message: '금융비용(이자)이 원가에 반영되지 않았어요', fix_step: 'ASSUMPTIONS', reason: '' }] }
+  };
+})();
+
+test('warning steps get a level from approval findings: loss is red, kept choice amber, unrelated note grey', () => {
+  const lv = k => stepLevel(reviewed.board.find(b => b.key === k), reviewed);
+  assert.equal(lv('TERMS'), 'high');
+  assert.equal(lv('MARKET'), 'mid');
+  assert.equal(lv('ASSUMPTIONS'), 'mid');      // NO_FINANCING(조건부)이 가정값 단계로 이어진다
+  assert.equal(lv('SIMULATE'), 'mid');         // 금리 미반영 경고는 NO_FINANCING과 같은 내용
+  assert.equal(lv('REVIEW'), 'high');
+  assert.equal(lv('ANALYZE'), null);
+  const before = { ...reviewed, approval: null };
+  assert.equal(stepLevel(before.board.find(b => b.key === 'TERMS'), before), 'high');
+  assert.equal(stepLevel(before.board.find(b => b.key === 'ASSUMPTIONS'), before), 'mid');
+  const noFinding = { ...reviewed, approval: { ...reviewed.approval, findings: [] } };
+  assert.equal(stepLevel(noFinding.board.find(b => b.key === 'ASSUMPTIONS'), noFinding), 'note');
+});
+
+test('stepper shows a flag per warning step and the panel explains reason and where it is resolved', () => {
+  const html = renderStepper(reviewed);
+  assert.equal((html.match(/<li /g) || []).length, 8);
+  assert.ok(html.includes('data-ca-flag="TERMS" aria-expanded="false"') && html.includes('재검토 필요'));
+  assert.ok(html.includes('data-level="high"') && html.includes('id="ca-flag-panel"'));
+  const open = renderStepper(reviewed, 'TERMS');
+  assert.ok(open.includes('data-ca-flag="TERMS" aria-expanded="true"'));
+  assert.ok(open.includes('5년 가격이 원가($1.40)보다 낮습니다') && open.includes('5년가: 원가 $1.40보다 낮아 손실이에요'));
+  assert.ok(open.includes('사유를 적어도 판정이 바뀌지 않아요'));
+  const market = renderFlagPanel(reviewed, 'MARKET');
+  assert.ok(market.includes('&#39;그대로 유지&#39;를 골라') && market.includes('입력이 잘못된 것이 아니라') && market.includes('진행 사유: 전략 가격'));
+  const waiting = { ...reviewed, approval: null, step: 'REVIEW' };
+  assert.ok(flagResolution(waiting.board[2], waiting, 'mid').includes("마지막 '승인 검토' 단계"));
+  assert.equal(renderFlagPanel(reviewed, 'ANALYZE'), '');
+});
+
+test('result lists findings by level with reason and related step, and colours summary lines', () => {
+  const html = renderResult(reviewed);
+  assert.ok(html.includes('class="ca-checks" data-level="high"') && html.includes('확인할 점 3개 · 재검토 1 · 조건부 2'));
+  assert.ok(html.includes('<li data-level="high"><span class="ca-lv" data-level="high">재검토</span>'));
+  assert.ok(html.includes('진행 사유: 전략 가격 · 관련 단계: 시장 비교') && html.includes('관련 단계: 기간별 가격'));
+  assert.equal(summaryTone('5년 계약가 $1.310 (할인 25%).', reviewed), 'bad');
+  assert.equal(summaryTone('3년 계약가 $1.480 (할인 15%).', reviewed), '');
+  assert.equal(summaryTone('승인 검토 판정: 재검토.', reviewed), 'bad');
+  assert.equal(summaryTone('자동 검증 6/7 통과.', reviewed), 'bad');
+  assert.equal(summaryTone('자동 검증 7/7 통과.', reviewed), '');
+  assert.equal(summaryTone('시장 공개가격 5개 기준 시장 최저가보다 낮음 (중앙값 $2.50).', reviewed), 'warn');
+  assert.ok(html.includes('<li data-tone="bad">5년 계약가 $1.310'));
 });
 
 test('upload accepts PDF bills as well as Excel and CSV', () => {
