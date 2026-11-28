@@ -25,9 +25,10 @@ export function historyTicks(min,max){
  const ticks=[];for(let x=Math.ceil((min+offset)/step)*step-offset;x<=max;x+=step)ticks.push({value:x});
  return ticks;
 }
-export function historyZoom({reset,zoomIn,zoomOut,status,format,summary,curve,fullMin,fullMax,scopeLabel,presets}){
+export function historyZoom({reset,zoomIn,zoomOut,status,format,summary,curve,fullMin,fullMax,scopeLabel,presets,medianOnly=false}){
+ const extentPoints=medianOnly?curve.map(p=>({...p,min:p.median,max:p.median})):curve;
  let cleanup=()=>{},hover=null,drag=null;
- const fitY=chart=>{const e=visibleExtent(curve,chart.options.scales.x.min,chart.options.scales.x.max);if(e)Object.assign(chart.options.scales.y,e);};
+ const fitY=chart=>{const e=visibleExtent(extentPoints,chart.options.scales.x.min,chart.options.scales.x.max);if(e)Object.assign(chart.options.scales.y,e);};
  return {id:'historyWheelZoom',beforeInit:fitY,afterInit(chart){
   const canvas=chart.canvas,parent=canvas.parentElement,oldCursor=canvas.style.cursor;
   canvas.style.cursor='grab';canvas.setAttribute('tabindex','0');canvas.setAttribute('aria-label','가격 추이. 휠로 확대·축소, 드래그로 기간 이동. 키보드 +, -, 방향키, Home 사용 가능.');
@@ -42,7 +43,7 @@ export function historyZoom({reset,zoomIn,zoomOut,status,format,summary,curve,fu
    if(!inside(p)){clear();return;}
    const {min,max}=chart.options.scales.x,x=chart.scales.x.getValueForPixel(p.x),visible=summary.filter(r=>r.x>=min&&r.x<=max);
    if(!visible.length){clear();return;}hover=visible.reduce((a,b)=>Math.abs(a.x-x)<=Math.abs(b.x-x)?a:b);
-   const priceText=hover.min===hover.max?'가격  $'+hover.median.toFixed(3)+' / GPU·시간':'중앙값  $'+hover.median.toFixed(3)+' / GPU·시간\n최저  $'+hover.min.toFixed(3)+'   최고  $'+hover.max.toFixed(3);
+   const priceText=medianOnly?'일별 중앙값  $'+hover.median.toFixed(2)+' / GPU·시간':hover.min===hover.max?'가격  $'+hover.median.toFixed(3)+' / GPU·시간':'중앙값  $'+hover.median.toFixed(3)+' / GPU·시간\n최저  $'+hover.min.toFixed(3)+'   최고  $'+hover.max.toFixed(3);
    tip.textContent=(scopeLabel?scopeLabel+'\n':'')+format(hover.x)+' · 실제 관측\n'+priceText+'\n'+hover.count+'개 오퍼';tip.style.display='block';
    const r=canvas.getBoundingClientRect();tip.style.left=Math.max(0,Math.min(p.x*r.width/chart.width+16,parent.clientWidth-tip.offsetWidth-8))+'px';tip.style.top=Math.max(0,Math.min(p.y*r.height/chart.height-35,parent.clientHeight-tip.offsetHeight))+'px';chart.draw();
   };
