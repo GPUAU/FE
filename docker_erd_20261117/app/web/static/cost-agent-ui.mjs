@@ -40,9 +40,12 @@ async function call(fetchImpl, path, init) {
   return data;
 }
 
-export function startSession(file, goal, fetchImpl = fetch) {
+/** 파일 하나(File)는 예전처럼 'file', 여러 개(배열)는 'files'로 보낸다 (부서별 문서 → 원가 기준표). */
+export function startSession(fileOrFiles, goal, fetchImpl = fetch) {
   const body = new FormData();
-  body.append('file', file, file.name);
+  const files = Array.isArray(fileOrFiles) ? fileOrFiles : [fileOrFiles];
+  if (files.length === 1) body.append('file', files[0], files[0].name);
+  else files.forEach(f => body.append('files', f, f.name));
   if (goal.modelId) body.append('model_id', goal.modelId);
   if (goal.gpuCount) body.append('gpu_count', String(goal.gpuCount));
   body.append('terms', (goal.terms || [3, 5]).join(','));
@@ -73,11 +76,11 @@ export function renderStart(models = []) {
     <div class="ca-start-card">
       <header class="ca-section-head"><div><p class="ca-eyebrow">청구서 기반 산정</p><h2>청구서 등록</h2><p class="ca-desc">임차료·전력비 등 청구 내역을 바탕으로 원가와 제안가를 계산합니다.</p></div><span class="ca-stage-label">새 분석</span></header>
       <label class="ca-drop" data-ca-drop tabindex="0" role="button" aria-label="청구서 파일 선택">
-        <input type="file" accept=".xlsx,.csv,.pdf" data-ca-file hidden>
+        <input type="file" accept=".xlsx,.csv,.pdf" data-ca-file multiple hidden>
         <span class="ca-document" aria-hidden="true"><svg viewBox="0 0 48 56" fill="none"><path d="M8 2h22l12 12v38a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2Z"/><path d="M30 2v12h12M15 25h18M15 32h18M15 39h10"/></svg></span>
-        <strong>청구서 파일을 여기에 놓으세요</strong>
+        <strong>청구서·부서 문서를 여기에 놓으세요</strong>
         <span class="ca-upload-sub">또는 <span class="ca-file-action">파일 선택</span></span>
-        <small>XLSX, CSV, PDF (스캔본은 서버 안에서 OCR) · 최대 5MB</small>
+        <small>XLSX, CSV, PDF (스캔본은 서버 안에서 OCR) · 파일당 최대 5MB · 여러 개를 함께 올리면 원가 기준표로 합칩니다</small>
         <span class="ca-file" data-ca-filename aria-live="polite"></span>
       </label>
       <div class="ca-context-head"><h3>GPU 정보</h3><span>선택 입력</span></div>
@@ -219,6 +222,60 @@ export function renderBusy(label) {
   return `<div class="ca-card ca-busy" aria-live="polite"><span class="ca-spinner" aria-hidden="true"></span><div><h3>${esc(label)}</h3><p class="ca-desc">AI 분류와 원가 계산을 진행하고 있어요. 보통 10~20초 걸립니다.</p></div></div>`;
 }
 
+// ------------------------------------------------------------------ 원가 기준표 (여러 부서 문서)
+const CELL_LABEL = {
+  rack: '랙·상면 사용료', rent: '공간 임대료', electricity: '전력·냉각', network: '회선·스토리지',
+  operations: '운영비 (청구서 운영비 + 사내 인건비·판관비)', gpu_lease: 'GPU 임차', memory: '메모리', other: '기타',
+  acquisition: '서버·GPU 취득비', gpu_model: 'GPU 모델', gpu_count: 'GPU 수', depreciation_years: '감가상각 연수',
+  utilization: '유료 가동률', pricing_method: '마진 방식', target_rate: '목표 마진', fx_krw_per_usd: '환율 (원/달러)',
+  interest_rate_type: '금리 종류', annual_interest_rate: '연 금리', discount_3: '3년 약정 할인', discount_5: '5년 약정 할인',
+  plan_annual_cost: '검산 연간 원가', plan_hourly_cost: '검산 시간당 원가', plan_price: '검산 시간당 판매가', plan_price_usd: '검산 달러 판매가'
+};
+const CORE_CELLS = ['rack', 'electricity', 'network', 'operations', 'acquisition'];
+const CELL_STATUS = { filled: '채움', included: '다른 요금에 포함', excluded: '제외', empty: '빈칸', conflict: '충돌' };
+const METHOD_LABEL = { REVENUE_MARGIN: '매출 기준 이익률', COST_MARKUP: '원가 가산율' };
+
+function cellValue(c) {
+  if (c.status === 'conflict') return (c.candidates || []).map(x => `${esc(x.text)} <small>(${esc(x.doc)})</small>`).join(' · ');
+  if (c.value == null || c.value === '') return '—';
+  if (c.unit === '%') return `${Math.round(Number(c.value) * 1000) / 10}%`;
+  if (c.unit === '원' || c.currency === 'KRW') return esc(money(c.value, 'KRW'));
+  if (c.unit === 'method') return esc(METHOD_LABEL[c.value] || c.value);
+  if (typeof c.value === 'number') return `${esc(c.value.toLocaleString('ko-KR'))}${esc(c.unit === 'KRW/USD' ? '원/달러' : c.unit || '')}`;
+  return esc(c.value);
+}
+
+/** 원가 기준표: 칸마다 값 · 상태 · 출처 문서 · 등급 · 메모. 빈 비핵심 칸은 뺀다. */
+export function renderSheet(s) {
+  const cells = s?.sheet?.cells;
+  if (!cells) return '';
+  const rows = Object.values(cells).filter(c => c.status !== 'empty' || CORE_CELLS.includes(c.key)).map(c => {
+    const docs = [...new Set((c.sources || []).map(x => x.doc))];
+    const fixed = s.sheet_answers?.[c.key] ? ' <span class="ca-tag">담당자 확인</span>' : '';
+    return `<tr data-status="${esc(c.status)}"><th scope="row">${esc(CELL_LABEL[c.key] || c.key)}${fixed}</th><td>${cellValue(c)}</td>
+      <td><span class="ca-cell-status">${esc(CELL_STATUS[c.status] || c.status)}</span></td>
+      <td>${docs.map(d => `<span class="ca-doc">${esc(d)}</span>`).join(' ') || '—'}${c.grade ? `<small>${esc(c.grade)}</small>` : ''}</td>
+      <td class="ca-muted">${esc(c.note || '')}</td></tr>`;
+  }).join('');
+  const notices = (s.sheet.notices || []).map(n => `<li>${esc(n)}</li>`).join('');
+  return `<details class="ca-sheet" open><summary>원가 기준표</summary>
+    ${notices ? `<ul class="ca-sheet-notices" role="alert">${notices}</ul>` : ''}
+    <div class="ca-sheet-wrap"><table><thead><tr><th>칸</th><th>값</th><th>상태</th><th>출처</th><th>메모</th></tr></thead><tbody>${rows}</tbody></table></div>
+  </details>`;
+}
+
+// ------------------------------------------------------------------ 확인할 점 (천천히 보여 주기)
+// 누락값·오류·질문 줄은 재생할 때 더 오래 머물고, 다음 카드 위에 '확인할 점'으로 남는다 (담당자가 놓치지 않게)
+const ISSUE_KINDS = ['warn', 'ask'];
+export function renderIssues(events = []) {
+  const list = events.filter(e => ISSUE_KINDS.includes(e.kind));
+  if (!list.length) return '';
+  return `<div class="ca-card ca-issues" role="status" aria-live="polite">
+    <p class="ca-step-label">이번 단계에서 확인할 점 ${list.length}개</p>
+    <ol>${list.map((e, i) => `<li data-kind="${esc(e.kind)}" style="--i:${i}"><b>${esc(STEP_TITLES[e.step] || e.step || '')}</b><span>${esc(e.message)}</span></li>`).join('')}</ol>
+  </div>`;
+}
+
 // ------------------------------------------------------------------ 결과
 export function renderMarket(m) {
   if (!m?.count || m.min == null) return '<p class="ca-desc">비교할 공개 가격이 없습니다.</p>';
@@ -250,6 +307,7 @@ export function renderResult(s) {
     </div>
     ${s.approval ? `<p class="ca-verdict" data-verdict="${esc(s.approval.verdict)}"><b>권고: ${esc(s.approval.verdict)}</b>${(s.approval.reasons || []).slice(0, 3).map(x => ` · ${esc(x)}`).join('')}</p>` : ''}
     <h4>시장에서의 위치</h4>${renderMarket(s.market)}
+    ${renderSheet(s)}
     <h4>에이전트 판단 요약</h4><ul class="ca-summary-list">${(s.summary || []).map(l => `<li>${esc(l)}</li>`).join('')}</ul>
     <div class="ca-actions">
       ${s.report_ready && s.approval ? `<a class="ca-btn ca-btn-primary" href="${reportHtmlUrl(s.id)}" target="_blank" rel="noopener">승인 보고서 (한 장)</a>` : ''}
@@ -303,7 +361,7 @@ export function renderActivity(s) {
     <ol class="ca-timeline">${ev.map(e => `<li data-kind="${esc(e.kind)}"><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('')}</ol></details>`;
 }
 
-export function renderWorkspace(s, { busyLabel = '', models = [], live = null, enter = false } = {}) {
+export function renderWorkspace(s, { busyLabel = '', models = [], live = null, enter = false, issues = [] } = {}) {
   const d = s.draft;
   const a = s.assumptions || {};
   const goalModel = models.find(m => String(m.id) === String(s.goal?.model_id))?.name;
@@ -315,11 +373,11 @@ export function renderWorkspace(s, { busyLabel = '', models = [], live = null, e
   ].filter(Boolean);
   const main = live ? renderLive(s, live)
     : busyLabel ? renderBusy(busyLabel)
-    : s.question ? renderQuestion(s.question, s)
+    : s.question ? renderIssues(issues) + renderQuestion(s.question, s) + (s.question.step === 'MISSING' ? renderSheet(s) : '')
       : s.step === 'DONE' && s.simulation ? renderResult(s)
         : `<div class="ca-card"><h3>에이전트가 멈췄습니다</h3><p class="ca-desc">단계 표시줄에서 중단된 이유를 확인하고 새 청구서로 다시 시작하세요.</p><div class="ca-actions"><button type="button" class="ca-btn ca-btn-primary" data-ca-reset>새 청구서로 시작</button></div></div>`;
   return `<section class="ca ca-run">
-    <header class="ca-runhead"><div><p class="ca-eyebrow">원가 에이전트</p><h2>${esc(d?.file_name || '청구서 분석')}</h2>
+    <header class="ca-runhead"><div><p class="ca-eyebrow">원가 에이전트</p><h2>${esc(s.docs?.length ? `부서 문서 ${s.docs.length}개` : d?.file_name || '청구서 분석')}</h2>
       <div class="ca-chips">${chips.map(c => `<span>${esc(c)}</span>`).join('')}</div></div>
       <button type="button" class="ca-btn ca-btn-ghost" data-ca-reset>새 청구서</button></header>
     ${renderStepper(s)}
@@ -398,7 +456,10 @@ let activeMount = 0;
 let session = null;   // 탭을 오가도 진행 중인 세션을 유지한다
 
 const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-const EVENT_DELAY = { think: 650, tool: 750, ask: 550, answer: 350, result: 600, warn: 650 };
+const EVENT_DELAY = { think: 650, tool: 750, ask: 1200, answer: 350, result: 600, warn: 1800 };
+/** 한 줄을 보여 주고 다음 줄까지 기다릴 시간. 누락·오류(주의)와 질문은 읽을 시간을 더 준다. */
+export const eventDelay = ev => EVENT_DELAY[ev?.kind] || 500;
+export const fileLabel = files => files.length > 1 ? `${files[0].name} 외 ${files.length - 1}개` : files[0]?.name || '';
 export function fmtElapsed(ms) {
   const sec = Math.max(0, Math.round(ms / 1000));
   return sec < 60 ? `${sec}초` : `${Math.floor(sec / 60)}분 ${String(sec % 60).padStart(2, '0')}초`;
@@ -458,9 +519,10 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   disposeMount();
   const mountId = ++activeMount;
   const isCurrent = () => mountId === activeMount;
+  let files = [];
+  let issues = [];      // 마지막 응답에서 나온 주의·질문 줄 (다음 카드 위에 남김)
   let hintTimer = null;
   let playback = null;
-  let file = null;
   let run = 0;          // 새 청구서로 전환하면 이전 요청의 응답을 무시한다
   // 에이전트가 실제로 일한 시간 (담당자가 답을 고르는 시간은 빼고 센다)
   let workMs = 0, busySince = null, clock = null;
@@ -488,7 +550,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   disposeMount = () => { run++; playback?.stop(); stopHints(); busyEnd(); };
   const draw = (opts = {}) => {
     stopHints();
-    host.innerHTML = session ? renderWorkspace(session, { ...opts, models }) : renderStart(models);
+    host.innerHTML = session ? renderWorkspace(session, { ...opts, models, issues }) : renderStart(models);
     paintElapsed();
     const card = host.querySelector('.ca-question');
     if (card) {
@@ -526,6 +588,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     session = next;
     if (!onAgentTab()) return;
     const events = (next.events || []).slice(prev?.events?.length || 0);
+    issues = events.filter(e => ISSUE_KINDS.includes(e.kind));
     if (!events.length) { draw({enter:true}); return; }
     let board = (prev?.board || pendingSession('', {}).board).map(b => ({...b}));
     const first = {...next, board:boardAt(board,next,events[0]), step:events[0].step, question:null};
@@ -534,7 +597,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     const valid = () => requestId === run && isCurrent() && host.isConnected && onAgentTab();
     let readingStarted = false;
     playback = createProgressPlayback({events, immediate:reducedMotion(),
-      delayFor:ev=>EVENT_DELAY[ev.kind] || 500,
+      delayFor:eventDelay,
       active:()=>{if (!valid()) {playback?.stop();return false;}return !document.hidden;},
       onEvent:ev=>{
         board = boardAt(board,next,ev);
@@ -544,7 +607,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
         const list = host.querySelector('.ca-live-feed');
         if (list) {
           list.querySelector('[aria-current]')?.removeAttribute('aria-current');
-          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in${ISSUE_KINDS.includes(ev.kind) ? ' ca-live-issue' : ''}" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
           list.scrollTop = list.scrollHeight;
         }
       },
@@ -570,32 +633,34 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     const drop = host.querySelector('[data-ca-drop]');
     const input = host.querySelector('[data-ca-file]');
     const start = host.querySelector('[data-ca-start]');
-    const pick = f => {
-      if (!f) return;
-      file = f;
-      host.querySelector('[data-ca-filename]').textContent = `선택됨 · ${f.name}`;
+    const pick = list => {
+      const picked = [...(list || [])];
+      if (!picked.length) return;
+      files = picked;
+      host.querySelector('[data-ca-filename]').textContent = `선택됨 · ${fileLabel(files)}`;
       drop.classList.add('has-file');
       start.disabled = false;
-      host.querySelector('.ca-start-footer > span').textContent = '등록한 청구서를 분석할 준비가 되었습니다.';
+      host.querySelector('.ca-start-footer > span').textContent = files.length > 1
+        ? `문서 ${files.length}개를 원가 기준표로 합쳐 분석할 준비가 되었습니다.` : '등록한 청구서를 분석할 준비가 되었습니다.';
     };
     drop.addEventListener('keydown', e => {
       if (e.target !== drop || !['Enter', ' '].includes(e.key)) return;
       e.preventDefault(); e.stopPropagation(); input.click();
     });
-    input.addEventListener('change', e => pick(e.target.files?.[0]));
+    input.addEventListener('change', e => pick(e.target.files));
     ['dragenter', 'dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('is-over'); }));
     ['dragleave', 'drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('is-over'); }));
-    drop.addEventListener('drop', e => pick(e.dataTransfer?.files?.[0]));
+    drop.addEventListener('drop', e => pick(e.dataTransfer?.files));
     start.addEventListener('click', async () => {
-      if (!file) return;
+      if (!files.length) return;
       const goal = { model_id: host.querySelector('[data-ca-model]').value || null, gpu_count: Number(host.querySelector('[data-ca-gpu]').value) || null };
       const requestId = ++run;
       workMs = 0;
-      const placeholder = pendingSession(file.name, goal);
+      const placeholder = pendingSession(fileLabel(files), goal);
       showWaiting(placeholder);
       host.scrollIntoView({ block: 'start', behavior: reducedMotion() ? 'auto' : 'smooth' });
       try {
-        const next = await startSession(file, { modelId: goal.model_id, gpuCount: goal.gpu_count }, fetchImpl);
+        const next = await startSession(files.length === 1 ? files[0] : files, { modelId: goal.model_id, gpuCount: goal.gpu_count }, fetchImpl);
         await replay(placeholder, next, requestId);
       } catch (ex) {
         if (requestId !== run || !isCurrent()) return;
@@ -631,7 +696,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; file = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; files = []; issues = []; draw(); return; }
     if (btn.hasAttribute('data-ca-playback-next')) { playback?.next(); return; }
     if (btn.hasAttribute('data-ca-playback-pause')) { playback?.toggle(); return; }
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }

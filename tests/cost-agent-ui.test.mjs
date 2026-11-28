@@ -193,3 +193,57 @@ test('upload accepts PDF bills as well as Excel and CSV', () => {
   assert.ok(html.includes('accept=".xlsx,.csv,.pdf"'));
   assert.ok(html.includes('PDF'));
 });
+
+// ---------------------------------------------------------------- 여러 부서 문서 · 기준표 · 천천히 보여 주는 확인할 점
+import { renderSheet, renderIssues, eventDelay, fileLabel } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('upload sends multiple files as files[]', async () => {
+  let sent = null;
+  const ok = async (url, init) => { sent = init.body; return { ok: true, json: async () => ({ id: 's' }) }; };
+  await startSession([new File(['a'], '01.pdf'), new File(['b'], '03.pdf')], {}, ok);
+  assert.deepEqual(sent.getAll('files').map(f => f.name), ['01.pdf', '03.pdf']);
+  assert.equal(sent.get('file'), null);
+  await startSession([new File(['a'], 'c.xlsx')], {}, ok);  // 하나면 예전처럼 file
+  assert.equal(sent.get('file').name, 'c.xlsx');
+  assert.equal(fileLabel([{ name: 'a.pdf' }, { name: 'b.pdf' }, { name: 'c.pdf' }]), 'a.pdf 외 2개');
+});
+
+test('start screen allows several files', () => {
+  assert.ok(renderStart([]).includes('multiple'));
+});
+
+const sheet = { cells: {
+  acquisition: { key: 'acquisition', value: 1009000000, unit: '원', currency: 'KRW', status: 'filled', grade: '사내 문서 · 교차 확인 2건',
+    sources: [{ doc: '01_구매팀.pdf', page: 1, row: 10 }, { doc: '04_재무회계팀.pdf', page: 1, row: 6 }], note: '', owner: '구매팀·재무회계팀' },
+  electricity: { key: 'electricity', value: null, unit: '', status: 'conflict', sources: [], note: '', owner: '시설운영팀',
+    candidates: [{ doc: '03', text: '57,600,000원' }, { doc: '09', text: '60,000,000원' }] },
+  utilization: { key: 'utilization', value: 0.7, unit: '%', status: 'filled', sources: [{ doc: '06_영업팀.pdf', row: 9 }], note: '문장 교차 확인 일치' },
+  memory: { key: 'memory', value: null, status: 'empty', sources: [] }
+}, notices: ['x.pdf: 문서 종류를 확인해 주세요'] };
+
+test('cost sheet table shows value, sources, conflicts and notices', () => {
+  const html = renderSheet({ sheet, sheet_answers: {} });
+  assert.ok(html.includes('서버·GPU 취득비') && html.includes('10.09억 원') && html.includes('01_구매팀.pdf'));
+  assert.ok(html.includes('교차 확인 2건') && html.includes('70%'));
+  assert.ok(html.includes('충돌') && html.includes('57,600,000원') && html.includes('60,000,000원'));
+  assert.ok(html.includes('문서 종류를 확인해 주세요'));
+  assert.ok(!html.includes('메모리'));  // 빈 비핵심 칸은 표에 넣지 않음
+  assert.equal(renderSheet({}), '');
+});
+
+test('warnings and questions are held longer than routine lines', () => {
+  assert.ok(eventDelay({ kind: 'warn' }) >= 1500 && eventDelay({ kind: 'warn' }) > 2 * eventDelay({ kind: 'answer' }));
+  assert.ok(eventDelay({ kind: 'ask' }) > eventDelay({ kind: 'think' }));
+});
+
+test('issues found in a step stay pinned above the next card', () => {
+  const warns = [{ step: 'ANALYZE', kind: 'warn', message: '총액이 맞지 않아요' }, { step: 'MISSING', kind: 'ask', message: '전력 칸이 비었어요' },
+    { step: 'ANALYZE', kind: 'think', message: '판단' }];
+  const html = renderIssues(warns);
+  assert.ok(html.includes('확인할 점 2개') && html.includes('총액이 맞지 않아요') && html.includes('전력 칸이 비었어요'));
+  assert.ok(!html.includes('판단'));
+  assert.equal(renderIssues([{ kind: 'result', message: 'ok' }]), '');
+  const ws = renderWorkspace({ ...session, sheet }, { issues: warns });
+  assert.ok(ws.indexOf('확인할 점 2개') < ws.indexOf('ca-question'));
+  assert.ok(ws.includes('원가 기준표'));
+});
