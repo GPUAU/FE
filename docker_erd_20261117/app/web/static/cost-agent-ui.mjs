@@ -716,7 +716,7 @@ function countUp(root) {
   });
 }
 
-export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fetchImpl = fetch }) {
+export function mountAgentWorkspace({ host, models = [], onSendToCalculator, onResult, onInvalidate, fetchImpl = fetch }) {
   disposeMount();
   const mountId = ++activeMount;
   const isCurrent = () => mountId === activeMount;
@@ -792,6 +792,8 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     if (requestId !== run || !isCurrent()) return;
     stopHints(); busyEnd(); playback?.stop();
     session = next;
+    // 화면 이동 또는 처리 내역 재생 여부와 관계없이 완료 결과를 견적에 전달한다.
+    if (next.step === 'DONE' && next.simulation) onResult?.(next.simulation);
     if (!onAgentTab()) return;
     const events = (next.events || []).slice(prev?.events?.length || 0);
     issues = events.filter(isIssue);
@@ -870,6 +872,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
       if (!files.length) return;
       const goal = { model_id: host.querySelector('[data-ca-model]').value || null, gpu_count: Number(host.querySelector('[data-ca-gpu]').value) || null };
       const requestId = ++run;
+      onInvalidate?.();
       workMs = 0;
       const placeholder = pendingSession(fileLabel(files), goal);
       showWaiting(placeholder);
@@ -911,7 +914,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; files = []; issues = []; openFlag = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { onInvalidate?.(); playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; files = []; issues = []; openFlag = null; draw(); return; }
     if (btn.hasAttribute('data-ca-flag') && session) {
       openFlag = openFlag === btn.dataset.caFlag ? null : btn.dataset.caFlag;
       const shown = playback ? null : session;  // 재생 중에는 표시줄이 재생 상태를 그리므로 끝난 뒤에 반영한다
