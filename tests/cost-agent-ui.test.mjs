@@ -86,7 +86,7 @@ test('API calls go through the /agent proxy and surface errors', async () => {
   await sendAnswer('s1', { question_id: 'q1' }, ok);
   assert.deepEqual(calls, [['/agent/v1/agent/sessions', 'POST'], ['/agent/v1/agent/sessions/s1/answer', 'POST']]);
   const down = async () => ({ ok: false, status: 502, json: async () => { throw new Error('x'); } });
-  await assert.rejects(sendAnswer('s1', {}, down), /연결할 수 없습니다/);
+  await assert.rejects(sendAnswer('s1', {}, down), /연결할 수 없어요/);
 });
 
 import { renderLive, pendingSession, boardAt, WAIT_HINTS } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
@@ -270,4 +270,41 @@ test('issues stay pinned on the result and on a stopped run', () => {
 test('live feed stops following once an issue line is shown', () => {
   assert.equal(followFeed([{ kind: 'think' }, { kind: 'result' }]), true);
   assert.equal(followFeed([{ kind: 'warn', step: 'ANALYZE' }, { kind: 'result' }]), false);
+});
+
+// ---------------------------------------------------------------- 사용자가 이해할 수 있는 오류 문구
+import { errorMessage } from '../docker_erd_20261117/app/web/static/bill-import.mjs';
+import { checkUpload } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('server message in BE format is shown as is', () => {
+  assert.equal(errorMessage(403, { isSuccess: false, code: 'FORBIDDEN', message: '권한이 없습니다.' }), '권한이 없습니다.');
+  assert.equal(errorMessage(422, { detail: '선택지에서 골라 주세요.' }), '선택지에서 골라 주세요.');  // 예전 형식
+  assert.equal(errorMessage(422, { detail: { message: '오류를 먼저 고쳐야 계산할 수 있습니다.' } }), '오류를 먼저 고쳐야 계산할 수 있습니다.');
+});
+
+test('proxy errors without JSON get a friendly message, never a bare status code', () => {
+  const m413 = errorMessage(413, null);
+  assert.ok(m413.includes('파일이 너무 커요') && m413.includes('20MB') && !m413.includes('413'));
+  assert.equal(errorMessage(401, null), '로그인이 필요합니다. 다시 로그인해 주세요.');
+  assert.equal(errorMessage(403, null), '권한이 없습니다.');
+  assert.ok(errorMessage(404, null).includes('찾을 수 없'));
+  assert.ok(errorMessage(504, null).includes('잠시 후'));
+  assert.ok(errorMessage(500, null).includes('일시적인 오류'));
+  assert.ok(!/\(\d{3}\)/.test(errorMessage(418, null)));
+});
+
+test('API call turns a proxy 413 page into the friendly message', async () => {
+  const html413 = async () => ({ ok: false, status: 413, json: async () => { throw new Error('html'); } });
+  await assert.rejects(startSession(new File(['x'], 'a.pdf'), {}, html413), /파일이 너무 커요/);
+  const offline = async () => { throw new TypeError('Failed to fetch'); };
+  await assert.rejects(sendAnswer('s', {}, offline), /서버에 연결할 수 없어요/);
+});
+
+test('upload is checked before sending: per-file size, total size, file count', () => {
+  const mb = n => ({ name: `f${n}.pdf`, size: n * 1024 * 1024 });
+  assert.equal(checkUpload([mb(1), mb(2)]), null);
+  assert.ok(checkUpload([{ name: '큰파일.pdf', size: 6 * 1024 * 1024 }]).includes("'큰파일.pdf' 파일이 너무 커요"));
+  assert.ok(checkUpload([mb(5), mb(5), mb(5), mb(5), mb(4)]).includes('합쳐 최대 20MB'));
+  assert.ok(checkUpload(Array.from({ length: 21 }, () => mb(0.1))).includes('최대 20개'));
+  assert.ok(checkUpload([{ name: 'a.hwp', size: 10 }]).includes('xlsx, csv, pdf'));
 });

@@ -81,8 +81,8 @@ server {
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
         proxy_connect_timeout 5s;
-        proxy_read_timeout 120s;
-        client_max_body_size 6m;
+        proxy_read_timeout 300s;  # 스캔 PDF OCR은 오래 걸릴 수 있다
+        client_max_body_size 25m;  # cost-agent 합계 한도 20MB + multipart 여유 (ingress proxy-body-size와 맞춤)
         add_header Cache-Control "no-store" always;
     }
 

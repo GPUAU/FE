@@ -3,7 +3,7 @@
  * 에이전트(cost-agent /agent/v1/agent/sessions)가 단계를 진행하고, 이 화면은 상태를 그리기만 한다. 숫자 계산은 서버가 한다.
  */
 import { createProgressPlayback } from './agent-progress-playback.mjs?v=hold5-1127';
-import { AGENT_BASE, toCostForm, applyToForm, markMissing } from './bill-import.mjs';
+import { AGENT_BASE, toCostForm, applyToForm, markMissing, requestJson, UPLOAD_LIMITS } from './bill-import.mjs?v=err-1128';
 
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
 const STEP_ORDER = ['ANALYZE', 'MISSING', 'ASSUMPTIONS', 'SIMULATE', 'MARKET', 'TERMS', 'REVIEW', 'REPORT'];
@@ -28,16 +28,22 @@ export function money(amount, currency) {
 }
 
 // ------------------------------------------------------------------ API
-async function call(fetchImpl, path, init) {
-  const r = await fetchImpl(`${AGENT_BASE}${path}`, init);
-  let data = null;
-  try { data = await r.json(); } catch { /* 비 JSON */ }
-  if (!r.ok) {
-    if ([502, 503, 504].includes(r.status)) throw new Error('원가 에이전트 서버에 연결할 수 없습니다. 잠시 후 다시 시도하세요.');
-    const d = data?.detail;
-    throw new Error(typeof d === 'string' ? d : d?.message || `요청 실패 (${r.status})`);
-  }
-  return data;
+function call(fetchImpl, path, init) {
+  return requestJson(fetchImpl, `${AGENT_BASE}${path}`, init);  // 오류는 사용자 문구로 (bill-import.mjs errorMessage)
+}
+
+const ALLOWED = /\.(xlsx|csv|pdf)$/i;
+/** 올리기 전에 확인: 파일 종류·개수·파일당 크기·합계. 문제가 없으면 null. */
+export function checkUpload(files) {
+  const MB = 1024 * 1024;
+  const { fileMb, totalMb, files: maxFiles } = UPLOAD_LIMITS;
+  if (files.length > maxFiles) return `한 번에 최대 ${maxFiles}개까지 올릴 수 있어요. 나눠서 올려 주세요.`;
+  const bad = files.find(f => !ALLOWED.test(f.name || ''));
+  if (bad) return `'${bad.name}': xlsx, csv, pdf 파일만 올릴 수 있어요.`;
+  const big = files.find(f => f.size > fileMb * MB);
+  if (big) return `'${big.name}' 파일이 너무 커요. 파일 하나는 최대 ${fileMb}MB까지 올릴 수 있어요.`;
+  if (files.reduce((n, f) => n + f.size, 0) > totalMb * MB) return `올린 파일을 합쳐 최대 ${totalMb}MB까지 보낼 수 있어요. 나눠서 올려 주세요.`;
+  return null;
 }
 
 /** 파일 하나(File)는 예전처럼 'file', 여러 개(배열)는 'files'로 보낸다 (부서별 문서 → 원가 기준표). */
@@ -644,6 +650,10 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     const pick = list => {
       const picked = [...(list || [])];
       if (!picked.length) return;
+      const problem = checkUpload(picked);
+      const err = host.querySelector('[data-ca-error]');
+      if (err) err.textContent = problem || '';
+      if (problem) { files = []; start.disabled = true; drop.classList.remove('has-file'); host.querySelector('[data-ca-filename]').textContent = ''; return; }
       files = picked;
       host.querySelector('[data-ca-filename]').textContent = `선택됨 · ${fileLabel(files)}`;
       drop.classList.add('has-file');
