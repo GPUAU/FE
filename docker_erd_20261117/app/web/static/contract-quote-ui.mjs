@@ -1,10 +1,13 @@
-import {mountQuoteMarket} from './contract-quote-market.mjs?v=benchmark1125';
+import {fetchMarketCatalog} from './spring-market-client.mjs';
+import {mountQuoteMarket} from './contract-quote-market.mjs?v=quote-krw1128';
 import {calculateContractQuote, quoteText} from './contract-quote.mjs?v=mentoring1125';
 const esc = value => String(value ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const defaults = () => ({model:'', currency:'USD', price:'', cost:'', quantity:'1', billing:'full', monthlyHours:'', discount3:'', discount5:'', sourceLabel:'사용자 직접 입력'});
 export function mountQuote({host, saved, getSource, loadMarket, request}) {
   saved.draft ||= defaults();
   const d = saved.draft;
+  const modelOptions = () => `<option value="">GPU 모델 선택</option>${(saved.quoteModels || []).map(model=>`<option value="${esc(model.name)}">${esc(model.name)}</option>`).join('')}<option value="__custom__">직접 입력</option>`;
+  const modelChoice = () => (saved.quoteModels || []).some(model=>model.name===d.model) ? d.model : d.model ? '__custom__' : '';
   const examples = () => ({price:d.currency==='KRW'?'예: 6700':'예: 5.00', cost:d.currency==='KRW'?'예: 4000':'예: 3.00', quantity:'예: 8', monthlyHours:'예: 360', discount3:'예: 10', discount5:'예: 20'});
   const number = (key, label, note, step='any') => `<label for="cq-${key}">${label}<input id="cq-${key}" name="${key}" type="number" min="0" step="${step}" value="${esc(d[key])}" placeholder="${esc(examples()[key])}"><small>${note}</small></label>`;
   host.innerHTML = `<div class="mv cp-page rw-page rw-contracts cq-page">
@@ -14,7 +17,7 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     <div class="cq-actions"><button type="button" class="mv-btn" data-import>원가·제안가 결과 가져오기</button><a href="#cost/datacenter" class="cq-link">데이터센터 원가 계산</a></div>
     <p class="cq-source" data-source></p><p role="status" data-import-status></p>
     <form data-quote-form novalidate><div class="cq-fields">
-      <label for="cq-model">견적 대상 GPU·상품<input id="cq-model" name="model" maxlength="120" value="${esc(d.model)}" placeholder="예: B300 · 제공 사양 직접 입력"><small>센터 원가를 가져온 경우 실제 적용할 GPU·사양을 확인하세요.</small></label>
+      <div class="cq-model-field"><label for="cq-model-choice">견적 대상 GPU·상품<select id="cq-model-choice" name="modelChoice">${modelOptions()}</select><small data-model-help>GPU 모델을 선택하세요. 상품명·세부 사양은 직접 입력할 수 있습니다.</small></label><label for="cq-model" data-model-custom ${modelChoice()==='__custom__'?'':'hidden'}>상품명·세부 사양<input id="cq-model" name="model" maxlength="120" value="${esc(d.model)}" placeholder="예: B300 · 8 GPU 서버"></label></div>
       <label for="cq-currency">견적 통화<select name="currency" id="cq-currency"><option value="USD" ${d.currency==='USD'?'selected':''}>USD · 미국 달러</option><option value="KRW" ${d.currency==='KRW'?'selected':''}>KRW · 대한민국 원</option></select><small>통화 변경은 환율 변환이 아닙니다. 단가를 새로 입력하세요.</small></label>
       ${number('price','기준 판매단가 / GPU·시간','할인 적용 전 우리 판매단가 · 소수 6자리까지')}
       ${number('quantity','계약 GPU 수량','노드 수가 아닌 GPU 개수', '1')}
@@ -33,11 +36,27 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
   const resultHost = host.querySelector('[data-result]');
   const errorHost = host.querySelector('[data-error]');
   const field = key => form.elements.namedItem(key);
+  field('modelChoice').value=modelChoice();
+  if(request && !saved.quoteModels) {
+    host.querySelector('[data-model-help]').textContent='등록된 GPU 모델을 불러오고 있습니다…';
+    fetchMarketCatalog(request).then(catalog=>{
+      saved.quoteModels=catalog.models;
+      if(!form.isConnected)return;
+      const keepCustom=field('modelChoice').value==='__custom__';
+      field('modelChoice').innerHTML=modelOptions();
+      field('modelChoice').value=keepCustom?'__custom__':modelChoice();
+      host.querySelector('[data-model-custom]').hidden=field('modelChoice').value!=='__custom__';
+      host.querySelector('[data-model-help]').textContent='GPU 모델을 선택하세요. 상품명·세부 사양은 직접 입력할 수 있습니다.';
+    }).catch(()=>{
+      if(form.isConnected)host.querySelector('[data-model-help]').textContent='모델 목록을 불러오지 못했습니다. 직접 입력을 이용해 주세요.';
+    });
+  }
   const note = text => { host.querySelector('[data-import-status]').textContent = text; };
   const sourceLabel = () => {host.querySelector('[data-source]').textContent = '단가 출처: ' + d.sourceLabel;};
   const stale = () => saved.sourceId && saved.sourceId !== getSource()?.id;
   const read = () => {for (const key of Object.keys(defaults())) if (field(key)) d[key] = field(key).value;};
   const money = (cents, currency=d.currency) => (cents / 100).toLocaleString('ko-KR', {minimumFractionDigits:2, maximumFractionDigits:2}) + ' ' + esc(currency);
+  const krw = (usd, currency) => currency === 'USD' ? `<small class="cq-krw" data-usd="${Number(usd)}" data-krw-compact></small>` : '';
   function invalidate(message='조건이 변경되었습니다. 예상 견적을 다시 계산하세요.') {
     saved.result = null; errorHost.textContent = ''; paint(message);
   }
@@ -53,9 +72,9 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     const r=saved.result, i=r.input;
     if(request){benchmark.hidden=false;const target=document.createElement('div');benchmarkBody.append(target);mountQuoteMarket({host:target,quote:r,request});}
     resultHost.innerHTML=`<div class="cp-results-head cq-section-head"><div><p class="cq-eyebrow">견적 결과</p><h2>장기계약 예상 견적</h2><p>${esc(i.model)} · ${esc(i.quantity)} GPU · ${esc(i.currency)}</p></div><span class="cq-badge">확정 계약가 아님</span></div><p class="cq-source">${esc(i.sourceLabel)}</p><div class="cq-actions cq-benchmark-jump"><button type="button" class="mv-btn primary" data-show-benchmark>경쟁사 약정 가격 보기</button><span>같은 GPU의 온디맨드·3년·5년 약정 비교</span></div>
-      <div class="cq-result-grid">${r.rows.map(row=>`<article class="cq-result-card"><div class="cq-term"><h3>${row.years}년 계약</h3><span>${row.discount}% 할인</span></div><small>총 계약금액 · 세금 별도</small><strong class="cq-total">${money(row.totalCents,i.currency)}</strong><dl><div><dt>할인 전 총액</dt><dd>${money(row.baselineCents,i.currency)}</dd></div><div><dt>절감액</dt><dd>${money(row.savingCents,i.currency)}</dd></div><div><dt>할인 단가 / GPU·시간</dt><dd>${row.unit.toLocaleString('ko-KR',{maximumFractionDigits:10})} ${esc(i.currency)}</dd></div><div><dt>월 평균 환산</dt><dd>${money(row.monthlyCents,i.currency)}</dd></div><div><dt>총 과금 GPU·시간</dt><dd>${row.gpuHours.toLocaleString('ko-KR')}</dd></div></dl>
+      <div class="cq-result-grid">${r.rows.map(row=>`<article class="cq-result-card"><div class="cq-term"><h3>${row.years}년 계약</h3><span>${row.discount}% 할인</span></div><small>총 계약금액 · 세금 별도</small><strong class="cq-total">${money(row.totalCents,i.currency)}</strong>${krw(row.totalCents/100,i.currency)}<dl><div><dt>할인 전 총액</dt><dd>${money(row.baselineCents,i.currency)}${krw(row.baselineCents/100,i.currency)}</dd></div><div><dt>절감액</dt><dd>${money(row.savingCents,i.currency)}${krw(row.savingCents/100,i.currency)}</dd></div><div><dt>할인 단가 / GPU·시간</dt><dd>${row.unit.toLocaleString('ko-KR',{maximumFractionDigits:10})} ${esc(i.currency)}${krw(row.unit,i.currency)}</dd></div><div><dt>월 평균 환산</dt><dd>${money(row.monthlyCents,i.currency)}${krw(row.monthlyCents/100,i.currency)}</dd></div><div><dt>총 과금 GPU·시간</dt><dd>${row.gpuHours.toLocaleString('ko-KR')}</dd></div></dl>
       ${row.free?'<p class="cq-warning">100% 할인: GPU 이용료가 0입니다. 할인율을 확인하세요.</p>':''}${row.belowCost?'<p class="cq-warning">원가 미달 · 할인 단가가 입력한 참고 원가보다 낮습니다.</p>':i.cost===''?'<p class="cq-neutral">참고 원가 미입력 · 수익성 미검증</p>':`<p class="cq-neutral">${row.margin==null?'이익률 산출 불가':'입력 원가 기준 이익률 '+(row.margin*100).toFixed(2)+'%'} · 고정 원가 가정</p>`}</article>`).join('')}</div>
-      <div class="cq-formula"><b>적용한 계산 근거</b><p>${esc(i.price)} ${esc(i.currency)} × (1 − 기간별 할인율 ÷ 100) × ${esc(i.quantity)} GPU × 연 ${r.annualHours.toLocaleString('ko-KR')}시간 × 계약 연수</p><p>월 평균은 총액 ÷ 계약 개월 수이며 실제 월 청구액이 아닙니다.</p></div>
+      ${i.currency==='USD'?'<p class="cq-fx-note">원화는 상단 표시 환율로 환산한 참고금액입니다. 실제 계약 환율에 따라 달라질 수 있습니다.</p>':''}<div class="cq-formula"><b>적용한 계산 근거</b><p>${esc(i.price)} ${esc(i.currency)} × (1 − 기간별 할인율 ÷ 100) × ${esc(i.quantity)} GPU × 연 ${r.annualHours.toLocaleString('ko-KR')}시간 × 계약 연수</p><p>월 평균은 총액 ÷ 계약 개월 수이며 실제 월 청구액이 아닙니다.</p></div>
       <div class="cq-actions"><button type="button" class="mv-btn" data-copy>견적 요약 복사</button><button type="button" class="mv-btn" data-download>견적 TXT 저장</button></div><p data-export-status role="status"></p>`;
     resultHost.querySelector('[data-show-benchmark]').onclick=()=>{benchmark.scrollIntoView({behavior:'smooth',block:'start'});benchmark.focus({preventScroll:true});};
     resultHost.querySelector('[data-copy]').onclick=async()=>{
@@ -77,6 +96,12 @@ export function mountQuote({host, saved, getSource, loadMarket, request}) {
     sourceLabel();invalidate();note('우리 목표 판매단가와 참고 원가를 가져왔습니다. 소수 6자리 기준이며 GPU 모델·계약 수량은 직접 확인하세요.');
   }
   form.addEventListener('input',event=>{
+    if(event.target.name==='modelChoice') {
+      const custom=field('modelChoice').value==='__custom__';
+      host.querySelector('[data-model-custom]').hidden=!custom;
+      field('model').value=custom?'':field('modelChoice').value;
+      if(custom)field('model').focus();
+    }
     if(event.target.name==='currency') {
       field('price').value='';field('cost').value='';note('환율을 자동 적용하지 않습니다. 선택한 통화로 단가와 원가를 다시 입력하세요.');
     }
