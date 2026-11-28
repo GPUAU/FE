@@ -1,179 +1,43 @@
-/* Original SK wing motif, with a stationary hit area and hover flight. */
+/* A docked, non-modal agent panel. The page remains usable beside it. */
+:root { --agent-panel-width: 380px; --agent-panel-top: 68px; }
 #agentLauncher {
-  position: fixed;
-  right: calc(24px + env(safe-area-inset-right, 0px));
-  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
-  z-index: 35;
-  display: inline-flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  box-sizing: border-box;
-  width: 88px;
-  height: 94px;
-  padding: 8px;
-  border: 0;
-  border-radius: 16px;
-  background: transparent;
-  color: #333842;
-  box-shadow: none;
-  font: inherit;
-  text-decoration: none;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  flex:0 0 auto; height:38px; padding:0 13px; margin-left:8px;
+  border:1px solid #f3c4cd; border-radius:6px; background:#fff;
+  color:#cf1234; font-family:inherit; font-size:14px; font-weight:500; line-height:1.2; cursor:pointer; white-space:nowrap;
 }
-#agentLauncher[hidden], body.ws-menu-open #agentLauncher { display: none; }
-#agentLauncher .agent-launcher-mark {
-  position: relative;
-  display: block;
-  flex: 0 0 auto;
-  width: 64px;
-  height: 52px;
-  perspective: 240px;
-  pointer-events: none;
-  filter: drop-shadow(0 2px 2px rgb(93 38 38 / 10%));
-}
-#agentLauncher .agent-launcher-flight,
-#agentLauncher .agent-launcher-wing {
-  position: absolute;
-  inset: 0;
-  display: block;
-  transform-origin: 46% 39%;
-}
-#agentLauncher .agent-launcher-wing { overflow: hidden; }
-#agentLauncher .agent-launcher-wing-left {
-  clip-path: polygon(0 0, 46.2% 0, 46.2% 39%, 30% 70%, 0 80%);
-}
-#agentLauncher .agent-launcher-wing-right {
-  clip-path: polygon(46.2% 0, 100% 0, 100% 100%, 0 100%, 0 80%, 30% 70%, 46.2% 39%);
-}
-#agentLauncher .agent-launcher-mark img {
-  position: absolute;
-  display: block;
-  left: -34.18px;
-  top: 0;
-  width: 195.49px;
-  height: 76.97px;
-  max-width: none;
-  clip-path: polygon(17% 0%, 30% 0%, 34% 24%, 46% 29%, 51% 48%, 34% 68%, 29% 56%, 27% 48%, 17% 49%);
-  user-select: none;
-  pointer-events: none;
-}
-#agentLauncher .agent-launcher-label {
-  font-size: 14px;
-  font-weight: 600;
-  line-height: 20px;
-  white-space: nowrap;
-  letter-spacing: .045em;
-  text-shadow: 0 1px 5px #fff, 0 0 10px #fff;
-}
-#agentLauncher:hover, #agentLauncher:focus-visible { color: #c9002b; }
-#agentLauncher:focus-visible { outline: 2px solid #c9002b; outline-offset: 3px; }
-body.has-agent-launcher #toast { bottom: calc(134px + env(safe-area-inset-bottom, 0px)); }
-@keyframes agent-hover-flight {
-  0%, 100% { transform: translateY(-2px) rotate(-2deg); }
-  50% { transform: translateY(-7px) rotate(2deg); }
-}
-@keyframes agent-wing-left {
-  0%, 100% { transform: rotateY(0deg) rotateZ(0deg); }
-  50% { transform: rotateY(48deg) rotateZ(-5deg); }
-}
-@keyframes agent-wing-right {
-  0%, 100% { transform: rotateY(0deg) rotateZ(0deg); }
-  50% { transform: rotateY(-42deg) rotateZ(5deg); }
-}
-@media (prefers-reduced-motion: no-preference) {
-  #agentLauncher .agent-launcher-flight { animation: var(--agent-flight, none); }
-  #agentLauncher .agent-launcher-wing-left { animation: var(--agent-left, none); }
-  #agentLauncher .agent-launcher-wing-right { animation: var(--agent-right, none); }
-  #agentLauncher:focus-visible {
-    --agent-flight: agent-hover-flight 1.25s ease-in-out infinite;
-    --agent-left: agent-wing-left .48s ease-in-out infinite;
-    --agent-right: agent-wing-right .48s ease-in-out infinite;
-  }
-}
-@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-  #agentLauncher:hover {
-    --agent-flight: agent-hover-flight 1.25s ease-in-out infinite;
-    --agent-left: agent-wing-left .48s ease-in-out infinite;
-    --agent-right: agent-wing-right .48s ease-in-out infinite;
-  }
-}
-@media (max-width: 650px) {
-  #agentLauncher {
-    right: calc(14px + env(safe-area-inset-right, 0px));
-    bottom: calc(14px + env(safe-area-inset-bottom, 0px));
-    width: 76px;
-    height: 84px;
-    gap: 4px;
-  }
-  #agentLauncher .agent-launcher-mark { width: 56px; height: 46px; }
-  #agentLauncher .agent-launcher-mark img { width: 171.05px; height: 67.35px; left: -29.91px; }
-  body.has-agent-launcher #toast { bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
-}
-@media print { #agentLauncher { display: none; } }
-
-
-/* Non-modal agent window: the underlying page remains interactive. */
-#agentLauncher { cursor: pointer; }
+#agentLauncher:hover, #agentLauncher[aria-expanded="true"] { background:#fff2f4; border-color:#eb8b9c; }
+#agentLauncher:focus-visible, #agentMiniWindow button:focus-visible { outline:2px solid #c9002b; outline-offset:3px; }
+#agentLauncher[hidden] { display:none; }
+#agentLauncher.agent-toggle-fallback { position:fixed; top:15px; right:20px; z-index:100; }
 #agentMiniWindow {
-  position: fixed;
-  right: calc(24px + env(safe-area-inset-right, 0px));
-  bottom: calc(126px + env(safe-area-inset-bottom, 0px));
-  z-index: 36;
-  width: min(420px, calc(100vw - 32px));
-  height: min(590px, calc(100vh - 150px));
-  height: min(590px, calc(100dvh - 150px));
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  box-sizing: border-box;
-  border: 1px solid #e1e4e9;
-  border-radius: 18px;
-  background: #fff;
-  color: #303640;
-  box-shadow: 0 16px 55px rgb(27 34 48 / 18%), 0 3px 12px rgb(27 34 48 / 6%);
+  position:fixed; top:var(--agent-panel-top); bottom:0; right:0; z-index:85;
+  display:flex; flex-direction:column; width:var(--agent-panel-width); max-width:100vw;
+  box-sizing:border-box; overflow:hidden; border:0; border-left:1px solid #e1e4e9;
+  border-radius:0; background:#fff; color:#303640; box-shadow:-4px 0 18px rgb(27 34 48 / 3%);
 }
-#agentMiniWindow[hidden], body.ws-menu-open #agentMiniWindow { display: none !important; }
+#agentMiniWindow[hidden] { display:none!important; }
 #agentMiniWindow .agent-mini-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex: 0 0 auto;
-  gap: 12px;
-  padding: 16px 18px;
-  border-bottom: 1px solid #eceef1;
-  background: #fff;
+  display:flex; align-items:center; justify-content:space-between; flex:0 0 auto;
+  gap:12px; padding:18px 20px; border-bottom:1px solid #eceef1; background:#fff;
 }
-#agentMiniWindow .agent-mini-header h2 {
-  margin: 0;
-  color: #c9002b;
-  font-size: 18px;
-  line-height: 1.3;
-  font-weight: 650;
-  letter-spacing: .01em;
-}
-#agentMiniWindow .agent-mini-header p { margin: 4px 0 0; color: #777f8c; font-size: 12px; line-height: 1.5; }
-#agentMiniWindow .agent-mini-minimize {
-  display: grid;
-  place-items: center;
-  flex: 0 0 36px;
-  width: 36px;
-  height: 36px;
-  padding: 0;
-  border: 1px solid #e6e9ee;
-  border-radius: 10px;
-  background: #fff;
-  color: #59616d;
-  font: inherit;
-  font-size: 24px;
-  cursor: pointer;
-}
-#agentMiniWindow .agent-mini-minimize:hover { background: #f5f6f8; }
-#agentMiniWindow button:focus-visible, #agentEmbeddedPanel button:focus-visible {
-  outline: 2px solid #c9002b;
-  outline-offset: 2px;
+#agentMiniWindow .agent-mini-header h2 { margin:0; color:#303640; font-size:16px; font-weight:650; line-height:1.4; }
+#agentMiniWindow .agent-mini-header p { margin:5px 0 0; color:#777f8c; font-size:13px; line-height:1.5; }
+#agentMiniWindow .agent-mini-minimize { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; padding:0; border:0; border-radius:5px; background:#fff; color:#687180; cursor:pointer; }
+#agentMiniWindow .agent-mini-minimize:hover { background:#f5f6f8; }
+html body.agent-mini-open #layout,
+html body.agent-mini-open #band,
+html body.agent-mini-open .crumbs,
+html body.agent-mini-open .main-footer,
+html body.agent-mini-open .app-footer,
+html body.agent-mini-open #hello,
+html body.agent-mini-open.workspace-data > main { margin-right:var(--agent-panel-width)!important; }
+html body.agent-mini-open #content { container-type:inline-size; container-name:agent-page; }
+@container agent-page (max-width: 1000px) {
+  html body.agent-mini-open .cp-page .cp-filterbar { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  html body.agent-mini-open .cp-page .cp-search { grid-column:1/-1; }
+  html body.agent-mini-open .cp-page .rw-catalog-top { grid-template-columns:minmax(0,1fr); }
+  html body.agent-mini-open .cp-page .cp-model-tabs { grid-template-columns:repeat(3,minmax(0,1fr)); }
 }
 #agentMiniWindow .agent-mini-body {
   display: flex;
@@ -321,16 +185,78 @@ body.has-agent-launcher #toast { bottom: calc(134px + env(safe-area-inset-bottom
 body.agent-widget-embedded { margin: 0 !important; padding: 0 !important; min-width: 0 !important; overflow: hidden !important; }
 body.agent-widget-embedded > :not(#agentEmbeddedPanel) { display: none !important; }
 #agentEmbeddedPanel { display: flex; width: 100%; height: 100vh; height: 100dvh; margin: 0; padding: 0; }
-@media (max-width: 650px) {
-  #agentMiniWindow {
-    right: calc(12px + env(safe-area-inset-right, 0px));
-    bottom: calc(106px + env(safe-area-inset-bottom, 0px));
-    width: calc(100vw - 24px - env(safe-area-inset-right, 0px));
-    height: min(540px, calc(100vh - 126px));
-    height: min(540px, calc(100dvh - 126px));
-    border-radius: 16px;
-  }
-  #agentMiniWindow .agent-mini-header { padding: 12px 16px; }
-  #agentMiniWindow #askIn, #agentEmbeddedPanel #askIn { font-size: 16px; }
+
+#agentMiniWindow .agent-welcome { margin-block:auto; padding:28px 0; }
+#agentMiniWindow .agent-welcome h2 { font-size:24px; }
+#agentMiniWindow .agent-welcome > p { font-size:14px; }
+#agentMiniWindow .intent-grid button b { font-size:14px; }
+#agentMiniWindow .intent-grid button i { display:none; }
+#agentMiniWindow #askForm { margin:0 14px; border-radius:6px; }
+#agentMiniWindow #askIn { min-height:48px; }
+@media (max-width:1100px) { :root { --agent-panel-width:350px; } }
+@media (max-width:760px) {
+  :root { --agent-panel-width:100vw; }
+  html body.agent-mini-open #layout, html body.agent-mini-open #band,
+  html body.agent-mini-open .crumbs, html body.agent-mini-open .main-footer,
+  html body.agent-mini-open .app-footer, html body.agent-mini-open #hello,
+  html body.agent-mini-open.workspace-data > main { margin-right:0!important; }
+  #agentMiniWindow { z-index:90; }
+  #agentLauncher { margin-left:0; padding:0 10px; font-size:13px; }
+  #agentMiniWindow #askIn { font-size:16px; }
 }
-@media print { #agentMiniWindow { display: none !important; } }
+@media print { #agentLauncher, #agentMiniWindow { display:none!important; } html body.agent-mini-open #layout { margin-right:0!important; } }
+
+/* A quiet SK emblem in the empty conversation, removed with the welcome. */
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome {
+  display:flex; flex-direction:column; flex:1 0 auto; min-height:365px;
+  margin:0; padding:0 0 18px; text-align:center;
+}
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome .intent-grid {
+  order:-2; display:grid; grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px; margin:0 0 16px; text-align:left;
+}
+:is(#agentMiniWindow, #agentEmbeddedPanel) .intent-grid button { padding:10px; border:1px solid #e9ebef; background:#fff; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .intent-grid button:hover { background:#fff5f6; border-color:#efbbc5; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .intent-grid button b { font-size:13px; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .intent-grid button small { font-size:12px; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .intent-grid button i { display:none; }
+.agent-welcome-mark { display:none; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome-mark {
+  display:block; position:relative; order:-1; flex:0 0 auto; align-self:center;
+  width:140px; height:114px; margin:auto 0 22px; overflow:hidden; opacity:.22; pointer-events:none;
+}
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome-mark img {
+  position:absolute; left:-74.77px; top:0; width:427.63px; height:168.37px; max-width:none;
+  clip-path:polygon(17% 0%,30% 0%,34% 24%,46% 29%,51% 48%,34% 68%,29% 56%,27% 48%,17% 49%);
+  user-select:none;
+}
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome h2 { font-size:18px; line-height:1.5; margin:0 0 10px; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome h2 br { display:none; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome > p:not(.eyebrow) { font-size:13px; line-height:1.7; margin:0 0 auto; color:#777f8c; }
+
+/* Compact composer with a separate, clearly focused send control. */
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm {
+  display:flex; align-items:flex-end; gap:8px; margin:0; padding:12px 14px 6px;
+  border:0; border-top:1px solid #eceef2; border-radius:0!important; background:#fff; box-shadow:none;
+}
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm:focus-within { border-color:#eceef2; box-shadow:none; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askIn {
+  box-sizing:border-box; min-height:40px; max-height:120px; padding:10px 12px;
+  border:1px solid #e4e7ed; border-radius:8px!important; background:#fff;
+  font-size:13px; line-height:18px; resize:none; box-shadow:none;
+}
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askIn::placeholder { color:#9298a2; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askIn:focus { border-color:#ec9aaa; box-shadow:0 0 0 3px #ea002c09; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button {
+  display:grid; place-items:center; flex:0 0 40px; width:40px; height:40px;
+  padding:0; margin:0; border:0; border-radius:10px!important;
+  background:#f49aaa; color:#fff; box-shadow:none; cursor:pointer;
+  transition:background .15s ease,box-shadow .15s ease;
+}
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm.has-question button:not(:disabled) { background:#ea0033; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm.has-question button:not(:disabled):hover { background:#cf002d; box-shadow:0 3px 8px #ea003322; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button:disabled { background:#e4a3ae; opacity:.65; cursor:wait; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button:focus-visible { outline:2px solid #b80028; outline-offset:3px; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) .composer-note { padding:2px 15px 10px; font-size:11px; color:#9298a2; }
+@media(max-width:760px) { html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askIn { font-size:16px; line-height:20px; } }
+@media(prefers-reduced-motion:reduce) { html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button { transition:none; } }
