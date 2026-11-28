@@ -23,8 +23,6 @@
 }
 #agentMiniWindow .agent-mini-header h2 { margin:0; color:#303640; font-size:16px; font-weight:650; line-height:1.4; }
 #agentMiniWindow .agent-mini-header p { margin:5px 0 0; color:#777f8c; font-size:13px; line-height:1.5; }
-#agentMiniWindow .agent-mini-minimize { display:grid; place-items:center; flex:0 0 32px; width:32px; height:32px; padding:0; border:0; border-radius:5px; background:#fff; color:#687180; cursor:pointer; }
-#agentMiniWindow .agent-mini-minimize:hover { background:#f5f6f8; }
 html body.agent-mini-open #layout,
 html body.agent-mini-open #band,
 html body.agent-mini-open .crumbs,
@@ -80,7 +78,7 @@ html body.agent-mini-open #content { container-type:inline-size; container-name:
 #agentMiniWindow .chat-panel-head > :not(#agentReset),
 #agentEmbeddedPanel .chat-panel-head > :not(#agentReset) { display: none; }
 #agentMiniWindow .chat-panel-head::before,
-#agentEmbeddedPanel .chat-panel-head::before { content: 'GPU 가격 · 수집 시각 · 출처'; font-size: 12px; color: #747c88; }
+#agentEmbeddedPanel .chat-panel-head::before { content: none; }
 #agentMiniWindow #agentReset, #agentEmbeddedPanel #agentReset {
   margin-left: auto;
   padding: 6px 8px;
@@ -260,3 +258,38 @@ html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button:focus-visib
 html body :is(#agentMiniWindow, #agentEmbeddedPanel) .composer-note { padding:2px 15px 10px; font-size:11px; color:#9298a2; }
 @media(max-width:760px) { html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askIn { font-size:16px; line-height:20px; } }
 @media(prefers-reduced-motion:reduce) { html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm button { transition:none; } }
+
+/* Keep the conversation chrome compact and the emblem stationary. */
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) .chat-panel-head {
+  min-height:30px; padding:2px 14px; background:#fff; border-bottom:0;
+}
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) .composer-note > span:first-child { display:none; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) .composer-note:has(#agentSessionStatus:empty) { display:none; }
+html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm { padding-bottom:14px; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome-mark { transform-origin:50% 55%; }
+:is(#agentMiniWindow, #agentEmbeddedPanel) .agent-welcome-mark { animation:none; transform:none; opacity:.22; filter:none; }
+
+/* The left edge resizes the panel; the header holds the existing reset action. */
+html body #agentMiniWindow .chat-panel-head { display:none; }
+html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy) {
+  margin:0; padding:7px 10px; border:1px solid #e5e7ec; border-radius:6px!important;
+  background:#fff; color:#59616d; font:inherit; font-size:13px; white-space:nowrap; cursor:pointer;
+}
+html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy):hover:not(:disabled) { background:#fff4f6; border-color:#edb4c0; color:#cf1234; }
+html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy):disabled { opacity:.45; cursor:default; }
+#agentMiniWindow .agent-panel-resizer {
+  position:absolute; inset:0 auto 0 0; width:8px; z-index:5; cursor:col-resize; touch-action:none;
+}
+#agentMiniWindow .agent-panel-resizer::after {
+  content:''; position:absolute; top:0; bottom:0; left:0; width:2px; background:transparent;
+}
+#agentMiniWindow .agent-panel-resizer:hover::after,
+#agentMiniWindow .agent-panel-resizer:focus-visible::after,
+body.agent-panel-resizing #agentMiniWindow .agent-panel-resizer::after { background:#ec7f96; }
+#agentMiniWindow .agent-panel-resizer:focus-visible { outline:0; background:#ea003308; }
+body.agent-panel-resizing,body.agent-panel-resizing * { cursor:col-resize!important; user-select:none!important; }
+body.agent-panel-resizing iframe { pointer-events:none; }
+@media(max-width:760px) {
+  body { --agent-panel-width:100vw!important; }
+  #agentMiniWindow .agent-panel-resizer { display:none; }
+}

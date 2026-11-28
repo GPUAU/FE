@@ -75,9 +75,65 @@
   mini.setAttribute('role', 'dialog');
   mini.setAttribute('aria-modal', 'false');
   mini.setAttribute('aria-labelledby', 'agentMiniTitle');
-  mini.innerHTML = '<header class="agent-mini-header"><div><h2 id="agentMiniTitle">GPU AI 에이전트</h2><p>가격과 출처를 함께 확인하세요.</p></div><button type="button" class="agent-mini-minimize" aria-label="에이전트 패널 접기" title="패널 접기"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="m9 5 7 7-7 7"/></svg></button></header><div class="agent-mini-body copilot-layout"></div>';
+  mini.innerHTML = '<div class="agent-panel-resizer" role="separator" aria-label="대화창 너비 조절" aria-orientation="vertical" aria-controls="agentMiniWindow" tabindex="0" title="드래그하여 대화창 너비 조절"></div><header class="agent-mini-header"><h2 id="agentMiniTitle">GPU AI 에이전트</h2></header><div class="agent-mini-body copilot-layout"></div>';
   const content = mini.querySelector('.agent-mini-body');
-  const minimize = mini.querySelector('.agent-mini-minimize');
+  const resizer = mini.querySelector('.agent-panel-resizer');
+  const panelHeader = mini.querySelector('.agent-mini-header');
+  const resetHome = feedPanel?.querySelector('.chat-panel-head');
+  const resetButton = feedPanel?.querySelector('#agentReset') || document.createElement('button');
+  if (!feedPanel) {
+    resetButton.type = 'button';
+    resetButton.className = 'agent-reset-proxy';
+    resetButton.textContent = '새 대화';
+    resetButton.disabled = true;
+    resetButton.addEventListener('click', () => frame?.contentDocument?.getElementById('agentReset')?.click());
+    panelHeader.append(resetButton);
+  }
+  let dragWidth = null;
+  const widthLimits = () => ({min:320,max:Math.max(380,Math.min(800,window.innerWidth-400))});
+  function updateResizeState() {
+    const {min,max}=widthLimits();
+    resizer.setAttribute('aria-valuemin',String(min));
+    resizer.setAttribute('aria-valuemax',String(max));
+    resizer.setAttribute('aria-valuenow',String(Math.round(mini.getBoundingClientRect().width)));
+  }
+  function setPanelWidth(width) {
+    const {min,max}=widthLimits();
+    document.body.style.setProperty('--agent-panel-width', `${Math.round(Math.max(min,Math.min(max,width)))}px`);
+    updateResizeState();
+    window.dispatchEvent(new Event('resize'));
+  }
+  function stopResize() {
+    if(!dragWidth)return;
+    const id=dragWidth.id;dragWidth=null;
+    document.body.classList.remove('agent-panel-resizing');
+    if(resizer.hasPointerCapture(id))resizer.releasePointerCapture(id);
+  }
+  resizer.addEventListener('pointerdown', event => {
+    if(event.button!==0)return;
+    event.preventDefault();
+    dragWidth={id:event.pointerId,x:event.clientX,width:mini.getBoundingClientRect().width};
+    resizer.setPointerCapture(event.pointerId);
+    resizer.focus({preventScroll:true});
+    document.body.classList.add('agent-panel-resizing');
+  });
+  resizer.addEventListener('pointermove', event => {
+    if(dragWidth&&event.pointerId===dragWidth.id)setPanelWidth(dragWidth.width+dragWidth.x-event.clientX);
+  });
+  ['pointerup','pointercancel','lostpointercapture'].forEach(type=>resizer.addEventListener(type,stopResize));
+  resizer.addEventListener('keydown', event => {
+    if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+    event.preventDefault();
+    const {min,max}=widthLimits(),width=mini.getBoundingClientRect().width;
+    setPanelWidth(event.key==='Home'?min:event.key==='End'?max:width+(event.key==='ArrowLeft'?24:-24));
+  });
+  window.addEventListener('resize', () => {
+    if(window.innerWidth>760&&document.body.style.getPropertyValue('--agent-panel-width')) {
+      const {min,max}=widthLimits(),width=parseFloat(document.body.style.getPropertyValue('--agent-panel-width'));
+      document.body.style.setProperty('--agent-panel-width',`${Math.max(min,Math.min(max,width))}px`);
+    }
+    if(!mini.hidden)updateResizeState();
+  });
   const home = feedPanel ? document.createComment('Copilot panel home') : null;
   if (feedPanel) feedPanel.before(home);
   let frame = null;
@@ -105,6 +161,13 @@
       notice.hidden = ready;
       frame.hidden = !ready;
       retry.hidden = ready;
+      if(ready) {
+        const frameReset=frame.contentDocument.getElementById('agentReset');
+        if(frameReset) {
+          resetButton.disabled=frameReset.disabled;
+          new MutationObserver(()=>{resetButton.disabled=frameReset.disabled;}).observe(frameReset,{attributes:true,attributeFilter:['disabled']});
+        }
+      }
       if (!ready) message.textContent = '에이전트를 불러오지 못했습니다. 사이트 로그인 상태를 확인한 뒤 다시 연결해주세요.';
     });
     retry.addEventListener('click', () => {
@@ -121,6 +184,7 @@
       if (feedPanel) {
         prepareCopilot();
         content.append(feedPanel);
+        panelHeader.append(resetButton);
       } else {
         mountFrame();
       }
@@ -131,10 +195,12 @@
         if (feedScroll !== null) feed.scrollTop = feedScroll;
         document.getElementById('askIn')?.focus({ preventScroll: true });
       } else {
-        minimize.focus({ preventScroll: true });
+        resizer.focus({ preventScroll: true });
       }
     } else {
+      stopResize();
       if (feedPanel) {
+        resetHome.append(resetButton);
         feedScroll = document.getElementById('feed').scrollTop;
         home.after(feedPanel);
       }
@@ -148,7 +214,6 @@
   }
 
   launcher.addEventListener('click', () => setOpen(mini.hidden));
-  minimize.addEventListener('click', () => setOpen(false, true));
   document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && !event.isComposing && !mini.hidden &&
         (mini.contains(document.activeElement) || document.activeElement === launcher)) {
