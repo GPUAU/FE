@@ -1,12 +1,25 @@
 /* SK-inspired editorial shell with a data-first GPU pricing explorer. */
 const SG = { model:'B300', term:'ON_DEMAND', provider:'ALL', region:'ALL', query:'', sort:'price', page:0, period:'ALL', chart:null, miniChart:null, data:null, pending:null, seq:0, view:'home', group:'' };
-async function signatureSpringHistory(catalog) {
+async function signatureSpringHistory(models) {
   const {mapSeries} = await import('/static/spring-history-adapter.mjs');
   const {fetchModelHistories} = await import('/static/spring-history-client.mjs');
   const end = new Date(), from = new Date(end.getTime()-730*86400000).toISOString();
   const capabilities = await api('/static/backend-capabilities.json');
-  const result = await fetchModelHistories(api, catalog.models, from, end.toISOString(), capabilities.historyPagination === true);
+  const result = await fetchModelHistories(api, models, from, end.toISOString(), capabilities.historyPagination === true);
   return {history: mapSeries(result.series), historyFailures: result.failures, end};
+}
+/* 가격 이력은 모델별로 받아 둔다. 화면은 한 번에 한 모델만 그리므로 모든 모델(13개)을 한꺼번에 받지 않는다.
+   (예전: 화면을 열 때마다 전 모델 730일 치를 받아 응답이 수십~수백 MB까지 커졌다) */
+async function sgModelHistory(name, catalog) {
+  catalog ||= await springMarketCatalog();
+  SG.historyBy ||= new Map();
+  if (!SG.historyBy.has(name)) {
+    const model = catalog.models.find(item => item.name === name);
+    const pending = signatureSpringHistory(model ? [model] : []);
+    SG.historyBy.set(name, pending);
+    pending.catch(() => { if (SG.historyBy?.get(name) === pending) SG.historyBy.delete(name); });
+  }
+  return {...await SG.historyBy.get(name), catalog};
 }
 const sgArrow = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><path d="M5 12h14M13 5l7 7-7 7"/></svg>';
 const sgSearch = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></svg>';
@@ -25,13 +38,8 @@ async function sgData() {
     ...(provider ? {providerIds: provider.id} : {}),
     ...(SG.region !== 'ALL' ? {regionCode: SG.region} : {}),
   };
-  if (!SG.pending) {
-    const pending = signatureSpringHistory(catalog);
-    SG.pending = pending;
-    pending.catch(() => { if (SG.pending === pending) SG.pending = null; });
-  }
   const [base, offers, summary] = await Promise.all([
-    SG.pending,
+    sgModelHistory(SG.model, catalog),
     model ? client.fetchMarketOffers(api, {modelId: model.id, includeStale: 'true'})
       .then(rows => rows.map(client.mapMarketOffer)) : [],
     model ? client.fetchMarketSummary(api, filters).catch(() => null) : null,
@@ -83,7 +91,7 @@ function sgBindSummary(root) {
   });
 }
 function sgInvalidateData() {
-  SG.pending = null;
+  SG.historyBy = null;
   SG.group = '';
   springCatalogPending = null;
   MV.promise = null;
