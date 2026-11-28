@@ -66,6 +66,8 @@ export function sendAnswer(id, answer, fetchImpl = fetch) {
 
 export const reportUrl = id => `${AGENT_BASE}/agent/sessions/${encodeURIComponent(id)}/report.xlsx`;
 export const reportHtmlUrl = id => `${AGENT_BASE}/agent/sessions/${encodeURIComponent(id)}/report.html`;
+/** 승인 보고서를 열자마자 인쇄 창(PDF로 저장)을 띄운다. 보고서 HTML에 A4 인쇄 서식이 있다. */
+export const reportPdfUrl = id => `${reportHtmlUrl(id)}?print=1`;
 
 // ------------------------------------------------------------------ 진행률
 export function progressOf(s) {
@@ -128,18 +130,87 @@ function stepHead(p) {
   return `<span class="ca-head-ic" data-status="${esc(st)}" aria-hidden="true"></span><strong>${esc(p.current?.title || '준비 중')}</strong><span class="ca-state" data-status="${esc(st)}">${esc(STATUS_LABEL[st] || '진행 중')}</span>`;
 }
 
-export function renderStepper(s) {
+// ------------------------------------------------------------------ 확인 사항 등급
+// 서버는 단계마다 WARNING과 사유(details)를 보내고, 승인 검토에서 발견 사항마다 등급(재검토·조건부)과 고칠 단계(fix_step)를 준다.
+// 화면은 이 둘을 이어서 '!'가 얼마나 무거운지(빨강·주황·회색)와, 어디서 어떻게 처리되는지를 보여 준다.
+const LEVEL_OF = { 재검토: 'high', 조건부: 'mid' };
+const LEVEL_RANK = { note: 1, mid: 2, high: 3 };
+const FLAG_LABEL = { high: '재검토 필요', mid: '확인 필요', note: '참고' };
+const STEP_CODES = { SIMULATE: ['NO_FINANCING'] };  // fix_step은 다르지만 이 단계 경고에서 이어지는 발견 사항
+const levelOfFinding = f => LEVEL_OF[f?.level] || 'mid';
+
+/** 이 단계와 이어진 승인 검토 발견 사항. 승인 검토 단계는 전부. */
+export function stepFindings(s, key) {
+  const fs = s?.approval?.findings || [];
+  return key === 'REVIEW' ? fs : fs.filter(f => f.fix_step === key || (STEP_CODES[key] || []).includes(f.code));
+}
+
+/** WARNING·ERROR 단계의 무게: high(손실·재검토) · mid(확인 필요) · note(판정에 들어가지 않는 참고). 그 밖은 null. */
+export function stepLevel(b, s) {
+  if (!b) return null;
+  if (b.status === 'ERROR') return 'high';
+  if (b.status !== 'WARNING') return null;
+  const fs = stepFindings(s, b.key);
+  if (fs.length) return fs.map(levelOfFinding).reduce((a, c) => (LEVEL_RANK[c] > LEVEL_RANK[a] ? c : a), 'note');
+  if (b.key === 'TERMS') return 'high';  // 기간별 가격의 경고는 '원가보다 낮음(손실)' 하나뿐이다
+  return s?.approval ? 'note' : 'mid';
+}
+
+/** 담당자가 직접 고른 결과인지 (입력 오류가 아니라는 것을 알려 준다). */
+const chosenByUser = b => (b.key === 'MARKET' && /유지$/.test(b.summary || '')) || (b.key === 'ANALYZE' && /알고 진행/.test(b.summary || ''));
+
+/** 이 확인 사항이 어디서 어떻게 처리되는지 한 문장. */
+export function flagResolution(b, s, level) {
+  if (b.status === 'ERROR') return '이 단계에서 멈췄어요. 사유를 확인하고 새 청구서로 다시 시작하세요.';
+  if (chosenByUser(b)) return b.key === 'MARKET'
+    ? "담당자가 '그대로 유지'를 골라 진행했어요. 입력이 잘못된 것이 아니라 보고서에 '시장 범위 밖'으로 표시됩니다."
+    : '담당자가 총액 불일치를 확인하고 진행하기로 했어요. 보고서에 그대로 남습니다.';
+  if (s?.question?.step === 'REVIEW') return b.key === 'REVIEW'
+    ? "아래 카드에서 항목마다 '고치기'(해당 단계로 돌아감) 또는 '사유를 적고 진행'을 고르세요."
+    : "아래 승인 검토 카드에서 '고치기'를 고르면 이 단계로 돌아와 다시 계산해요.";
+  if (!s?.approval) return "입력이 막힌 것은 아니에요. 마지막 '승인 검토' 단계에서 다시 모아 고치거나 사유를 남깁니다.";
+  if (level === 'high') return "재검토 사유라 사유를 적어도 판정이 바뀌지 않아요. 가정값이나 할인율을 고쳐 다시 계산해야 '승인 권고'가 됩니다.";
+  if (level === 'mid') return '조건부 사유예요. 승인 보고서에 사유와 함께 남습니다.';
+  return '승인 판정에는 들어가지 않는 참고 사항이에요. 값이 실제와 맞는지만 확인하세요.';
+}
+
+function flagButton(b, s, open) {
+  const level = stepLevel(b, s);
+  if (!level) return '';
+  return `<button type="button" class="ca-step-flag" data-level="${level}" data-ca-flag="${esc(b.key)}" aria-expanded="${open === b.key}" aria-controls="ca-flag-panel">${FLAG_LABEL[level]}</button>`;
+}
+
+/** 단계 표시줄 아래: 고른 단계의 사유와 처리 방법. */
+export function renderFlagPanel(s, open) {
+  const b = (s?.board || []).find(x => x.key === open);
+  const level = b && stepLevel(b, s);
+  if (!level) return '';
+  const fs = stepFindings(s, b.key);
+  const seen = b.key === 'REVIEW' ? [] : (b.details || []).filter(Boolean);
+  const lines = seen.map(t => `<li><span class="ca-lv" data-level="${level === 'high' && !fs.length ? 'high' : 'note'}">에이전트 확인</span><span>${esc(t)}</span></li>`)
+    .concat(fs.map(f => `<li><span class="ca-lv" data-level="${levelOfFinding(f)}">${esc(f.level)}</span><span>${esc(f.message)}${f.reason ? `<small>진행 사유: ${esc(f.reason)}</small>` : ''}</span></li>`));
+  return `<div class="ca-flag-panel" data-level="${level}" role="region" aria-label="${esc(b.title)} 확인 사항">
+    <div class="ca-flag-head"><b>${esc(b.title)}</b><span class="ca-lv" data-level="${level}">${FLAG_LABEL[level]}</span>
+      <button type="button" class="ca-flag-close" data-ca-flag="${esc(b.key)}" aria-label="닫기">×</button></div>
+    ${lines.length ? `<ul>${lines.join('')}</ul>` : ''}
+    <p>${esc(flagResolution(b, s, level))}</p>
+  </div>`;
+}
+
+export function renderStepper(s, open = null) {
   const p = progressOf(s);
   const board = s.board || [];
   return `<div class="ca-progress" aria-label="진행 상황"${p.finished ? ' data-finished' : ''}>
     <div class="ca-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${p.pct}"><i style="width:${p.pct}%"></i></div>
     <div class="ca-progress-top"><div class="ca-head">${stepHead(p)}</div>
       <div class="ca-meta"><span class="ca-elapsed" data-ca-elapsed></span><span class="ca-pct">${p.done}/${p.total} 단계 · ${p.pct}%</span></div></div>
-    <ol class="ca-steps">${board.map((b, i) => `<li data-status="${esc(b.status)}"${b.key === s.step ? ' aria-current="step"' : ''}>
+    <ol class="ca-steps">${board.map((b, i) => `<li data-status="${esc(b.status)}" data-level="${stepLevel(b, s) || ''}"${b.key === s.step ? ' aria-current="step"' : ''}>
       <span class="ca-line" aria-hidden="true"><i></i></span>
       <span class="ca-dot" aria-hidden="true"><span class="ca-ic ca-num">${i + 1}</span>${DOT_ICONS}</span>
       <span class="ca-step-title">${esc(b.title)}</span>
-      <span class="ca-step-sum" title="${esc(b.summary || '')}">${esc(shortSummary(b.summary) || STATUS_LABEL[b.status] || '')}</span></li>`).join('')}</ol>
+      <span class="ca-step-sum" title="${esc(b.summary || '')}">${esc(shortSummary(b.summary) || STATUS_LABEL[b.status] || '')}</span>
+      <span class="ca-flag-slot">${flagButton(b, s, open)}</span></li>`).join('')}</ol>
+    <div class="ca-flag-panel-slot" id="ca-flag-panel">${renderFlagPanel(s, open)}</div>
   </div>`;
 }
 
@@ -302,6 +373,40 @@ export function renderMarket(m) {
   </div>`;
 }
 
+/** 판단 요약 한 줄의 색: bad(손실·불완전 원가·재검토) · warn(확인 필요). 서버 문장 형식에 맞춘다. */
+export function summaryTone(line, s) {
+  const t = String(line || '');
+  const cost = Number(s?.simulation?.hourlyCost);
+  const term = t.match(/^(\d+)년 계약가 \$([\d.]+)/);
+  if (term) return Number.isFinite(cost) && Number(term[2]) < cost ? 'bad' : '';
+  const check = t.match(/자동 검증 (\d+)\/(\d+)/);
+  if (check) return Number(check[1]) < Number(check[2]) ? 'bad' : '';
+  if (/승인 검토 판정: 재검토|불완전 원가|손실/.test(t)) return 'bad';
+  if (/승인 검토 판정: 조건부|불일치|빠져 있습니다|예시값/.test(t)) return 'warn';
+  const m = s?.market, cand = Number(s?.simulation?.candidatePrice);
+  if (/^시장 공개가격/.test(t) && m?.count && Number.isFinite(cand) && (cand < m.min || cand > m.max)) return 'warn';
+  return '';
+}
+
+/** 결과 맨 위: 권고와 확인할 점 (등급 색, 진행 사유, 고칠 단계). */
+export function renderChecks(s) {
+  const ap = s.approval;
+  if (!ap) return '';
+  const fs = ap.findings?.length ? ap.findings
+    : (ap.reasons || []).map(message => ({ level: ap.verdict === '재검토' ? '재검토' : '조건부', message }));
+  const count = lv => fs.filter(f => f.level === lv).length;
+  const tally = [['재검토', count('재검토')], ['조건부', count('조건부')]].filter(([, n]) => n).map(([lv, n]) => `${lv} ${n}`).join(' · ');
+  const note = ap.verdict === '재검토' ? "재검토 사유는 사유를 적어도 판정이 바뀌지 않아요. 가정값이나 할인율을 고쳐 다시 계산해야 '승인 권고'가 됩니다."
+    : ap.verdict === '조건부' ? '조건부 사유는 승인 보고서에 사유와 함께 남습니다.' : '';
+  const tone = ap.verdict === '재검토' ? 'high' : ap.verdict === '조건부' ? 'mid' : 'ok';  // CSS 선택자에는 한글을 쓰지 않는다 (인코딩)
+  return `<section class="ca-checks" data-level="${tone}" aria-label="승인 검토 결과">
+    <div class="ca-checks-head"><b>권고: ${esc(ap.verdict)}</b><span>${fs.length ? `확인할 점 ${fs.length}개${tally ? ` · ${tally}` : ''}` : '확인할 점 없음'}</span></div>
+    ${fs.length ? `<ol>${fs.map(f => `<li data-level="${levelOfFinding(f)}"><span class="ca-lv" data-level="${levelOfFinding(f)}">${esc(f.level)}</span>
+      <div><p>${esc(f.message)}</p>${f.reason || f.fix_step ? `<small>${f.reason ? `진행 사유: ${esc(f.reason)}` : ''}${f.reason && f.fix_step ? ' · ' : ''}${f.fix_step ? `관련 단계: ${esc(STEP_TITLES[f.fix_step] || f.fix_step)}` : ''}</small>` : ''}</div></li>`).join('')}</ol>` : ''}
+    ${note ? `<p class="ca-checks-note">${esc(note)}</p>` : ''}
+  </section>`;
+}
+
 export function renderResult(s) {
   const r = s.simulation || {};
   const a = s.assumptions || {};
@@ -314,12 +419,12 @@ export function renderResult(s) {
       <div><span>목표 마진</span><strong ${a.target_rate != null ? `data-count="${Math.round(a.target_rate * 100)}" data-fmt="pct"` : ''}>${a.target_rate != null ? Math.round(a.target_rate * 100) + '%' : '—'}</strong></div>
       ${(s.terms || []).map(t => `<div><span>${t.years}년 계약가 · 할인 ${Math.round(t.discount_rate * 100)}%</span><strong data-count="${esc(t.price)}" data-fmt="usd">${usd(t.price)}</strong></div>`).join('')}
     </div>
-    ${s.approval ? `<p class="ca-verdict" data-verdict="${esc(s.approval.verdict)}"><b>권고: ${esc(s.approval.verdict)}</b>${(s.approval.reasons || []).slice(0, 3).map(x => ` · ${esc(x)}`).join('')}</p>` : ''}
+    ${renderChecks(s)}
     <h4>시장에서의 위치</h4>${renderMarket(s.market)}
     ${renderSheet(s)}
-    <h4>에이전트 판단 요약</h4><ul class="ca-summary-list">${(s.summary || []).map(l => `<li>${esc(l)}</li>`).join('')}</ul>
+    <h4>에이전트 판단 요약</h4><ul class="ca-summary-list">${(s.summary || []).map(l => { const t = summaryTone(l, s); return `<li${t ? ` data-tone="${t}"` : ''}>${esc(l)}</li>`; }).join('')}</ul>
     <div class="ca-actions">
-      ${s.report_ready && s.approval ? `<a class="ca-btn ca-btn-primary" href="${reportHtmlUrl(s.id)}" target="_blank" rel="noopener">승인 보고서 (한 장)</a>` : ''}
+      ${s.report_ready && s.approval ? `<a class="ca-btn ca-btn-primary" href="${reportPdfUrl(s.id)}" target="_blank" rel="noopener">승인 보고서 PDF 저장</a>` : ''}
       ${s.report_ready ? `<a class="ca-btn ${s.approval ? 'ca-btn-ghost' : 'ca-btn-primary'}" href="${reportUrl(s.id)}" download>견적 근거서 엑셀 다운로드</a>` : ''}
       <button type="button" class="ca-btn ca-btn-ghost" data-ca-send>항목별 계산기로 보내기</button>
       <button type="button" class="ca-btn ca-btn-text" data-ca-reset>새 청구서로 시작</button>
@@ -370,7 +475,7 @@ export function renderActivity(s) {
     <ol class="ca-timeline">${ev.map(e => `<li data-kind="${esc(e.kind)}"><b>${esc(KIND_LABEL[e.kind] || e.kind)}</b><span>${esc(e.message)}</span></li>`).join('')}</ol></details>`;
 }
 
-export function renderWorkspace(s, { busyLabel = '', models = [], live = null, enter = false, issues = [] } = {}) {
+export function renderWorkspace(s, { busyLabel = '', models = [], live = null, enter = false, issues = [], openFlag = null } = {}) {
   const d = s.draft;
   const a = s.assumptions || {};
   const goalModel = models.find(m => String(m.id) === String(s.goal?.model_id))?.name;
@@ -389,7 +494,7 @@ export function renderWorkspace(s, { busyLabel = '', models = [], live = null, e
     <header class="ca-runhead"><div><p class="ca-eyebrow">원가 에이전트</p><h2>${esc(s.docs?.length ? `부서 문서 ${s.docs.length}개` : d?.file_name || '청구서 분석')}</h2>
       <div class="ca-chips">${chips.map(c => `<span>${esc(c)}</span>`).join('')}</div></div>
       <button type="button" class="ca-btn ca-btn-ghost" data-ca-reset>새 청구서</button></header>
-    ${renderStepper(s)}
+    ${renderStepper(s, openFlag)}
     <div class="ca-grid"><div class="ca-main${enter ? ' ca-enter' : ''}">${main}${live ? '' : renderActivity(s)}</div>${renderSummary(s)}</div>
   </section>`;
 }
@@ -477,7 +582,7 @@ export function fmtElapsed(ms) {
 const onAgentTab = () => location.hash.startsWith('#cost') && !location.hash.split('/')[1];
 
 /** 단계 표시줄을 다시 그리지 않고 상태만 바꿔 전환 애니메이션이 보이게 한다. */
-function updateStepper(root, s) {
+function updateStepper(root, s, open = null) {
   const prog = root.querySelector('.ca-progress');
   if (!prog) return;
   const p = progressOf(s);
@@ -500,7 +605,12 @@ function updateStepper(root, s) {
     const sum = li.querySelector('.ca-step-sum');
     sum.textContent = shortSummary(b.summary) || STATUS_LABEL[b.status] || '';
     sum.title = b.summary || '';
+    li.dataset.level = stepLevel(b, s) || '';
+    const slot = li.querySelector('.ca-flag-slot');
+    if (slot) slot.innerHTML = flagButton(b, s, open);
   });
+  const panel = prog.querySelector('.ca-flag-panel-slot');
+  if (panel) panel.innerHTML = renderFlagPanel(s, open);
   // 좁은 화면에서는 단계 줄이 가로로 스크롤되므로 현재 단계를 가운데로 옮긴다
   const steps = prog.querySelector('.ca-steps');
   const cur = steps?.querySelector('[aria-current="step"]');
@@ -530,6 +640,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   const isCurrent = () => mountId === activeMount;
   let files = [];
   let issues = [];      // 마지막 응답에서 나온 주의·질문 줄 (다음 카드 위에 남김)
+  let openFlag = null;  // 단계 표시줄에서 사유를 펼친 단계
   let hintTimer = null;
   let playback = null;
   let run = 0;          // 새 청구서로 전환하면 이전 요청의 응답을 무시한다
@@ -559,7 +670,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   disposeMount = () => { run++; playback?.stop(); stopHints(); busyEnd(); };
   const draw = (opts = {}) => {
     stopHints();
-    host.innerHTML = session ? renderWorkspace(session, { ...opts, models, issues }) : renderStart(models);
+    host.innerHTML = session ? renderWorkspace(session, { ...opts, models, issues, openFlag }) : renderStart(models);
     paintElapsed();
     const card = host.querySelector('.ca-question');
     if (card) {
@@ -714,7 +825,14 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
   host.onclick = async e => {
     const btn = e.target.closest('button');
     if (!btn) return;
-    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; files = []; issues = []; draw(); return; }
+    if (btn.hasAttribute('data-ca-reset')) { playback?.stop(); playback=null; run++; busyEnd(); workMs = 0; session = null; files = []; issues = []; openFlag = null; draw(); return; }
+    if (btn.hasAttribute('data-ca-flag') && session) {
+      openFlag = openFlag === btn.dataset.caFlag ? null : btn.dataset.caFlag;
+      const shown = playback ? null : session;  // 재생 중에는 표시줄이 재생 상태를 그리므로 끝난 뒤에 반영한다
+      if (shown) updateStepper(host, shown, openFlag);
+      host.querySelector(`.ca-step-flag[data-ca-flag="${CSS.escape(openFlag || btn.dataset.caFlag)}"]`)?.focus();
+      return;
+    }
     if (btn.hasAttribute('data-ca-playback-next')) { playback?.next(); return; }
     if (btn.hasAttribute('data-ca-playback-pause')) { playback?.toggle(); return; }
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }
