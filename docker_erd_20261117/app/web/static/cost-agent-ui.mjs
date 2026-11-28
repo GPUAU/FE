@@ -266,9 +266,12 @@ export function renderSheet(s) {
 
 // ------------------------------------------------------------------ 확인할 점 (천천히 보여 주기)
 // 누락값·오류·질문 줄은 재생할 때 더 오래 머물고, 다음 카드 위에 '확인할 점'으로 남는다 (담당자가 놓치지 않게)
-const ISSUE_KINDS = ['warn', 'ask'];
+/** 확인할 점: 주의(오류·기준선 경고) 줄과 누락값 질문. 다른 질문(가정값·할인율)은 카드 자체가 보여 주므로 넣지 않는다. */
+export const isIssue = e => e?.kind === 'warn' || (e?.kind === 'ask' && e?.step === 'MISSING');
+/** 진행 줄을 따라 내려갈지: 확인할 점이 한 번 나오면 그 줄이 밀려 올라가지 않게 멈춘다. */
+export const followFeed = feed => !feed.some(isIssue);
 export function renderIssues(events = []) {
-  const list = events.filter(e => ISSUE_KINDS.includes(e.kind));
+  const list = events.filter(isIssue);
   if (!list.length) return '';
   return `<div class="ca-card ca-issues" role="status" aria-live="polite">
     <p class="ca-step-label">이번 단계에서 확인할 점 ${list.length}개</p>
@@ -374,8 +377,8 @@ export function renderWorkspace(s, { busyLabel = '', models = [], live = null, e
   const main = live ? renderLive(s, live)
     : busyLabel ? renderBusy(busyLabel)
     : s.question ? renderIssues(issues) + renderQuestion(s.question, s) + (s.question.step === 'MISSING' ? renderSheet(s) : '')
-      : s.step === 'DONE' && s.simulation ? renderResult(s)
-        : `<div class="ca-card"><h3>에이전트가 멈췄습니다</h3><p class="ca-desc">단계 표시줄에서 중단된 이유를 확인하고 새 청구서로 다시 시작하세요.</p><div class="ca-actions"><button type="button" class="ca-btn ca-btn-primary" data-ca-reset>새 청구서로 시작</button></div></div>`;
+      : s.step === 'DONE' && s.simulation ? renderIssues(issues) + renderResult(s)
+        : renderIssues(issues) + `<div class="ca-card"><h3>에이전트가 멈췄습니다</h3><p class="ca-desc">단계 표시줄에서 중단된 이유를 확인하고 새 청구서로 다시 시작하세요.</p><div class="ca-actions"><button type="button" class="ca-btn ca-btn-primary" data-ca-reset>새 청구서로 시작</button></div></div>`;
   return `<section class="ca ca-run">
     <header class="ca-runhead"><div><p class="ca-eyebrow">원가 에이전트</p><h2>${esc(s.docs?.length ? `부서 문서 ${s.docs.length}개` : d?.file_name || '청구서 분석')}</h2>
       <div class="ca-chips">${chips.map(c => `<span>${esc(c)}</span>`).join('')}</div></div>
@@ -588,7 +591,7 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     session = next;
     if (!onAgentTab()) return;
     const events = (next.events || []).slice(prev?.events?.length || 0);
-    issues = events.filter(e => ISSUE_KINDS.includes(e.kind));
+    issues = events.filter(isIssue);
     if (!events.length) { draw({enter:true}); return; }
     let board = (prev?.board || pendingSession('', {}).board).map(b => ({...b}));
     const first = {...next, board:boardAt(board,next,events[0]), step:events[0].step, question:null};
@@ -596,10 +599,12 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     paintElapsed();
     const valid = () => requestId === run && isCurrent() && host.isConnected && onAgentTab();
     let readingStarted = false;
+    const shown = [];
     playback = createProgressPlayback({events, immediate:reducedMotion(),
       delayFor:eventDelay,
       active:()=>{if (!valid()) {playback?.stop();return false;}return !document.hidden;},
       onEvent:ev=>{
+        shown.push(ev);
         board = boardAt(board,next,ev);
         updateStepper(host,{...next,board,step:ev.step,question:null});
         const heading = host.querySelector('.ca-live h3');
@@ -607,8 +612,11 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
         const list = host.querySelector('.ca-live-feed');
         if (list) {
           list.querySelector('[aria-current]')?.removeAttribute('aria-current');
-          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in${ISSUE_KINDS.includes(ev.kind) ? ' ca-live-issue' : ''}" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
-          list.scrollTop = list.scrollHeight;
+          list.insertAdjacentHTML('beforeend',`<li data-kind="${esc(ev.kind)}" class="ca-live-in${isIssue(ev) ? ' ca-live-issue' : ''}" aria-current="true"><i aria-hidden="true">${esc(KIND_ICON[ev.kind] || '·')}</i><b>${esc(KIND_LABEL[ev.kind] || ev.kind)}</b><span>${esc(ev.message)}</span></li>`);
+          if (followFeed(shown.slice(0, -1))) {  // 확인할 점이 나오면 그 줄을 맨 위에 두고 더 내리지 않는다
+            const li = list.lastElementChild;
+            list.scrollTop = isIssue(ev) && li ? li.offsetTop - list.offsetTop : list.scrollHeight;
+          }
         }
       },
       onState:({paused,phase,seconds})=>{

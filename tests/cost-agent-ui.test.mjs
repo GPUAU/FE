@@ -247,3 +247,27 @@ test('issues found in a step stay pinned above the next card', () => {
   assert.ok(ws.indexOf('확인할 점 2개') < ws.indexOf('ca-question'));
   assert.ok(ws.includes('원가 기준표'));
 });
+
+// ---------------------------------------------------------------- 최종 리뷰: 확인할 점은 끝·중단 화면에도, 질문만으로는 늘지 않음
+import { isIssue, followFeed } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('only warnings and missing-value questions count as issues', () => {
+  assert.equal(isIssue({ kind: 'warn', step: 'ANALYZE' }), true);
+  assert.equal(isIssue({ kind: 'ask', step: 'MISSING' }), true);
+  assert.equal(isIssue({ kind: 'ask', step: 'ASSUMPTIONS' }), false);
+  assert.equal(renderIssues([{ kind: 'ask', step: 'TERMS', message: '할인율' }]), '');
+});
+
+test('issues stay pinned on the result and on a stopped run', () => {
+  const warns = [{ step: 'SIMULATE', kind: 'warn', message: '원가 계산 실패' }];
+  const done = { ...session, step: 'DONE', question: null, simulation: { hourlyCost: 2, candidatePrice: 2.5 }, report_ready: true };
+  assert.ok(renderWorkspace(done, { issues: warns }).includes('원가 계산 실패'));
+  const stopped = { ...session, step: 'DONE', question: null, simulation: null };
+  const html = renderWorkspace(stopped, { issues: warns });
+  assert.ok(html.includes('원가 계산 실패') && html.indexOf('원가 계산 실패') < html.indexOf('에이전트가 멈췄습니다'));
+});
+
+test('live feed stops following once an issue line is shown', () => {
+  assert.equal(followFeed([{ kind: 'think' }, { kind: 'result' }]), true);
+  assert.equal(followFeed([{ kind: 'warn', step: 'ANALYZE' }, { kind: 'result' }]), false);
+});
