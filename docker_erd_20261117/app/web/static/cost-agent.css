@@ -266,3 +266,31 @@
 .ca-playback-controls>div{display:flex;gap:8px}
 .ca-playback-paused .ca-orb,.ca-playback-paused .ca-orb i,.ca-playback-paused .ca-shimmer,.ca-playback-paused .ca-live-feed span::after{animation-play-state:paused!important}
 @media(max-width:600px){.ca-playback-controls{flex-wrap:wrap}.ca-playback-controls>div{margin-left:auto}}
+
+/* ---------- 확인할 점: 누락값·오류는 천천히, 눈에 띄게, 다음 카드 위에 남긴다 ---------- */
+.ca-live-feed li.ca-live-issue{background:#fff8eb;border-radius:8px;box-shadow:inset 3px 0 0 var(--ca-warn);padding-block:6px;
+  animation:ca-slide-in .38s cubic-bezier(.2,.7,.2,1) both,ca-issue-pulse 1.4s ease-out .38s 1}
+@keyframes ca-issue-pulse{0%{background:#ffe7bf}100%{background:#fff8eb}}
+.ca-issues{margin-bottom:14px;border-color:#f3d19c;background:#fffaf1;padding:16px 20px}
+.ca-issues ol{margin:8px 0 0;padding:0;list-style:none;display:grid;gap:6px}
+.ca-issues li{display:grid;grid-template-columns:max-content 1fr;gap:10px;font-size:14px;line-height:1.55;
+  opacity:0;animation:ca-slide-in .45s cubic-bezier(.2,.7,.2,1) both;animation-delay:calc(var(--i,0) * .45s)}
+.ca-issues li b{font-size:12px;color:var(--ca-warn);padding-top:2px}
+.ca-issues li[data-kind="warn"] span{color:var(--ca-bad)}
+@media (prefers-reduced-motion:reduce){.ca-issues li,.ca-live-feed li.ca-live-issue{animation:none;opacity:1}}
+
+/* ---------- 원가 기준표 ---------- */
+.ca-sheet{margin:18px 0;border:1px solid var(--ca-line);border-radius:12px;background:#fff}
+.ca-sheet>summary{cursor:pointer;padding:12px 16px;font-weight:800;font-size:14px}
+.ca-sheet-notices{margin:0 16px 8px;padding:8px 12px;border-radius:8px;background:#fff8eb;color:var(--ca-warn);font-size:13px;list-style:none}
+.ca-sheet-wrap{overflow-x:auto;padding:0 8px 10px}
+.ca-sheet table{width:100%;border-collapse:collapse;font-size:13px}
+.ca-sheet th,.ca-sheet td{padding:8px;border-top:1px solid var(--ca-line);text-align:left;vertical-align:top}
+.ca-sheet thead th{color:var(--ca-muted);font-weight:700;font-size:12px;border-top:0}
+.ca-sheet td small{display:block;color:var(--ca-muted);font-size:11px;margin-top:2px}
+.ca-sheet tr[data-status="conflict"] .ca-cell-status{color:var(--ca-bad);font-weight:800}
+.ca-sheet tr[data-status="empty"] .ca-cell-status{color:var(--ca-warn);font-weight:800}
+.ca-sheet tr[data-status="filled"] .ca-cell-status{color:var(--ca-ok)}
+.ca-doc{display:inline-block;max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:1px 6px;border-radius:6px;background:var(--ca-soft);font-size:12px}
+.ca-tag{font-size:11px;font-weight:700;color:var(--ca-accent);margin-left:4px}
+.ca-cell-status{white-space:nowrap}.ca-sheet td:first-of-type{white-space:nowrap}

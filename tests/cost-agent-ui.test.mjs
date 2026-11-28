@@ -93,8 +93,8 @@ import { renderLive, pendingSession, boardAt, WAIT_HINTS } from '../docker_erd_2
 
 test('pending session starts with analysis running and others waiting', () => {
   const p = pendingSession('c.xlsx', { model_id: '29' });
-  assert.equal(p.board.length, 7);
-  assert.deepEqual(p.board.map(b => b.status), ['RUNNING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING']);
+  assert.equal(p.board.length, 8);   // 승인 검토 단계 포함
+  assert.deepEqual(p.board.map(b => b.status), ['RUNNING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING', 'PENDING']);
   assert.equal(p.draft.file_name, 'c.xlsx');
 });
 
@@ -140,4 +140,134 @@ test('completed workspace shows questions and results with activity below and no
   for (const html of [question,result]) {
     assert.ok(!html.includes('data-ca-countdown') && !html.includes('data-ca-continue') && !html.includes('data-ca-review'));
   }
+});
+
+// ---------------------------------------------------------------- 2순위: 승인 검토 · 묶음 카드 · 보고서
+import { hiddenFields, reportHtmlUrl } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('pending board includes the approval review step between terms and report', () => {
+  const keys = pendingSession('a.xlsx', {}).board.map(b => b.key);
+  assert.deepEqual(keys.slice(-3), ['TERMS', 'REVIEW', 'REPORT']);
+  assert.equal(pendingSession('a.xlsx', {}).board.find(b => b.key === 'REVIEW').title, '승인 검토');
+});
+
+test('grouped card: prefixed fields follow their own choice select', () => {
+  const fields = [
+    { name: 'choice:네트워크', type: 'select', value: 'amount', options: [{ value: 'amount' }, { value: 'included' }] },
+    { name: 'amount:네트워크', show_for: ['amount'] },
+    { name: 'parent:네트워크', show_for: ['included'] },
+    { name: 'finding:NO_FINANCING', type: 'select', value: 'proceed', options: [{ value: 'fix' }, { value: 'proceed' }] },
+    { name: 'reason:NO_FINANCING', show_for: ['proceed'] },
+  ];
+  assert.deepEqual(hiddenFields(fields, { 'choice:네트워크': 'included', 'finding:NO_FINANCING': 'fix' }),
+    ['amount:네트워크', 'reason:NO_FINANCING']);
+  assert.deepEqual(hiddenFields(fields, {}), ['parent:네트워크']);
+});
+
+test('fields-only card: a field shows for the select whose options it names (interest rate)', () => {
+  const fields = [
+    { name: 'interest_rate_type', type: 'select', value: 'NOT_APPLIED', options: [{ value: 'NOT_APPLIED' }, { value: 'ASSUMED' }, { value: 'ACTUAL_LOAN' }] },
+    { name: 'annual_interest_rate', show_for: ['ASSUMED', 'ACTUAL_LOAN'] },
+  ];
+  assert.deepEqual(hiddenFields(fields, {}), ['annual_interest_rate']);
+  assert.deepEqual(hiddenFields(fields, { interest_rate_type: 'ASSUMED' }), []);
+});
+
+test('option-button card keeps the old behaviour', () => {
+  const fields = [{ name: 'amount', show_for: ['amount'] }, { name: 'parent', show_for: ['included'] }];
+  assert.deepEqual(hiddenFields(fields, {}, 'amount'), ['parent']);
+});
+
+test('result shows the verdict and opens the one-page report in a new tab', () => {
+  const done = { ...session, id: 's1', step: 'DONE', question: null, report_ready: true,
+    simulation: { hourlyCost: '2.52', candidatePrice: '3.15' }, assumptions: { target_rate: 0.2 }, market: null, terms: [], summary: [],
+    approval: { verdict: '조건부', reasons: ['금융비용(이자)이 원가에 반영되지 않았어요'] } };
+  const html = renderResult(done);
+  assert.ok(html.includes('권고: 조건부') && html.includes('금융비용(이자)'));
+  assert.ok(html.includes(`href="${reportHtmlUrl('s1')}"`) && html.includes('target="_blank"'));
+  assert.ok(reportHtmlUrl('s1').endsWith('/agent/sessions/s1/report.html'));
+});
+
+test('upload accepts PDF bills as well as Excel and CSV', () => {
+  const html = renderStart([]);
+  assert.ok(html.includes('accept=".xlsx,.csv,.pdf"'));
+  assert.ok(html.includes('PDF'));
+});
+
+// ---------------------------------------------------------------- 여러 부서 문서 · 기준표 · 천천히 보여 주는 확인할 점
+import { renderSheet, renderIssues, eventDelay, fileLabel } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('upload sends multiple files as files[]', async () => {
+  let sent = null;
+  const ok = async (url, init) => { sent = init.body; return { ok: true, json: async () => ({ id: 's' }) }; };
+  await startSession([new File(['a'], '01.pdf'), new File(['b'], '03.pdf')], {}, ok);
+  assert.deepEqual(sent.getAll('files').map(f => f.name), ['01.pdf', '03.pdf']);
+  assert.equal(sent.get('file'), null);
+  await startSession([new File(['a'], 'c.xlsx')], {}, ok);  // 하나면 예전처럼 file
+  assert.equal(sent.get('file').name, 'c.xlsx');
+  assert.equal(fileLabel([{ name: 'a.pdf' }, { name: 'b.pdf' }, { name: 'c.pdf' }]), 'a.pdf 외 2개');
+});
+
+test('start screen allows several files', () => {
+  assert.ok(renderStart([]).includes('multiple'));
+});
+
+const sheet = { cells: {
+  acquisition: { key: 'acquisition', value: 1009000000, unit: '원', currency: 'KRW', status: 'filled', grade: '사내 문서 · 교차 확인 2건',
+    sources: [{ doc: '01_구매팀.pdf', page: 1, row: 10 }, { doc: '04_재무회계팀.pdf', page: 1, row: 6 }], note: '', owner: '구매팀·재무회계팀' },
+  electricity: { key: 'electricity', value: null, unit: '', status: 'conflict', sources: [], note: '', owner: '시설운영팀',
+    candidates: [{ doc: '03', text: '57,600,000원' }, { doc: '09', text: '60,000,000원' }] },
+  utilization: { key: 'utilization', value: 0.7, unit: '%', status: 'filled', sources: [{ doc: '06_영업팀.pdf', row: 9 }], note: '문장 교차 확인 일치' },
+  memory: { key: 'memory', value: null, status: 'empty', sources: [] }
+}, notices: ['x.pdf: 문서 종류를 확인해 주세요'] };
+
+test('cost sheet table shows value, sources, conflicts and notices', () => {
+  const html = renderSheet({ sheet, sheet_answers: {} });
+  assert.ok(html.includes('서버·GPU 취득비') && html.includes('10.09억 원') && html.includes('01_구매팀.pdf'));
+  assert.ok(html.includes('교차 확인 2건') && html.includes('70%'));
+  assert.ok(html.includes('충돌') && html.includes('57,600,000원') && html.includes('60,000,000원'));
+  assert.ok(html.includes('문서 종류를 확인해 주세요'));
+  assert.ok(!html.includes('메모리'));  // 빈 비핵심 칸은 표에 넣지 않음
+  assert.equal(renderSheet({}), '');
+});
+
+test('warnings and questions are held longer than routine lines', () => {
+  assert.ok(eventDelay({ kind: 'warn' }) >= 1500 && eventDelay({ kind: 'warn' }) > 2 * eventDelay({ kind: 'answer' }));
+  assert.ok(eventDelay({ kind: 'ask' }) > eventDelay({ kind: 'think' }));
+});
+
+test('issues found in a step stay pinned above the next card', () => {
+  const warns = [{ step: 'ANALYZE', kind: 'warn', message: '총액이 맞지 않아요' }, { step: 'MISSING', kind: 'ask', message: '전력 칸이 비었어요' },
+    { step: 'ANALYZE', kind: 'think', message: '판단' }];
+  const html = renderIssues(warns);
+  assert.ok(html.includes('확인할 점 2개') && html.includes('총액이 맞지 않아요') && html.includes('전력 칸이 비었어요'));
+  assert.ok(!html.includes('판단'));
+  assert.equal(renderIssues([{ kind: 'result', message: 'ok' }]), '');
+  const ws = renderWorkspace({ ...session, sheet }, { issues: warns });
+  assert.ok(ws.indexOf('확인할 점 2개') < ws.indexOf('ca-question'));
+  assert.ok(ws.includes('원가 기준표'));
+});
+
+// ---------------------------------------------------------------- 최종 리뷰: 확인할 점은 끝·중단 화면에도, 질문만으로는 늘지 않음
+import { isIssue, followFeed } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+test('only warnings and missing-value questions count as issues', () => {
+  assert.equal(isIssue({ kind: 'warn', step: 'ANALYZE' }), true);
+  assert.equal(isIssue({ kind: 'ask', step: 'MISSING' }), true);
+  assert.equal(isIssue({ kind: 'ask', step: 'ASSUMPTIONS' }), false);
+  assert.equal(renderIssues([{ kind: 'ask', step: 'TERMS', message: '할인율' }]), '');
+});
+
+test('issues stay pinned on the result and on a stopped run', () => {
+  const warns = [{ step: 'SIMULATE', kind: 'warn', message: '원가 계산 실패' }];
+  const done = { ...session, step: 'DONE', question: null, simulation: { hourlyCost: 2, candidatePrice: 2.5 }, report_ready: true };
+  assert.ok(renderWorkspace(done, { issues: warns }).includes('원가 계산 실패'));
+  const stopped = { ...session, step: 'DONE', question: null, simulation: null };
+  const html = renderWorkspace(stopped, { issues: warns });
+  assert.ok(html.includes('원가 계산 실패') && html.indexOf('원가 계산 실패') < html.indexOf('에이전트가 멈췄습니다'));
+});
+
+test('live feed stops following once an issue line is shown', () => {
+  assert.equal(followFeed([{ kind: 'think' }, { kind: 'result' }]), true);
+  assert.equal(followFeed([{ kind: 'warn', step: 'ANALYZE' }, { kind: 'result' }]), false);
 });
