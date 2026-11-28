@@ -376,3 +376,52 @@ test('upload is checked before sending: per-file size, total size, file count', 
   assert.ok(checkUpload(Array.from({ length: 21 }, () => mb(0.1))).includes('최대 20개'));
   assert.ok(checkUpload([{ name: 'a.hwp', size: 10 }]).includes('xlsx, csv, pdf'));
 });
+
+// ---------------------------------------------------------------- 승인 검토 카드: 막는 것/참고, 제안대로 고치기, 사유 칩
+import { renderReview, reviewRemaining } from '../docker_erd_20261117/app/web/static/cost-agent-ui.mjs';
+
+const chips = [{ value: 'strategic', label: '전략 가격' }, { value: 'market_entry', label: '시장 진입용' },
+  { value: 'customer_agreed', label: '고객 협의 완료' }, { value: 'other', label: '기타' }];
+const reviewQ = {
+  id: 'rq', step: 'REVIEW', title: '승인 전 확인 — 막는 것 1개 · 참고 2개', text: '…', options: [], submit_label: '결정 완료하고 보고서 만들기',
+  fields: [
+    { name: 'finding:PRICE_BELOW_COST', label: '5년가: 원가 $1.40보다 낮아 손실이에요', type: 'select', value: null,
+      options: [{ value: 'apply', label: '제안대로 고치기' }, { value: 'fix', label: '돌아가서 고치기' }, { value: 'proceed', label: '이대로 진행' }],
+      meta: { kind: 'block', level: '재검토', message: '5년가: 원가 $1.40보다 낮아 손실이에요',
+        suggestion: { label: '5년 할인 25% → 19%', effect: '5년가 $1.41 ≥ 원가 $1.40', terms: { 5: 0.19 } }, fix_step: '기간별 가격' } },
+    { name: 'reason:PRICE_BELOW_COST', label: '진행 사유', type: 'select', value: null, show_for: ['proceed'], options: chips },
+    { name: 'reason_text:PRICE_BELOW_COST', label: '기타 사유', type: 'text', value: null, show_for: ['other'] },
+    { name: 'finding:NO_FINANCING', label: '금융비용(이자)이 원가에 반영되지 않았어요', type: 'select', value: 'ack',
+      options: [{ value: 'ack', label: '확인' }, { value: 'fix', label: '고치기' }], meta: { kind: 'note', level: '조건부', message: '금융비용(이자)이 원가에 반영되지 않았어요', fix_step: '가정값 확인' } },
+    { name: 'finding:THIN_MARKET', label: '시장 공개가격이 사업자 2곳뿐이에요', type: 'select', value: 'ack',
+      options: [{ value: 'ack', label: '확인' }], meta: { kind: 'note', level: '조건부', message: '시장 공개가격이 사업자 2곳뿐이에요', fix_step: '' } }
+  ]
+};
+
+test('review card: blocking items first with the suggestion and three actions, notes as a light list', () => {
+  const html = renderReview(reviewQ, { approval: { verdict: '재검토' }, simulation: { hourlyCost: 1.4, candidatePrice: 1.74 } });
+  assert.ok(html.includes('ca-review') && html.includes('막는 것') && html.includes('참고'));
+  assert.ok(html.indexOf('PRICE_BELOW_COST') < html.indexOf('NO_FINANCING'));
+  assert.ok(html.includes('5년 할인 25% → 19%') && html.includes('5년가 $1.41 ≥ 원가 $1.40'));
+  for (const v of ['apply', 'fix', 'proceed']) assert.ok(html.includes(`data-value="${v}"`));
+  assert.ok(html.includes('전략 가격') && html.includes('시장 진입용') && html.includes('고객 협의 완료') && html.includes('기타'));
+  assert.ok(!html.includes('<textarea') && !/진행 사유<\/span><input/.test(html));  // 긴 사유 입력칸 없음
+  assert.ok(html.includes('보고서에 단서로 들어가요'));
+  assert.equal((html.match(/data-rv-toggle=/g) || []).length, 1);  // 고칠 수 있는 참고만 '고치기'
+  assert.ok(html.includes('결정 완료하고 보고서 만들기') && html.includes('막는 것 1개 남음') && html.includes('data-submit disabled'));
+  assert.ok(html.includes('재검토') && html.includes('$1.74') && html.includes('$1.40'));
+});
+
+test('remaining blocking decisions', () => {
+  assert.equal(reviewRemaining([{ value: '' }]), 1);
+  assert.equal(reviewRemaining([{ value: 'apply' }, { value: 'fix' }]), 0);
+  assert.equal(reviewRemaining([{ value: 'proceed' }]), 1);                       // 사유 칩을 골라야
+  assert.equal(reviewRemaining([{ value: 'proceed', chip: 'strategic' }]), 0);
+  assert.equal(reviewRemaining([{ value: 'proceed', chip: 'other', text: '' }]), 1); // 기타는 짧은 글
+  assert.equal(reviewRemaining([{ value: 'proceed', chip: 'other', text: '본부장 승인' }]), 0);
+});
+
+test('non-review questions keep the generic card', () => {
+  const html = renderQuestion({ ...question }, session);
+  assert.ok(!html.includes('ca-review'));
+});

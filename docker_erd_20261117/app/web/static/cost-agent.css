@@ -340,3 +340,47 @@
 .ca-summary-list li[data-tone]::marker{content:"\25CF  ";font-size:10px}
 .ca-summary-list li[data-tone="bad"]{color:var(--ca-bad);font-weight:650}
 .ca-summary-list li[data-tone="warn"]{color:var(--ca-warn)}
+
+/* ---------- 승인 검토 카드: 막는 것 / 참고 ---------- */
+.ca-review{max-width:860px}
+.ca-rv-head{display:flex;align-items:center;gap:10px;margin-top:4px}
+.ca-rv-head h3{margin:0}
+.ca-rv-verdict{font-size:12px;font-weight:800;padding:3px 10px;border-radius:999px;background:var(--ca-soft);color:var(--ca-ink2)}
+.ca-rv-verdict[data-verdict="재검토"]{background:#fdecef;color:var(--ca-bad)}
+.ca-rv-verdict[data-verdict="조건부"]{background:#fff4e5;color:var(--ca-warn)}
+.ca-rv-verdict[data-verdict="승인 권고"]{background:#eaf6ef;color:var(--ca-ok)}
+.ca-rv-section{margin-top:20px}
+.ca-rv-section h4{display:flex;align-items:center;gap:8px;margin:0 0 10px;font-size:14px}
+.ca-rv-section h4 small{font-weight:500;color:var(--ca-muted);font-size:12px}
+.ca-dot{width:8px;height:8px;border-radius:50%;background:var(--ca-muted);display:inline-block}
+.ca-dot-block{background:var(--ca-bad)}
+.ca-rv-item{border:1px solid var(--ca-line);border-left:3px solid var(--ca-bad);border-radius:12px;padding:16px 18px;margin-bottom:12px;background:#fff}
+.ca-rv-msg{margin:0 0 10px;font-weight:700;line-height:1.55}
+.ca-rv-sug{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:#f2f8ff;margin-bottom:12px}
+.ca-rv-sug b{display:block;font-size:14px}
+.ca-rv-sug small{color:var(--ca-ink2);font-size:12px}
+.ca-rv-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px}
+.ca-rv-act{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:10px 12px;border:1px solid var(--ca-line);border-radius:10px;background:#fff;cursor:pointer;text-align:left;font:inherit}
+.ca-rv-act b{font-size:14px}
+.ca-rv-act small{font-size:12px;color:var(--ca-muted)}
+.ca-rv-act:hover{border-color:var(--ca-ink2)}
+.ca-rv-act[aria-pressed="true"]{border-color:var(--ca-accent);background:#fff5f7;box-shadow:inset 0 0 0 1px var(--ca-accent)}
+.ca-rv-act[data-value="apply"] b{color:var(--ca-accent)}
+.ca-rv-chips{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.ca-rv-chips>span{font-size:12px;color:var(--ca-muted);margin-right:2px}
+.ca-chip{position:relative}
+.ca-chip input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.ca-chip span{display:inline-block;padding:6px 12px;border:1px solid var(--ca-line);border-radius:999px;font-size:13px;background:#fff}
+.ca-chip input:checked+span{border-color:var(--ca-ink);background:var(--ca-ink);color:#fff}
+.ca-chip input:focus-visible+span{outline:2px solid var(--ca-accent);outline-offset:2px}
+.ca-rv-text{flex:1 1 220px;min-width:180px;padding:7px 10px;border:1px solid var(--ca-line);border-radius:8px;font:inherit;font-size:13px}
+.ca-rv-notes{list-style:none;margin:0;padding:0;border:1px solid var(--ca-line);border-radius:12px}
+.ca-rv-note{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;font-size:14px;color:var(--ca-ink2)}
+.ca-rv-note+.ca-rv-note{border-top:1px solid var(--ca-line)}
+.ca-rv-fix{white-space:nowrap;font-size:13px}
+.ca-rv-fix[aria-pressed="true"]{color:var(--ca-accent);font-weight:800}
+.ca-rv-fix[aria-pressed="true"]::before{content:"✓ "}
+.ca-rv-foot{justify-content:flex-end;align-items:center;gap:14px;margin-top:20px}
+.ca-rv-left{font-size:13px;color:var(--ca-muted)}
+.ca-btn[disabled]{opacity:.45;cursor:not-allowed}
+@media(max-width:600px){.ca-rv-actions{grid-template-columns:1fr}.ca-rv-note{flex-direction:column;align-items:flex-start}}

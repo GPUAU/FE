@@ -229,7 +229,81 @@ function fieldInput(f, currency) {
   return `<label class="ca-field" for="${id}" data-show-for="${esc((f.show_for || []).join(','))}"><span>${esc(f.label)}</span>${control}${f.hint ? `<small>${esc(f.hint)}</small>` : ''}</label>`;
 }
 
+// ------------------------------------------------------------------ 승인 검토 카드
+// 막는 것(재검토)은 '제안대로 고치기 / 돌아가서 고치기 / 이대로 진행(사유 칩)' 중 하나, 참고(조건부)는 확인만 (보고서에 단서로).
+const isReview = q => q.step === 'REVIEW' && q.fields.some(f => f.meta?.kind);
+const RV_ACTION_HINT = { apply: '그 자리에서 다시 계산', fix: '해당 단계로 돌아가기', proceed: '사유를 골라 진행' };
+
+/** 아직 결정하지 않은 막는 것 수. 이대로 진행은 사유 칩, 기타는 짧은 글까지 있어야 결정된 것. */
+export function reviewRemaining(blocks) {
+  return blocks.filter(b => {
+    if (!b.value) return true;
+    if (b.value !== 'proceed') return false;
+    if (!b.chip) return true;
+    return b.chip === 'other' && !String(b.text || '').trim();
+  }).length;
+}
+
+export function renderReview(q, s) {
+  const byName = Object.fromEntries(q.fields.map(f => [f.name, f]));
+  const findings = q.fields.filter(f => f.name.startsWith('finding:'));
+  const blocks = findings.filter(f => f.meta.kind === 'block');
+  const notes = findings.filter(f => f.meta.kind !== 'block');
+  const code = f => f.name.split(':').slice(1).join(':');
+  const r = s?.simulation || {};
+  const verdict = s?.approval?.verdict || (blocks.length ? '재검토' : notes.length ? '조건부' : '승인 권고');
+  const left = reviewRemaining(blocks.map(f => ({ value: f.value, chip: byName[`reason:${code(f)}`]?.value, text: byName[`reason_text:${code(f)}`]?.value })));
+  const blockCard = f => {
+    const c = code(f), m = f.meta, sug = m.suggestion;
+    const chipF = byName[`reason:${c}`], textF = byName[`reason_text:${c}`];
+    return `<article class="ca-rv-item" data-code="${esc(c)}">
+      <p class="ca-rv-msg">${esc(m.message)}</p>
+      ${sug ? `<div class="ca-rv-sug"><span aria-hidden="true">💡</span><div><b>${esc(sug.label)}</b><small>${esc(sug.effect)}</small></div></div>` : ''}
+      <input type="hidden" name="${esc(f.name)}" value="${esc(f.value ?? '')}" data-rv>
+      <div class="ca-rv-actions" role="radiogroup" aria-label="처리 방법">${f.options.map(o => `<button type="button" class="ca-rv-act" role="radio" data-rv-set="${esc(f.name)}" data-value="${esc(o.value)}" aria-pressed="${String(o.value) === String(f.value)}"><b>${esc(o.label)}</b><small>${esc(o.value === 'fix' && m.fix_step ? `'${m.fix_step}' 단계로` : RV_ACTION_HINT[o.value] || '')}</small></button>`).join('')}</div>
+      ${chipF ? `<div class="ca-rv-chips" data-rv-when="${esc(f.name)}" ${f.value === 'proceed' ? '' : 'hidden'}><span>진행 사유</span>${chipF.options.map(o => `<label class="ca-chip"><input type="radio" name="${esc(chipF.name)}" value="${esc(o.value)}" data-rv ${String(o.value) === String(chipF.value) ? 'checked' : ''}><span>${esc(o.label)}</span></label>`).join('')}
+        ${textF ? `<input type="text" class="ca-rv-text" name="${esc(textF.name)}" value="${esc(textF.value ?? '')}" placeholder="사유를 짧게 적어 주세요" maxlength="80" data-rv data-rv-other="${esc(chipF.name)}" ${chipF.value === 'other' ? '' : 'hidden'}>` : ''}</div>` : ''}
+    </article>`;
+  };
+  const noteRow = f => {
+    const canFix = f.options.some(o => o.value === 'fix');
+    return `<li class="ca-rv-note" data-code="${esc(code(f))}"><span>${esc(f.meta.message)}</span>
+      <input type="hidden" name="${esc(f.name)}" value="${esc(f.value ?? 'ack')}" data-rv>
+      ${canFix ? `<button type="button" class="ca-btn ca-btn-text ca-rv-fix" data-rv-toggle="${esc(f.name)}" aria-pressed="${f.value === 'fix'}" title="'${esc(f.meta.fix_step)}' 단계로 돌아가 고쳐요">고치기 →</button>` : ''}</li>`;
+  };
+  return `<div class="ca-card ca-question ca-review" role="form" aria-label="${esc(q.title)}" data-qid="${esc(q.id)}">
+    <p class="ca-step-label">STEP ${STEP_ORDER.indexOf('REVIEW') + 1} · 승인 검토 · 담당자 확인</p>
+    <div class="ca-rv-head"><h3>승인 전 확인</h3><span class="ca-rv-verdict" data-verdict="${esc(verdict)}">${esc(verdict)}</span></div>
+    <p class="ca-desc">막는 것 ${blocks.length}개 · 참고 ${notes.length}개${r.candidatePrice != null ? ` · 제안가 ${usd(r.candidatePrice)} · 원가 ${usd(r.hourlyCost)}` : ''}</p>
+    ${blocks.length ? `<section class="ca-rv-section"><h4><i class="ca-dot ca-dot-block" aria-hidden="true"></i>막는 것 <small>고칠지, 그대로 진행할지 골라 주세요</small></h4>${blocks.map(blockCard).join('')}</section>` : ''}
+    ${notes.length ? `<section class="ca-rv-section"><h4><i class="ca-dot" aria-hidden="true"></i>참고 <small>보고서에 단서로 들어가요 · 고칠 것만 고르세요</small></h4><ul class="ca-rv-notes">${notes.map(noteRow).join('')}</ul></section>` : ''}
+    <div class="ca-actions ca-rv-foot"><span class="ca-rv-left" aria-live="polite">${left ? `막는 것 ${left}개 남음` : '모두 정했어요'}</span><button type="button" class="ca-btn ca-btn-primary" data-submit ${left ? 'disabled' : ''}>${esc(q.submit_label)}</button></div>
+    <div class="ca-error" role="alert"></div>
+  </div>`;
+}
+
+/** 승인 검토 카드의 상태를 화면에 맞춘다 (사유 칩 보이기·남은 수·완료 버튼). */
+function syncReview(card) {
+  const blocks = [];
+  card.querySelectorAll('.ca-rv-item').forEach(item => {
+    const hidden = item.querySelector('input[type="hidden"][data-rv]');
+    const chips = item.querySelector('.ca-rv-chips');
+    if (chips) chips.hidden = hidden.value !== 'proceed';
+    const chip = item.querySelector('.ca-rv-chips input[type="radio"]:checked')?.value;
+    const text = item.querySelector('.ca-rv-text');
+    if (text) text.hidden = chip !== 'other';
+    item.querySelectorAll('[data-rv-set]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.value === hidden.value)));
+    blocks.push({ value: hidden.value, chip, text: text?.value });
+  });
+  const left = reviewRemaining(blocks);
+  const btn = card.querySelector('[data-submit]');
+  if (btn) btn.disabled = left > 0;
+  const tag = card.querySelector('.ca-rv-left');
+  if (tag) tag.textContent = left ? `막는 것 ${left}개 남음` : '모두 정했어요';
+}
+
 export function renderQuestion(q, s) {
+  if (isReview(q)) return renderReview(q, s);
   // <form>을 쓰지 않는다 (다른 form 안에 들어가도 안전하게). 모든 버튼은 type="button".
   const stepNo = STEP_ORDER.indexOf(q.step) + 1;
   const stepTitle = s?.board?.find(b => b.key === q.step)?.title || '';
@@ -520,6 +594,14 @@ export function fillCalculator(form, session) {
 /** 질문 카드에서 답 읽기. 선택 버튼이 있으면 눌린 것, 입력칸은 보이는 것만. */
 export function readAnswer(card, choice) {
   const values = {};
+  if (card.classList.contains('ca-review')) {  // 승인 검토 카드: 숨은 값·고른 칩·보이는 글만
+    card.querySelectorAll('[data-rv]').forEach(el => {
+      if (el.type === 'radio' && !el.checked) return;
+      if (el.hidden || el.value === '') return;
+      values[el.name] = el.value;
+    });
+    return { question_id: card.dataset.qid, choice: choice ?? null, values };
+  }
   card.querySelectorAll('.ca-field').forEach(label => {
     if (label.hidden) return;
     const el = label.querySelector('input,select');
@@ -673,7 +755,11 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     host.innerHTML = session ? renderWorkspace(session, { ...opts, models, issues, openFlag }) : renderStart(models);
     paintElapsed();
     const card = host.querySelector('.ca-question');
-    if (card) {
+    if (card?.classList.contains('ca-review')) {  // 승인 검토 카드: 칩·글 입력에 따라 남은 수·완료 버튼을 맞춘다
+      syncReview(card);
+      card.addEventListener('change', () => syncReview(card));
+      card.addEventListener('input', () => syncReview(card));
+    } else if (card) {
       syncShowFor(card);
       card.addEventListener('change', () => syncShowFor(card));  // select를 바꾸면 조건부 입력칸을 다시 맞춘다
     }
@@ -838,6 +924,16 @@ export function mountAgentWorkspace({ host, models = [], onSendToCalculator, fet
     if (btn.hasAttribute('data-ca-send') && session) { onSendToCalculator?.(session); return; }
     const card = btn.closest('.ca-question');
     if (!card || !session) return;
+    if (btn.hasAttribute('data-rv-set') || btn.hasAttribute('data-rv-toggle')) {
+      const name = btn.dataset.rvSet || btn.dataset.rvToggle;
+      const input = [...card.querySelectorAll('input[type="hidden"][data-rv]')].find(el => el.name === name);
+      if (input) {
+        if (btn.dataset.rvSet) input.value = btn.dataset.value;
+        else { input.value = input.value === 'fix' ? 'ack' : 'fix'; btn.setAttribute('aria-pressed', String(input.value === 'fix')); }
+      }
+      syncReview(card);
+      return;
+    }
     if (btn.classList.contains('ca-opt')) {
       card.querySelectorAll('.ca-opt').forEach(b => { const on = b === btn; b.setAttribute('aria-pressed', String(on)); b.setAttribute('aria-checked', String(on)); });
       syncShowFor(card);
