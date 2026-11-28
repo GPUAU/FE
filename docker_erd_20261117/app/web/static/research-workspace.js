@@ -191,7 +191,7 @@
  }
  async function history(){
   const ticket=++RW.seq,root=$('#v-trend');frame(root,'GPU','가격 이력','수집 시점별 가격 변동과 원본 출처를 제공합니다.');
-  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgData(),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=single-line1128")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;SG.data=snapshot;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
+  let d,buildHistoryRange,smoothHistoryRange,historyZoom,historyTicks;try{let snapshot,module,zoomModule;[d,snapshot,module,zoomModule]=await Promise.all([data(),sgData(),import("/static/history-range.mjs?v=smooth1127"),import("/static/history-zoom.mjs?v=hover-range1128")]);buildHistoryRange=module.buildHistoryRange;smoothHistoryRange=module.smoothHistoryRange;historyZoom=zoomModule.historyZoom;historyTicks=zoomModule.historyTicks;SG.data=snapshot;SG.historyFailures=snapshot.historyFailures||[];}catch(e){if(ticket===RW.seq)error(root,e,history);return;}if(ticket!==RW.seq||route()!=='trend')return;
   marketPriceFrame('가격 이력','수집 시각 기준 가격 관측');const H=RW.history;
   function draw(){
    const focus=focusState(root),source=SG.data.history.filter(r=>r.model_name===H.model&&r.term===H.term);
@@ -213,7 +213,7 @@
     <div class="rw-history-detail-filters">${cpSelect('rwHistoryOffer','개별 오퍼',[['ALL','선택 조건의 모든 오퍼'],...ids.map(id=>{const r=pool.find(r=>String(r.offer_id)===id);return [id,`${r.provider_name} · ${r.original_product_name||'상품명 미확인'} · ${r.region_code} · #${id}`];})],H.offer)}${search('rwHistorySearch',H.q,'상품, 리전 검색 · 그래프와 표에 함께 적용')}</div>
     ${notice(historyNote)}
     ${(SG.historyFailures||[]).length?`<div class="rw-warning" role="status">일부 모델 이력 조회 실패: ${SG.historyFailures.map(r=>mh(r.model+' ('+r.reason+')')).join(' · ')}</div>`:''}
-    <div class="history-chart-tools" id="rwHistoryTools"><div><span class="history-gesture">휠로 확대·축소 · 드래그로 이동</span><span id="rwHistoryZoomStatus" role="status"></span></div><div class="history-chart-actions"><button type="button" data-history-days="30">30일</button><button type="button" data-history-days="90">90일</button><button type="button" data-history-days="0">전체</button><span class="history-tool-divider"></span><button type="button" id="rwHistoryZoomIn" aria-label="기간 확대" disabled>＋</button><button type="button" id="rwHistoryZoomOut" aria-label="기간 축소" disabled>−</button><button type="button" id="rwHistoryZoomReset" disabled>초기화</button></div></div>
+    <div class="history-chart-tools" id="rwHistoryTools"><div><span class="history-gesture">마우스를 올려 가격 확인 · 휠로 확대·축소 · 드래그로 이동</span><span id="rwHistoryZoomStatus" role="status"></span></div><div class="history-chart-actions"><button type="button" data-history-days="30">30일</button><button type="button" data-history-days="90">90일</button><button type="button" data-history-days="0">전체</button><span class="history-tool-divider"></span><button type="button" id="rwHistoryZoomIn" aria-label="기간 확대" disabled>＋</button><button type="button" id="rwHistoryZoomOut" aria-label="기간 축소" disabled>−</button><button type="button" id="rwHistoryZoomReset" disabled>초기화</button></div></div>
     ${chartCard('rwHistoryChart','가격 변동 이력',`${plotted.length.toLocaleString()}개 유효 관측 · ${count(rows,'offer_id')}개 오퍼 · ${rows.length?sgDay(rows.at(-1).chart_at)+' ~ '+sgDay(rows[0].chart_at):'기간 미확보'} · KST`)}
     <div id="rwHistoryLegend" role="group" aria-label="가격 그래프 범례" style="display:flex;flex-wrap:wrap;gap:8px 12px;padding:16px 0"></div>
     <div class="rw-chart-note">최근 730일 범위에서 조회한 자료입니다. ${rows.length-plotted.length}개 환산 불가·시각 미확인 기록은 그래프에서 제외됩니다.<button class="rw-text-button" id="rwHistoryReload">저장 데이터 다시 조회</button></div>
@@ -245,7 +245,7 @@
     RW.charts.set('rwHistoryChart',chart);
     $('#rwHistoryLegend').innerHTML='<span class="history-line-key"><i aria-hidden="true"></i>일별 중앙값</span><span class="history-series-context">'+summary.length+'개 관측일 · '+mh(H.model)+' · '+mh(MT[H.term])+(summary.length===1?' · 관측일이 1개여서 점으로 표시합니다.':'')+'</span>';
     card.querySelector('.history-chart-actions').append($('#rwHistoryLegend'));
-    $('#rwHistoryChart').setAttribute('aria-label',mh(H.model)+' 일별 중앙값 가격 추이. 아래 음영은 가격 범위가 아닌 시각적 강조입니다. 휠로 확대·축소, 드래그로 기간 이동.');
+    $('#rwHistoryChart').setAttribute('aria-label',mh(H.model)+' 일별 중앙값 가격 추이. 아래 음영은 가격 범위가 아닌 시각적 강조입니다. 마우스를 올리면 중앙값·최댓값·최솟값 표시. Enter로도 확인, Esc로 닫기. 휠로 확대·축소, 드래그로 기간 이동.');
 
 
    }refreshKrw();restoreFocus(focus);
