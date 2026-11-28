@@ -32,6 +32,8 @@
   function enhance(select) {
     if (select.dataset.regionEnhanced) return;
     select.dataset.regionEnhanced = 'true';
+    const isRegion = select.id === 'mfRegion' || select.id === 'cpRegion';
+    const controlLabel = isRegion ? '서비스 지역' : select.id === 'mfModel' ? 'GPU 모델' : '사업자';
     const wrapper = document.createElement('div');
     wrapper.className = 'region-picker';
     select.parentNode.insertBefore(wrapper, select);
@@ -42,17 +44,22 @@
     for (const node of label?.childNodes || []) if (node.nodeType === 3 && node.textContent.trim() === '리전') node.textContent = '서비스 지역';
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'region-trigger';
-    button.setAttribute('aria-label', '서비스 지역');
+    button.id = select.id + '-trigger';
+    button.setAttribute('aria-label', controlLabel);
+    if (label?.htmlFor === select.id) label.htmlFor = button.id;
     button.setAttribute('aria-haspopup', 'listbox');
     button.setAttribute('aria-expanded', 'false');
     const list = document.createElement('div');
     list.id = 'region-options-' + nextId++;
     list.className = 'region-options'; list.role = 'listbox'; list.hidden = true;
+    list.setAttribute('aria-label', controlLabel);
     button.setAttribute('aria-controls', list.id);
     select.classList.add('region-native'); select.tabIndex = -1; select.setAttribute('aria-hidden','true');
     wrapper.append(button, list);
     const close = () => {list.hidden = true; button.setAttribute('aria-expanded','false');};
     const contents = option => {
+      if (!option) return '';
+      if (!isRegion) return `<span class="region-place">${escape(option.textContent)}</span>`;
       const isAll = !option.value || option.value === 'ALL';
       return `<span class="region-place">${escape(isAll ? '전체 지역' : labels[option.value] || option.textContent)}</span>${isAll || !labels[option.value] ? '' : `<span class="region-code">${escape(option.value)}</span>`}`;
     };
@@ -61,26 +68,35 @@
       button.innerHTML = contents(select.selectedOptions[0] || select.options[0]);
       list.replaceChildren();
       Array.from(select.options).forEach(option => {
-        const row = document.createElement('button'); row.type = 'button'; row.role = 'option'; row.className = 'region-option';
+        const row = document.createElement('button'); row.type = 'button'; row.role = 'option'; row.className = 'region-option'; row.tabIndex = -1;
         row.setAttribute('aria-selected', String(option.selected)); row.innerHTML = contents(option); row.disabled = option.disabled;
-        row.onclick = event => {event.preventDefault();select.value = option.value; close(); select.dispatchEvent(new Event('change', {bubbles:true})); if(button.isConnected){sync();button.focus();}};
+        // Keep pointer focus inside the menu until click commits the selection (including Safari).
+        row.addEventListener('pointerdown', event => { if (event.pointerType === 'mouse' && event.button === 0) event.preventDefault(); });
+        row.onclick = event => {
+          event.preventDefault(); event.stopPropagation();
+          select.value = option.value; close();
+          select.dispatchEvent(new Event('change', {bubbles:true}));
+          // Changing the simulation scope rebuilds its controls. Restore focus to the new trigger.
+          queueMicrotask(() => document.getElementById(button.id)?.focus({preventScroll:true}));
+        };
         list.append(row);
       });
     };
-    button.onclick = event => {event.preventDefault(); const open = list.hidden; list.hidden = !open; button.setAttribute('aria-expanded', String(open)); if(open) list.querySelector('[aria-selected="true"]')?.focus();};
+    button.onclick = event => {event.preventDefault(); event.stopPropagation(); const open = list.hidden; list.hidden = !open; button.setAttribute('aria-expanded', String(open)); if(open) list.querySelector('[aria-selected="true"]')?.focus();};
     wrapper.addEventListener('keydown', event => {
       if (event.key === 'Escape') {event.preventDefault();close();button.focus();}
-      if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+      if (!['ArrowDown','ArrowUp','Home','End'].includes(event.key)) return;
       event.preventDefault(); list.hidden = false; button.setAttribute('aria-expanded','true');
       const rows = Array.from(list.querySelectorAll('button:not(:disabled)'));
       const at = rows.indexOf(document.activeElement);
-      rows[(at + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length]?.focus();
+      const index = event.key === 'Home' ? 0 : event.key === 'End' ? rows.length-1 : at < 0 ? (event.key === 'ArrowDown' ? 0 : rows.length-1) : (at + (event.key === 'ArrowDown' ? 1 : -1) + rows.length) % rows.length;
+      rows[index]?.focus();
     });
-    wrapper.addEventListener('focusout', event => {if(!wrapper.contains(event.relatedTarget))close();});
+    wrapper.addEventListener('focusout', () => queueMicrotask(() => { if(!wrapper.contains(document.activeElement)) close(); }));
     select.addEventListener('change',sync);
     new MutationObserver(sync).observe(select,{childList:true,subtree:true,attributes:true,attributeFilter:['disabled']});
     sync();
   }
-  const scan = () => document.querySelectorAll('select#mfRegion,select#cpRegion').forEach(enhance);
+  const scan = () => document.querySelectorAll('select#mfModel,select#mfProvider,select#mfRegion,select#cpRegion').forEach(enhance);
   new MutationObserver(scan).observe(document.body, {childList:true,subtree:true}); scan();
 })();

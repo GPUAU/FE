@@ -15,7 +15,17 @@ function fxPrice(value){
  return valid?`${mp(value)}<small class="v02-krw" data-usd="${Number(value)}"></small>`:'—';
 }
 function refreshKrw(){
- document.querySelectorAll('[data-usd]').forEach(el=>{el.textContent=GpuFx.krwText(el.dataset.usd,V02.fx,V02.manualFx);});
+ document.querySelectorAll('[data-usd]').forEach(el=>{
+  let text=GpuFx.krwText(el.dataset.usd,V02.fx,V02.manualFx);
+  const rate=GpuFx.appliedRate(V02.fx,V02.manualFx).rate;
+  if(rate!==null && el.hasAttribute('data-krw-compact')) {
+   const won=value=>Math.round(Number(value)*rate).toLocaleString('ko-KR')+'원';
+   text=won(el.dataset.usd);
+   if(el.hasAttribute('data-usd-upper'))text+='–'+won(el.dataset.usdUpper);
+   text='약 '+text;
+  }
+  el.textContent=text;
+ });
 }
 async function fxData(force=false){
  if(V02.fxPromise)return V02.fxPromise;

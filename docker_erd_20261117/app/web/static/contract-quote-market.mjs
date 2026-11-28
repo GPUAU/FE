@@ -9,6 +9,7 @@ const amount = offer => {
   return offer?.effective?.status==='OK' && value!=null && String(value).trim()!=='' && Number.isFinite(Number(value)) && Number(value)>=0 ? Number(value) : null;
 };
 const price = value => value==null?'데이터 없음':Number(value).toLocaleString('ko-KR',{maximumFractionDigits:6});
+const krw = value => value == null ? '' : `<small class="cq-krw" data-usd="${Number(value)}" data-krw-compact></small>`;
 const normalize = value => String(value ?? '').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();
 
 // Match whole model names; B200 must never select GB200, nor B300 select GB300.
@@ -98,7 +99,7 @@ export async function mountQuoteMarket({host,quote,request}) {
         if(error)return `<tr><td>${productCell}</td><td colspan="5">조회 실패 · ${esc(error.message)} <button class="mv-btn" type="button" data-retry-row>다시 조회</button></td></tr>`;
         return quoteMarketRows(product,comparison).map(row=>{
           const rate=row.rate==null?`<span>산출 불가</span><small>${esc(row.reason)}</small>`:`<b class="cq-market-rate">${(Math.abs(row.rate)*100).toLocaleString('ko-KR',{maximumFractionDigits:1})}% ${row.rate<0?'높음':'할인'}</b>`;
-          return `<tr><td>${productCell}</td><td><b>${row.months/12}년 약정</b><span>${row.offer?esc(pay[row.offer.paymentOption] || '결제 조건 미확인'):'데이터 없음'}</span><small>${esc(row.offer?.contractProductType || '')}</small></td><td>${price(row.baselineAmount)}${observed(row.baseline)}</td><td><b>${price(row.amount)}</b>${observed(row.offer)}${row.offer?.effective?.assumptions?.length?`<small>${esc(row.offer.effective.assumptions.join(' · '))}</small>`:''}</td><td>${rate}</td><td>${row.offer?`<small>약정 · ${date(row.offer)}</small>${evidence(row.offer)}`:''}${row.baseline?`<small>온디맨드 · ${date(row.baseline)}</small>${evidence(row.baseline)}`:''}${!row.offer&&!row.baseline?'데이터 없음':''}</td></tr>`;
+          return `<tr><td>${productCell}</td><td><b>${row.months/12}년 약정</b><span>${row.offer?esc(pay[row.offer.paymentOption] || '결제 조건 미확인'):'데이터 없음'}</span><small>${esc(row.offer?.contractProductType || '')}</small></td><td>${price(row.baselineAmount)}${krw(row.baselineAmount)}${observed(row.baseline)}</td><td><b>${price(row.amount)}</b>${krw(row.amount)}${observed(row.offer)}${row.offer?.effective?.assumptions?.length?`<small>${esc(row.offer.effective.assumptions.join(' · '))}</small>`:''}</td><td>${rate}</td><td>${row.offer?`<small>약정 · ${date(row.offer)}</small>${evidence(row.offer)}`:''}${row.baseline?`<small>온디맨드 · ${date(row.baseline)}</small>${evidence(row.baseline)}`:''}${!row.offer&&!row.baseline?'데이터 없음':''}</td></tr>`;
         }).join('');
       }).join('')}</tbody></table></div><p class="cq-neutral">할인율은 각 사업자의 동일 상품·리전 온디맨드 기준가에 대한 값입니다. 검증된 비교 결과가 없으면 산출하지 않습니다. 5년 데이터가 없을 때 3년 가격으로 추정하지 않습니다.</p><div class="cq-market-pagination"><span>상품 ${page*pageSize+1}–${Math.min((page+1)*pageSize,all.length)} / ${all.length}개</span><button type="button" class="mv-btn" data-prev ${page===0?'disabled':''}>이전</button><button type="button" class="mv-btn" data-next ${(page+1)*pageSize>=all.length?'disabled':''}>다음</button></div>`;
     target.querySelector('[data-prev]').onclick=()=>{page--;load();};

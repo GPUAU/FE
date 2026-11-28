@@ -24,7 +24,7 @@
     document.getElementById('dataContext').hidden=true;
     host.innerHTML='<p role="status">견적 계산 화면을 불러오고 있습니다.</p>';
     try {
-      const {mountQuote}=await import('/static/contract-quote-ui.mjs?v=benchmark-visible1125');
+      const {mountQuote}=await import('/static/contract-quote-ui.mjs?v=quote-model1128');
       if(ticket!==revision||state.view!=='discounts')return;
       mountQuote({host,saved,request:api,getSource:()=>window.GpuContractQuote.source,
         loadMarket:root=>window.renderContractMarket({root,embedded:true})});
