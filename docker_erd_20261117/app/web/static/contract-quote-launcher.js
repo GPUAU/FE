@@ -1,13 +1,26 @@
 /* Keep #discounts; separate our quote scenarios from collected competitor prices. */
 (() => {
   const saved = {};
+  const sourceKey = 'gpu-contract-cost-source-v1';
+  const valid = r => r && [r.price,r.cost].every(v =>
+    (typeof v === 'number' || typeof v === 'string') && String(v).trim() !== '' && Number.isFinite(Number(v))) && Number(r.price)>0 && Number(r.cost)>=0;
+  let restored = null;
+  try {
+    const value = JSON.parse(sessionStorage.getItem(sourceKey));
+    if (valid(value) && typeof value.id === 'string' && typeof value.time === 'string') restored = value;
+  } catch { /* 저장소를 사용할 수 없어도 현재 화면의 계산은 연결한다. */ }
   window.GpuContractQuote = {
-    source: null,
-    invalidateCost() { this.source = null; },
+    source: restored,
+    invalidateCost() {
+      this.source = null;
+      try { sessionStorage.removeItem(sourceKey); } catch { /* 메모리 상태는 초기화됨 */ }
+    },
     acceptCost(result) {
-      if (!Number.isFinite(Number(result.candidatePrice)) || !Number.isFinite(Number(result.hourlyCost))) return;
-      this.source = {id:crypto.randomUUID(),price:result.candidatePrice,cost:result.hourlyCost,
+      const values = {price:result?.candidatePrice,cost:result?.hourlyCost};
+      if (!valid(values)) { this.invalidateCost(); return; }
+      this.source = {id:crypto.randomUUID(),price:Number(values.price),cost:Number(values.cost),
         time:new Date().toLocaleString('ko-KR',{timeZone:'Asia/Seoul'})};
+      try { sessionStorage.setItem(sourceKey,JSON.stringify(this.source)); } catch { /* 현재 탭에서는 사용 가능 */ }
     },
     openFromCost() {saved.autoImport = true;location.hash='#discounts';},
   };

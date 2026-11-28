@@ -49,13 +49,15 @@
     view.innerHTML = `<div class="invoice-page cp-page"><header class="cp-hero"><p class="cp-eyebrow">GPU 시세 인덱스</p><h1>청구서 분석 · <em>원가 검토</em></h1><p>청구 내역을 확인하고 GPU 원가와 판매가격의 근거를 정리합니다.</p></header><div id="costAgentHost"><p role="status">청구서 분석을 불러오고 있습니다.</p></div></div>`;
     view.querySelector('.cp-hero').after(document.getElementById('costTabs'));
     const host = view.querySelector('#costAgentHost');
-    const { mountAgentWorkspace } = await import('/static/cost-agent-ui.mjs?v=review-1128');
+    const { mountAgentWorkspace } = await import('/static/cost-agent-ui.mjs?v=quote-bridge1128');
     if (ticket !== revision || state.view !== 'cost' || current() !== 'agent') return;
     let models = [];
     try { models = (await api('/api/v1/catalog'))?.result?.models || []; } catch { /* 모델 목록 없이도 시작 가능 */ }
     if (ticket !== revision || state.view !== 'cost' || current() !== 'agent') return;
     mountAgentWorkspace({
       host, models,
+      onResult: result => window.GpuContractQuote?.acceptCost(result),
+      onInvalidate: () => window.GpuContractQuote?.invalidateCost(),
       onSendToCalculator: session => { window.__costAgentFill = session; location.hash = '#cost/manual'; }
     });
   }
