@@ -19,9 +19,12 @@
 #agentMiniWindow[hidden] { display:none!important; }
 #agentMiniWindow .agent-mini-header {
   display:flex; align-items:center; justify-content:space-between; flex:0 0 auto;
-  gap:12px; padding:18px 20px; border-bottom:1px solid #eceef1; background:#fff;
+  gap:12px; min-height:76px; padding:18px 20px; box-sizing:border-box;
+  border-top:3px solid #ea0033; border-bottom:1px solid #eee7e9;
+  background:linear-gradient(110deg,#fff 55%,#fff6f3);
 }
-#agentMiniWindow .agent-mini-header h2 { margin:0; color:#303640; font-size:16px; font-weight:650; line-height:1.4; }
+#agentMiniWindow .agent-mini-header h2 { display:flex; align-items:center; gap:10px; margin:0; color:#252a34; font-size:18px; font-weight:800; letter-spacing:-.6px; line-height:1.4; white-space:nowrap; }
+#agentMiniWindow .agent-mini-header h2::before { content:""; flex:0 0 4px; height:22px; border-radius:2px; background:#ea0033; }
 #agentMiniWindow .agent-mini-header p { margin:5px 0 0; color:#777f8c; font-size:13px; line-height:1.5; }
 html body.agent-mini-open #layout,
 html body.agent-mini-open #band,
@@ -272,11 +275,14 @@ html body :is(#agentMiniWindow, #agentEmbeddedPanel) #askForm { padding-bottom:1
 /* The left edge resizes the panel; the header holds the existing reset action. */
 html body #agentMiniWindow .chat-panel-head { display:none; }
 html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy) {
-  margin:0; padding:7px 10px; border:1px solid #e5e7ec; border-radius:6px!important;
-  background:#fff; color:#59616d; font:inherit; font-size:13px; white-space:nowrap; cursor:pointer;
+  display:inline-flex; align-items:center; justify-content:center; gap:6px; flex:0 0 auto;
+  margin:0; min-height:34px; padding:7px 10px; border:1px solid #f1b8c3; border-radius:7px!important;
+  background:#fff; color:#c81036; font:inherit; font-size:12px; font-weight:650; white-space:nowrap; cursor:pointer;
 }
 html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy):hover:not(:disabled) { background:#fff4f6; border-color:#edb4c0; color:#cf1234; }
-html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy):disabled { opacity:.45; cursor:default; }
+html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy)::before { content:"+"; font-size:18px; font-weight:400; line-height:1; }
+html body #agentMiniWindow .agent-mini-header :is(#agentReset,.agent-reset-proxy):disabled { opacity:1; color:#a8888e; border-color:#efdee2; background:#fffafa; cursor:default; }
+@media(max-width:360px) { #agentMiniWindow .agent-mini-header { padding-inline:14px; gap:8px; } #agentMiniWindow .agent-mini-header h2 { font-size:16px; gap:8px; } }
 #agentMiniWindow .agent-panel-resizer {
   position:absolute; inset:0 auto 0 0; width:8px; z-index:5; cursor:col-resize; touch-action:none;
 }
